@@ -25,13 +25,22 @@ let unsubscribeTasks = null;
  */
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 Dashboard initializing...');
-    await checkAuth();
-    await loadUserData();
-    await loadOrganization();
-    await loadProjects();
+    
+    // Setup event listeners FIRST so buttons are always responsive,
+    // even if Firebase is slow or data loading fails
     setupEventListeners();
-    setupRealtimeSubscription();
-    console.log('✅ Dashboard ready!');
+    
+    try {
+        await checkAuth();
+        await loadUserData();
+        await loadOrganization();
+        await loadProjects();
+        setupRealtimeSubscription();
+        console.log('✅ Dashboard ready!');
+    } catch (error) {
+        console.error('Dashboard initialization error:', error);
+        showToast('Error loading dashboard data. Please refresh.', 'error');
+    }
 });
 
 /**
@@ -429,7 +438,10 @@ async function createTask(taskData) {
 // ============================================
 
 async function createProject(projectData) {
-    if (!currentOrganization) return false;
+    if (!currentOrganization) {
+        showToast('No organization found. Please log out and sign in again.', 'error');
+        return false;
+    }
     
     try {
         const project = {
