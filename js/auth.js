@@ -17,6 +17,9 @@ const signupBtn = document.getElementById('signup-btn');
 const googleLoginBtn = document.getElementById('google-login-btn');
 const googleSignupBtn = document.getElementById('google-signup-btn');
 
+// Flag to prevent onAuthStateChanged from redirecting during Google auth flow
+let isGoogleAuthInProgress = false;
+
 // ============================================
 // UI Toggle Functions
 // ============================================
@@ -198,6 +201,9 @@ const handleGoogleAuth = async () => {
         prompt: 'select_account'
     });
     
+    // Prevent onAuthStateChanged from redirecting before we finish setup
+    isGoogleAuthInProgress = true;
+    
     try {
         const result = await auth.signInWithPopup(provider);
         const user = result.user;
@@ -247,7 +253,8 @@ const handleGoogleAuth = async () => {
                     color: '#6366f1'
                 });
             } else {
-                // User cancelled organization creation
+                // User cancelled - sign out and reset flag
+                isGoogleAuthInProgress = false;
                 await auth.signOut();
                 return;
             }
@@ -260,10 +267,14 @@ const handleGoogleAuth = async () => {
             name: user.displayName
         }));
         
+        // Setup complete, allow future auth state changes to redirect
+        isGoogleAuthInProgress = false;
+        
         // Redirect to dashboard
         window.location.href = 'dashboard.html';
         
     } catch (error) {
+        isGoogleAuthInProgress = false;
         console.error('Google auth error:', error);
         showError(getErrorMessage(error.code));
     }
@@ -355,8 +366,10 @@ function generateSlug(text) {
  * Redirect to dashboard if already logged in
  */
 auth.onAuthStateChanged((user) => {
-    if (user && window.location.pathname.includes('login.html')) {
+    if (user && window.location.pathname.includes('login.html') && !isGoogleAuthInProgress) {
         // User is logged in but on login page, redirect to dashboard
+        // Skip redirect if Google auth is in progress (it handles its own redirect
+        // after creating the user document)
         window.location.href = 'dashboard.html';
     }
 });
