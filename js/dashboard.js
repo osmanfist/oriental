@@ -202,10 +202,6 @@ async function selectProject(project) {
 async function loadTasks() {
     if (!currentProject) return;
     
-    if (unsubscribeTasks) {
-        unsubscribeTasks();
-    }
-    
     try {
         const tasksSnapshot = await db.collection('tasks')
             .where('projectId', '==', currentProject.id)
@@ -219,7 +215,6 @@ async function loadTasks() {
         
         console.log(`Loaded ${tasks.length} tasks`);
         renderBoard(tasks);
-        setupRealtimeSubscription();
         
     } catch (error) {
         console.error('Error loading tasks:', error);
@@ -554,9 +549,14 @@ function setupRealtimeSubscription() {
     
     unsubscribeTasks = db.collection('tasks')
         .where('projectId', '==', currentProject.id)
+        .orderBy('createdAt', 'desc')
         .onSnapshot((snapshot) => {
             console.log('Real-time update: tasks changed');
-            loadTasks();
+            const tasks = [];
+            snapshot.forEach(doc => {
+                tasks.push({ id: doc.id, ...doc.data() });
+            });
+            renderBoard(tasks);
         }, (error) => {
             console.error('Realtime subscription error:', error);
         });
@@ -730,7 +730,7 @@ function closeTaskModal() {
     const modal = document.getElementById('task-modal');
     if (modal) {
         modal.classList.remove('active');
-        modal.style.display = 'none';
+        modal.style.display = '';
     }
     const form = document.getElementById('task-form');
     if (form) form.reset();
@@ -761,18 +761,14 @@ function closeCommentModal() {
 function openTaskModal() {
     console.log('Opening task modal');
     
-    // Don't block if no project - we'll show a message
     if (!currentProject) {
         showToast('Please select or create a project first', 'warning');
-        // Still open the modal? Or return? Let's return for now
         return;
     }
     
     const modal = document.getElementById('task-modal');
     if (modal) {
-        // Use both class and style to ensure visibility
         modal.classList.add('active');
-        modal.style.display = 'flex';
         console.log('Task modal opened');
     } else {
         console.error('Task modal not found');
@@ -804,21 +800,6 @@ async function loadSprints() {
     if (sprintContainer) {
         sprintContainer.innerHTML = '<div class="empty-state"><p>Sprint feature coming soon!</p></div>';
     }
-}
-function openProjectModal() {
-    console.log('Opening project modal');
-    const modal = document.getElementById('project-modal');
-    if (modal) modal.classList.add('active');
-}
-
-function openSprintModal() {
-    console.log('Opening sprint modal');
-    if (!currentProject) {
-        showToast('Please select a project first', 'warning');
-        return;
-    }
-    const modal = document.getElementById('sprint-modal');
-    if (modal) modal.classList.add('active');
 }
 
 // ============================================
@@ -855,6 +836,9 @@ function showToast(message, type = 'info') {
 // Global Exports
 // ============================================
 window.openComments = openComments;
+window.openTaskModal = openTaskModal;
+window.openProjectModal = openProjectModal;
+window.openSprintModal = openSprintModal;
 window.closeTaskModal = closeTaskModal;
 window.closeProjectModal = closeProjectModal;
 window.closeSprintModal = closeSprintModal;
