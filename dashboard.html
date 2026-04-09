@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oriental - Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        /* Layout */
+        .app {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: white;
+            border-right: 1px solid #e0e0e0;
+            padding: 24px;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 32px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .logo i {
+            font-size: 32px;
+            color: #667eea;
+        }
+
+        .logo h1 {
+            font-size: 24px;
+            color: #333;
+        }
+
+        .org-info {
+            margin-bottom: 32px;
+            padding: 16px;
+            background: #f5f5f5;
+            border-radius: 12px;
+        }
+
+        .org-name {
+            font-weight: 600;
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+
+        .org-role {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 32px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            color: #666;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .nav-item:hover {
+            background: #f5f5f5;
+            color: #667eea;
+        }
+
+        .nav-item.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .projects-section {
+            margin-top: 24px;
+        }
+
+        .projects-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .projects-header h3 {
+            font-size: 14px;
+            text-transform: uppercase;
+            color: #999;
+        }
+
+        .add-project-btn {
+            background: none;
+            border: none;
+            color: #667eea;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .project-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .project-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .project-item:hover {
+            background: #f5f5f5;
+        }
+
+        .project-item.active {
+            background: #e8eaff;
+            color: #667eea;
+        }
+
+        .project-color {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .project-name {
+            flex: 1;
+            font-size: 14px;
+        }
+
+        .project-count {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding-top: 24px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .logout-btn {
+            width: 100%;
+            padding: 12px;
+            background: #fee;
+            color: #e53e3e;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 32px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+
+        .header h2 {
+            font-size: 28px;
+        }
+
+        .create-task-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Board View */
+        .board {
+            display: flex;
+            gap: 24px;
+            overflow-x: auto;
+            padding-bottom: 20px;
+        }
+
+        .column {
+            min-width: 320px;
+            background: #f8f8f8;
+            border-radius: 16px;
+            padding: 16px;
+        }
+
+        .column-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .column-title {
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .column-count {
+            background: #e0e0e0;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+
+        .task-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .task-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .task-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .task-description {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 12px;
+        }
+
+        .task-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+        }
+
+        .priority {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .priority-high {
+            background: #fee;
+            color: #e53e3e;
+        }
+
+        .priority-medium {
+            background: #fff3e0;
+            color: #ed8936;
+        }
+
+        .priority-low {
+            background: #e6fffa;
+            color: #38b2ac;
+        }
+
+        .assignee {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: #666;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 24px;
+            padding: 32px;
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .modal-header h3 {
+            font-size: 24px;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #666;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        /* Sprint View */
+        .sprint-header {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .sprint-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .create-sprint-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s;
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <i class="fas fa-mountain-sun"></i>
+                <h1>oriental</h1>
+            </div>
+            
+            <div class="org-info" id="org-info">
+                <div class="org-name" id="org-name">Loading...</div>
+                <div class="org-role" id="org-role">Organization</div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-view="board">
+                    <i class="fas fa-columns"></i> Board
+                </a>
+                <a href="#" class="nav-item" data-view="sprints">
+                    <i class="fas fa-calendar-alt"></i> Sprints
+                </a>
+            </nav>
+            
+            <div class="projects-section">
+                <div class="projects-header">
+                    <h3>Projects</h3>
+                    <button class="add-project-btn" id="add-project-btn" onclick="openProjectModal()">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+                <div class="project-list" id="project-list">
+                    <!-- Projects will be loaded here -->
+                </div>
+            </div>
+            
+            <div class="sidebar-footer">
+                <button class="logout-btn" id="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="header">
+                <h2 id="current-view">Board</h2>
+                <button class="create-task-btn" id="create-task-btn" onclick="openTaskModal()">
+                    <i class="fas fa-plus"></i> New Task
+                </button>
+                </button>
+            </div>
+            
+            <!-- Board View -->
+            <div id="board-view" class="board">
+                <!-- Columns will be loaded here -->
+            </div>
+            
+            <!-- Sprints View (hidden by default) -->
+            <div id="sprints-view" style="display: none;">
+                <div class="sprint-header">
+                    <div class="sprint-info">
+                        <div>
+                            <h3>Active Sprint</h3>
+                            <p id="active-sprint-info">No active sprint</p>
+                        </div>
+                        <button class="create-sprint-btn" id="create-sprint-btn" onclick="openSprintModal()">
+                            <i class="fas fa-plus"></i> Start Sprint
+                        </button>
+                    </div>
+                </div>
+                <div id="sprint-tasks" class="board">
+                    <!-- Sprint tasks will be loaded here -->
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Task Modal -->
+    <div class="modal" id="task-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create Task</h3>
+                <button class="close-modal" onclick="closeTaskModal()">&times;</button>
+            </div>
+            <form id="task-form">
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" id="task-title" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="task-description" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Priority</label>
+                    <select id="task-priority">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Assign to</label>
+                    <select id="task-assignee">
+                        <option value="">Unassigned</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Due Date</label>
+                    <input type="date" id="task-due-date">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeTaskModal()">Cancel</button>
+                    <button type="submit" class="btn-primary" style="padding: 12px 24px;">Create Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Project Modal -->
+    <div class="modal" id="project-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create Project</h3>
+                <button class="close-modal" onclick="closeProjectModal()">&times;</button>
+            </div>
+            <form id="project-form">
+                <div class="form-group">
+                    <label>Project Name</label>
+                    <input type="text" id="project-name" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="project-description" rows="3"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeProjectModal()">Cancel</button>
+                    <button type="submit" class="btn-primary" style="padding: 12px 24px;">Create Project</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Sprint Modal -->
+    <div class="modal" id="sprint-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Start New Sprint</h3>
+                <button class="close-modal" onclick="closeSprintModal()">&times;</button>
+            </div>
+            <form id="sprint-form">
+                <div class="form-group">
+                    <label>Sprint Name</label>
+                    <input type="text" id="sprint-name" required placeholder="e.g., Sprint 1 - Authentication">
+                </div>
+                <div class="form-group">
+                    <label>Goal</label>
+                    <textarea id="sprint-goal" rows="2" placeholder="What do you want to accomplish?"></textarea>
+                </div>
+                <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                        <label>Start Date</label>
+                        <input type="date" id="sprint-start-date">
+                    </div>
+                    <div class="form-group">
+                        <label>End Date</label>
+                        <input type="date" id="sprint-end-date">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeSprintModal()">Cancel</button>
+                    <button type="submit" class="btn-primary" style="padding: 12px 24px;">Start Sprint</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Comment Modal -->
+    <div class="modal" id="comment-modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3 id="comment-task-title">Task Comments</h3>
+                <button class="close-modal" onclick="closeCommentModal()">&times;</button>
+            </div>
+            <div id="comments-list" style="max-height: 400px; overflow-y: auto; margin-bottom: 20px;">
+                <!-- Comments will be loaded here -->
+            </div>
+            <div class="form-group">
+                <textarea id="new-comment" rows="3" placeholder="Write a comment..."></textarea>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" onclick="closeCommentModal()">Close</button>
+                <button type="button" class="btn-primary" id="add-comment-btn" style="padding: 12px 24px;">Add Comment</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>
