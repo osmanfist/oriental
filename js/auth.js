@@ -342,43 +342,86 @@ if (signupBtn) {
  * For brand-new users, shows an inline modal to collect the org name
  * instead of the inaccessible browser prompt().
  */
+/**
+ * Handle Google authentication
+ */
 const handleGoogleAuth = async () => {
     const provider = new firebase.auth.GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
-
+    
     try {
-        const { user } = await auth.signInWithPopup(provider);
-        console.log('Google sign-in successful:', user.uid);
-
-        // Ensure display name is set
+        const result = await auth.signInWithPopup(provider);
+        const user = result.user;
+        
+        // Ensure display name
         let displayName = user.displayName;
         if (!displayName && user.email) {
             displayName = user.email.split('@')[0];
-            await user.updateProfile({ displayName });
+            await user.updateProfile({ displayName: displayName });
         }
-
-        // Check whether this user already has a Firestore document
+        
+        // Check if user document exists
         const userDoc = await db.collection('users').doc(user.uid).get();
-
+        
         if (!userDoc.exists) {
-            console.log('New user — collecting organisation name');
-
-            // Use our custom modal instead of window.prompt()
-            const orgName = await promptOrgName();
-
-            if (!orgName) {
-                // User cancelled — sign them out and stay on login page
-                await auth.signOut();
-                return;
+            // Check for existing organizations
+            const orgsSnapshot = await db.collection('organizations')
+                .where('members', 'array-contains', user.uid)
+                .get();
+            
+            let orgId;
+            
+            if (!orgsSnapshot.empty) {
+                orgId = orgsSnapshot.docs[0].id;
+            } else {
+                // Create new organization
+                const orgName = prompt('Welcome to Oriental! Enter your organization name:', 'My Team');
+                if (!orgName) {
+                    await auth.signOut();
+                    return;
+                }
+                
+                const orgRef = await db.collection('organizations').add({
+                    name: orgName,
+                    slug: orgName.toLowerCase().replace(/ /g, '-'),
+                    createdBy: user.uid,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    members: [user.uid],
+                    settings: { defaultView: 'board', theme: 'light' }
+                });
+                orgId = orgRef.id;
+                
+                // Create default project
+                await db.collection('projects').add({
+                    name: 'Getting Started',
+                    description: 'Your first project',
+                    organizationId: orgId,
+                    createdBy: user.uid,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    isArchived: false,
+                    color: '#6366f1'
+                });
             }
-
-            await createUserDocument(user, displayName, orgName);
-        } else {
-            console.log('Existing user:', userDoc.data().currentOrganization);
+            
+            // Create user document
+            await db.collection('users').doc(user.uid).set({
+                name: displayName,
+                email: user.email,
+                currentOrganization: orgId,
+                organizations: [orgId],
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                preferences: { notifications: true, emailDigest: 'daily' }
+            });
         }
-
+        
+        localStorage.setItem('oriental_user', JSON.stringify({
+            uid: user.uid,
+            email: user.email,
+            name: displayName
+        }));
+        
         window.location.href = 'dashboard.html';
-
+        
     } catch (error) {
         console.error('Google auth error:', error);
         showError(getErrorMessage(error.code));
