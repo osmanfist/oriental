@@ -18,14 +18,26 @@
 // the corresponding string from your Firebase console, and add firebase-config.js
 // to your .gitignore.
 // ---------------------------------------------------------------------------
+
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
 const firebaseConfig = {
-    apiKey:            typeof import_meta_env !== 'undefined' ? import_meta_env.VITE_FIREBASE_API_KEY            : '',
-    authDomain:        typeof import_meta_env !== 'undefined' ? import_meta_env.VITE_FIREBASE_AUTH_DOMAIN        : '',
-    projectId:         typeof import_meta_env !== 'undefined' ? import_meta_env.VITE_FIREBASE_PROJECT_ID         : '',
-    storageBucket:     typeof import_meta_env !== 'undefined' ? import_meta_env.VITE_FIREBASE_STORAGE_BUCKET     : '',
-    messagingSenderId: typeof import_meta_env !== 'undefined' ? import_meta_env.VITE_FIREBASE_MESSAGING_SENDER_ID: '',
-    appId:             typeof import_meta_env !== 'undefined' ? import_meta_env.VITE_FIREBASE_APP_ID             : ''
+  apiKey: "AIzaSyAvpRHzvlTkUqk2vTo_98K_QrpNmLCtgqw",
+  authDomain: "oriental-8982d.firebaseapp.com",
+  projectId: "oriental-8982d",
+  storageBucket: "oriental-8982d.firebasestorage.app",
+  messagingSenderId: "1069834803185",
+  appId: "1:1069834803185:web:cbaa6fe37568dec7b29650"
 };
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+
+
 
 // ---------------------------------------------------------------------------
 // NOTE for contributors using a plain HTML setup (no build tool):
@@ -41,8 +53,6 @@ const firebaseConfig = {
 // See .env.example for the full list of required variables.
 // ---------------------------------------------------------------------------
 
-// Initialise Firebase (once, here — do not call initializeApp anywhere else)
-firebase.initializeApp(firebaseConfig);
 
 // ---- Service references (globally available to scripts loaded after this) ----
 const auth = firebase.auth();
