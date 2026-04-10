@@ -20,10 +20,6 @@
     --primary-800: #3730a3;
     --primary-900: #312e81;
     
-    /* Colors - Secondary */
-    --secondary-50: #fef2f2;
-    --secondary-500: #ef4444;
-    
     /* Colors - Neutral */
     --gray-50: #f9fafb;
     --gray-100: #f3f4f6;
@@ -99,6 +95,56 @@ body {
 }
 
 /* ============================================
+   Splash Page Styles
+   ============================================ */
+.splash-page {
+    background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-800) 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.splash-container {
+    text-align: center;
+    color: white;
+    animation: fadeIn 1s ease-out;
+}
+
+.splash-container .logo {
+    font-size: 80px;
+    margin-bottom: 20px;
+    animation: bounce 2s infinite;
+}
+
+.splash-container h1 {
+    font-size: 48px;
+    margin-bottom: 16px;
+    letter-spacing: 2px;
+}
+
+.splash-container .tagline {
+    font-size: 18px;
+    opacity: 0.9;
+    margin-bottom: 32px;
+}
+
+.splash-container .loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 3px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 32px auto;
+}
+
+.splash-container .redirect-text {
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+/* ============================================
    Authentication Pages
    ============================================ */
 .auth-page {
@@ -118,17 +164,6 @@ body {
     max-width: 480px;
     box-shadow: var(--shadow-xl);
     animation: slideUp 0.5s ease-out;
-}
-
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
 }
 
 .auth-logo {
@@ -162,15 +197,6 @@ body {
     animation: fadeIn 0.3s ease-out;
 }
 
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
-
 .auth-form h2 {
     font-size: var(--font-size-2xl);
     margin-bottom: var(--spacing-xs);
@@ -183,7 +209,9 @@ body {
     font-size: var(--font-size-sm);
 }
 
-/* Form Elements */
+/* ============================================
+   Form Elements
+   ============================================ */
 .form-group {
     margin-bottom: var(--spacing-lg);
 }
@@ -228,7 +256,16 @@ body {
     color: var(--gray-500);
 }
 
-/* Buttons */
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+}
+
+/* ============================================
+   Buttons
+   ============================================ */
 .btn {
     display: inline-flex;
     align-items: center;
@@ -283,7 +320,9 @@ body {
     border-color: var(--gray-300);
 }
 
-/* Divider */
+/* ============================================
+   Divider
+   ============================================ */
 .divider {
     text-align: center;
     margin: var(--spacing-xl) 0;
@@ -315,7 +354,9 @@ body {
     font-size: var(--font-size-sm);
 }
 
-/* Toggle Link */
+/* ============================================
+   Toggle Link
+   ============================================ */
 .toggle-link {
     text-align: center;
     margin-top: var(--spacing-xl);
@@ -333,7 +374,9 @@ body {
     text-decoration: underline;
 }
 
-/* Error Message */
+/* ============================================
+   Error Message
+   ============================================ */
 .error-message {
     background: #fef2f2;
     color: var(--error);
@@ -546,7 +589,7 @@ body {
     padding: var(--spacing-2xl);
 }
 
-/* Header */
+/* Dashboard Header */
 .dashboard-header {
     display: flex;
     justify-content: space-between;
@@ -557,6 +600,12 @@ body {
 .dashboard-header h1 {
     font-size: var(--font-size-3xl);
     font-weight: 600;
+}
+
+.header-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    align-items: center;
 }
 
 .create-task-btn {
@@ -606,6 +655,10 @@ body {
 .column-title {
     font-weight: 600;
     font-size: var(--font-size-base);
+}
+
+.column-title i {
+    margin-right: var(--spacing-sm);
 }
 
 .column-count {
@@ -670,6 +723,10 @@ body {
     font-weight: 600;
 }
 
+.priority i {
+    margin-right: 4px;
+}
+
 .priority-high {
     background: #fef2f2;
     color: var(--error);
@@ -692,7 +749,59 @@ body {
     color: var(--gray-500);
 }
 
-/* Modals */
+.comment-btn {
+    background: none;
+    border: none;
+    color: var(--gray-400);
+    cursor: pointer;
+    transition: color var(--transition-fast);
+}
+
+.comment-btn:hover {
+    color: var(--primary-600);
+}
+
+/* Sprints View */
+.sprints-view {
+    display: block;
+}
+
+/* .hidden is the single toggle pattern used throughout the app.
+   Both board-view and sprints-view use classList.toggle('hidden') in dashboard.js */
+.sprints-view.hidden {
+    display: none;
+}
+
+.sprint-header {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-xl);
+    margin-bottom: var(--spacing-xl);
+    box-shadow: var(--shadow-sm);
+}
+
+.sprint-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.create-sprint-btn {
+    background: var(--primary-600);
+    color: white;
+    border: none;
+    padding: var(--spacing-md) var(--spacing-xl);
+    border-radius: var(--radius-lg);
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+/* ============================================
+   Modals
+   ============================================ */
 .modal {
     display: none;
     position: fixed;
@@ -719,6 +828,10 @@ body {
     max-height: 90vh;
     overflow-y: auto;
     animation: slideUp 0.3s ease-out;
+}
+
+.modal-large {
+    max-width: 600px;
 }
 
 .modal-header {
@@ -770,10 +883,19 @@ body {
     border-bottom: 1px solid var(--gray-200);
 }
 
+.comment-item:last-child {
+    border-bottom: none;
+}
+
 .comment-author {
     font-weight: 600;
     margin-bottom: var(--spacing-xs);
     font-size: var(--font-size-sm);
+}
+
+.comment-author i {
+    margin-right: var(--spacing-xs);
+    color: var(--primary-600);
 }
 
 .comment-content {
@@ -787,7 +909,9 @@ body {
     color: var(--gray-400);
 }
 
-/* Toast Notifications */
+/* ============================================
+   Toast Notifications
+   ============================================ */
 .toast {
     position: fixed;
     bottom: var(--spacing-xl);
@@ -799,20 +923,14 @@ body {
     z-index: 1100;
     animation: slideInRight 0.3s ease-out;
     box-shadow: var(--shadow-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
 }
 
-@keyframes slideInRight {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-/* Empty States */
+/* ============================================
+   Empty States
+   ============================================ */
 .empty-state {
     text-align: center;
     padding: var(--spacing-3xl);
@@ -828,7 +946,16 @@ body {
     font-size: var(--font-size-base);
 }
 
-/* Loading States */
+.empty-state-small {
+    text-align: center;
+    padding: var(--spacing-lg);
+    color: var(--gray-400);
+    font-size: var(--font-size-sm);
+}
+
+/* ============================================
+   Loading States
+   ============================================ */
 .loading-spinner {
     width: 40px;
     height: 40px;
@@ -839,13 +966,70 @@ body {
     margin: var(--spacing-xl) auto;
 }
 
-@keyframes spin {
+/* ============================================
+   Utility Classes
+   ============================================ */
+.hidden {
+    display: none;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.mt-1 { margin-top: var(--spacing-sm); }
+.mt-2 { margin-top: var(--spacing-md); }
+.mt-3 { margin-top: var(--spacing-lg); }
+.mb-1 { margin-bottom: var(--spacing-sm); }
+.mb-2 { margin-bottom: var(--spacing-md); }
+.mb-3 { margin-bottom: var(--spacing-lg); }
+
+/* ============================================
+   Animations
+   ============================================ */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
     to {
-        transform: rotate(360deg);
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 
-/* Responsive Design */
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+/* ============================================
+   Responsive Design
+   ============================================ */
 @media (max-width: 768px) {
     .sidebar {
         transform: translateX(-100%);
@@ -867,14 +1051,110 @@ body {
     .board-column {
         min-width: auto;
     }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .modal-content {
+        margin: var(--spacing-md);
+        max-width: calc(100% - 2rem);
+    }
 }
 
-/* Utility Classes */
-.text-center { text-align: center; }
-.text-right { text-align: right; }
-.mt-1 { margin-top: var(--spacing-sm); }
-.mt-2 { margin-top: var(--spacing-md); }
-.mt-3 { margin-top: var(--spacing-lg); }
-.mb-1 { margin-bottom: var(--spacing-sm); }
-.mb-2 { margin-bottom: var(--spacing-md); }
-.mb-3 { margin-bottom: var(--spacing-lg); }
+/* ============================================
+   Custom Scrollbar
+   ============================================ */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--gray-100);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--gray-300);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-400);
+}
+
+
+/* Enhanced Logout Button */
+.logout-btn {
+    width: 100%;
+    padding: var(--spacing-md);
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    color: var(--error);
+    border: 2px solid var(--error);
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    transition: all var(--transition-fast);
+    font-size: var(--font-size-base);
+}
+
+.logout-btn:hover {
+    background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.logout-btn i {
+    font-size: 16px;
+}
+
+/* User Info Section (Option 2) */
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-lg);
+    background: var(--gray-50);
+    border-radius: var(--radius-lg);
+    margin: var(--spacing-lg);
+}
+
+.user-avatar i {
+    font-size: 40px;
+    color: var(--primary-600);
+}
+
+.user-details {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.user-name {
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+    color: var(--gray-800);
+}
+
+.user-email {
+    font-size: var(--font-size-xs);
+    color: var(--gray-500);
+}
+
+.logout-icon-btn {
+    background: none;
+    border: none;
+    color: var(--gray-400);
+    cursor: pointer;
+    font-size: 18px;
+    transition: color var(--transition-fast);
+}
+
+.logout-icon-btn:hover {
+    color: var(--error);
+}

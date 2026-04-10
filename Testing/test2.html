@@ -10,10 +10,7 @@
 </head>
 <body>
     <div class="dashboard">
-
-        <!-- ============================================================
-             Sidebar
-             ============================================================ -->
+        <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
@@ -21,27 +18,12 @@
                     <h2>oriental</h2>
                 </div>
             </div>
-
-            <!-- User info with icon-only logout -->
-            <!-- logout-btn-icon is distinct from logout-btn-sidebar below -->
-            <div class="user-info">
-                <div class="user-avatar">
-                    <i class="fas fa-user-circle"></i>
-                </div>
-                <div class="user-details">
-                    <span class="user-name"  id="user-name">User</span>
-                    <span class="user-email" id="user-email">email@example.com</span>
-                </div>
-                <button class="logout-icon-btn" id="logout-btn-icon" title="Sign out">
-                    <i class="fas fa-sign-out-alt"></i>
-                </button>
-            </div>
-
+            
             <div class="org-info" id="org-info">
-                <div class="org-name" id="org-name">Loading…</div>
-                <div class="org-role" id="org-role">Organisation</div>
+                <div class="org-name" id="org-name">Loading...</div>
+                <div class="org-role" id="org-role">Organization</div>
             </div>
-
+            
             <nav class="nav-menu">
                 <a href="#" class="nav-item active" data-view="board">
                     <i class="fas fa-columns"></i>
@@ -52,50 +34,45 @@
                     <span>Sprints</span>
                 </a>
             </nav>
-
+            
             <div class="projects-section">
                 <div class="projects-header">
                     <h3>Projects</h3>
-                    <!-- onclick removed — handler attached in setupEventListeners() -->
-                    <button class="add-project-btn" id="add-project-btn" aria-label="Add project">
+                    <button class="add-project-btn" id="add-project-btn" onclick="openProjectModal()">
                         <i class="fas fa-plus"></i>
                     </button>
                 </div>
                 <div class="project-list" id="project-list">
-                    <!-- Populated by dashboard.js -->
+                    <!-- Projects will be loaded here -->
                 </div>
             </div>
-
+            
             <div class="sidebar-footer">
-                <!-- Distinct ID from the icon button above -->
-                <button class="logout-btn" id="logout-btn-sidebar">
+                <button class="logout-btn" id="logout-btn">
                     <i class="fas fa-sign-out-alt"></i>
-                    <span>Sign out</span>
+                    <span>Logout</span>
                 </button>
             </div>
         </aside>
-
-        <!-- ============================================================
-             Main Content
-             ============================================================ -->
+        
+        <!-- Main Content -->
         <main class="main-content">
             <div class="dashboard-header">
                 <h1 id="current-view">Board</h1>
                 <div class="header-actions">
-                    <!-- onclick removed — handler attached in setupEventListeners() -->
-                    <button class="create-task-btn" id="create-task-btn">
+                    <button class="create-task-btn" id="create-task-btn" onclick="openTaskModal()">
                         <i class="fas fa-plus"></i>
                         <span>New Task</span>
                     </button>
                 </div>
             </div>
-
-            <!-- Board View (visible by default) -->
+            
+            <!-- Board View -->
             <div id="board-view" class="board-view">
-                <!-- Columns injected by dashboard.js -->
+                <!-- Columns will be loaded here -->
             </div>
-
-            <!-- Sprints View (hidden by default via .hidden class) -->
+            
+            <!-- Sprints View (hidden by default) -->
             <div id="sprints-view" class="sprints-view hidden">
                 <div class="sprint-header">
                     <div class="sprint-info">
@@ -103,29 +80,25 @@
                             <h3>Active Sprint</h3>
                             <p id="active-sprint-info">No active sprint</p>
                         </div>
-                        <!-- onclick removed — handler attached in setupEventListeners() -->
-                        <button class="create-sprint-btn" id="create-sprint-btn">
+                        <button class="create-sprint-btn" id="create-sprint-btn" onclick="openSprintModal()">
                             <i class="fas fa-plus"></i>
                             <span>Start Sprint</span>
                         </button>
                     </div>
                 </div>
                 <div id="sprint-tasks" class="board-view">
-                    <!-- Sprint tasks injected by dashboard.js -->
+                    <!-- Sprint tasks will be loaded here -->
                 </div>
             </div>
         </main>
     </div>
-
-    <!-- ================================================================
-         Task Modal
-         ================================================================ -->
-    <div class="modal" id="task-modal" role="dialog" aria-modal="true" aria-labelledby="task-modal-title">
+    
+    <!-- Task Modal -->
+    <div class="modal" id="task-modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="task-modal-title">Create Task</h3>
-                <!-- onclick removed — .close-modal handled by delegated listener -->
-                <button class="close-modal" aria-label="Close">&times;</button>
+                <h3>Create Task</h3>
+                <button class="close-modal" onclick="closeTaskModal()">&times;</button>
             </div>
             <form id="task-form">
                 <div class="modal-body">
@@ -159,21 +132,19 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary close-modal">Cancel</button>
+                    <button type="button" class="btn-secondary" onclick="closeTaskModal()">Cancel</button>
                     <button type="submit" class="btn-primary">Create Task</button>
                 </div>
             </form>
         </div>
     </div>
-
-    <!-- ================================================================
-         Project Modal
-         ================================================================ -->
-    <div class="modal" id="project-modal" role="dialog" aria-modal="true" aria-labelledby="project-modal-title">
+    
+    <!-- Project Modal -->
+    <div class="modal" id="project-modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="project-modal-title">Create Project</h3>
-                <button class="close-modal" aria-label="Close">&times;</button>
+                <h3>Create Project</h3>
+                <button class="close-modal" onclick="closeProjectModal()">&times;</button>
             </div>
             <form id="project-form">
                 <div class="modal-body">
@@ -187,33 +158,29 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary close-modal">Cancel</button>
+                    <button type="button" class="btn-secondary" onclick="closeProjectModal()">Cancel</button>
                     <button type="submit" class="btn-primary">Create Project</button>
                 </div>
             </form>
         </div>
     </div>
-
-    <!-- ================================================================
-         Sprint Modal
-         ================================================================ -->
-    <div class="modal" id="sprint-modal" role="dialog" aria-modal="true" aria-labelledby="sprint-modal-title">
+    
+    <!-- Sprint Modal -->
+    <div class="modal" id="sprint-modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="sprint-modal-title">Start New Sprint</h3>
-                <button class="close-modal" aria-label="Close">&times;</button>
+                <h3>Start New Sprint</h3>
+                <button class="close-modal" onclick="closeSprintModal()">&times;</button>
             </div>
             <form id="sprint-form">
                 <div class="modal-body">
                     <div class="form-group">
                         <label for="sprint-name">Sprint Name</label>
-                        <input type="text" id="sprint-name"
-                               placeholder="e.g. Sprint 1 — Authentication" required>
+                        <input type="text" id="sprint-name" placeholder="e.g., Sprint 1 - Authentication" required>
                     </div>
                     <div class="form-group">
                         <label for="sprint-goal">Goal</label>
-                        <textarea id="sprint-goal" rows="2"
-                                  placeholder="What do you want to accomplish?"></textarea>
+                        <textarea id="sprint-goal" rows="2" placeholder="What do you want to accomplish?"></textarea>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
@@ -227,45 +194,41 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary close-modal">Cancel</button>
+                    <button type="button" class="btn-secondary" onclick="closeSprintModal()">Cancel</button>
                     <button type="submit" class="btn-primary">Start Sprint</button>
                 </div>
             </form>
         </div>
     </div>
-
-    <!-- ================================================================
-         Comment Modal
-         ================================================================ -->
-    <div class="modal" id="comment-modal" role="dialog" aria-modal="true" aria-labelledby="comment-task-title">
+    
+    <!-- Comment Modal -->
+    <div class="modal" id="comment-modal">
         <div class="modal-content modal-large">
             <div class="modal-header">
                 <h3 id="comment-task-title">Task Comments</h3>
-                <button class="close-modal" aria-label="Close">&times;</button>
+                <button class="close-modal" onclick="closeCommentModal()">&times;</button>
             </div>
             <div class="modal-body">
                 <div id="comments-list" class="comments-list">
-                    <!-- Comments injected by dashboard.js -->
+                    <!-- Comments will be loaded here -->
                 </div>
                 <div class="form-group">
-                    <textarea id="new-comment" rows="3" placeholder="Write a comment…"></textarea>
+                    <textarea id="new-comment" rows="3" placeholder="Write a comment..."></textarea>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn-secondary close-modal">Close</button>
+                <button type="button" class="btn-secondary" onclick="closeCommentModal()">Close</button>
                 <button type="button" class="btn-primary" id="add-comment-btn">Add Comment</button>
             </div>
         </div>
     </div>
-
-    <!-- ================================================================
-         Firebase (compat SDK — v9 only, initialised once in firebase-config.js)
-         ================================================================ -->
+    
+    <!-- Firebase Scripts -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-
-    <!-- App scripts -->
+    
+    <!-- Application Scripts -->
     <script src="js/firebase-config.js"></script>
     <script src="js/dashboard.js"></script>
 </body>
