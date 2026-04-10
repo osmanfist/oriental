@@ -25,13 +25,14 @@ import { initializeApp } from "firebase/app";
 // https://firebase.google.com/docs/web/setup#available-libraries
 
 // Your web app's Firebase configuration
+// Use environment variables for production
 const firebaseConfig = {
-  apiKey: "AIzaSyAvpRHzvlTkUqk2vTo_98K_QrpNmLCtgqw",
-  authDomain: "oriental-8982d.firebaseapp.com",
-  projectId: "oriental-8982d",
-  storageBucket: "oriental-8982d.firebasestorage.app",
-  messagingSenderId: "1069834803185",
-  appId: "1:1069834803185:web:cbaa6fe37568dec7b29650"
+    apiKey: process.env.VITE_FIREBASE_API_KEY || "AIzaSyAvpRHzvlTkUqk2vTo_98K_QrpNmLCtgqw",
+    authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN || "oriental-8982d.firebaseapp.com",
+    projectId: process.env.VITE_FIREBASE_PROJECT_ID || "oriental-8982d",
+    storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET || "oriental-8982d.firebasestorage.app",
+    messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "1069834803185",
+    appId: process.env.VITE_FIREBASE_APP_ID || "1:1069834803185:web:cbaa6fe37568dec7b29650"
 };
 
 // Initialize Firebase
