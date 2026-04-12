@@ -1,91 +1,104 @@
 /**
  * Oriental - Dashboard Module
  * Version: 1.1.0
- *
- * Main application logic: task management, project handling,
- * real-time updates, drag-and-drop, sprints, and comments.
- *
- * Changes from v1.0.0:
- *  - Fixed userData scope bug (lines that ran outside try block)
- *  - Fixed infinite real-time loop (onSnapshot → loadTasks → setupRealtimeSubscription)
- *  - checkAuth now unsubscribes its listener immediately after first call
- *  - All event listeners centralised in setupEventListeners() — no more inline onclick
- *  - Visibility toggling uses classList exclusively (no mixed style.display)
- *  - Duplicate logout button IDs resolved (one shared handler, two IDs)
- *  - localStorage removed — Firebase Auth already caches the user
+ * 
+ * Main application logic including task management, project handling,
+ * real-time updates, drag-and-drop functionality, and comments.
  */
 
 // ============================================
-// Global State
+// Global State Variables
 // ============================================
-let currentUser         = null;
+let currentUser = null;
 let currentOrganization = null;
-let currentProject      = null;
-let currentView         = 'board';
+let currentProject = null;
+let currentView = 'board';
 let currentTaskForComments = null;
-let unsubscribeTasks    = null;
+let unsubscribeTasks = null;
 
 // ============================================
-// Initialisation
+// Initialization
 // ============================================
 
+/**
+ * Initialize dashboard when DOM is ready
+ */
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('Dashboard initialising…');
+    console.log('🚀 Dashboard initializing...');
     await checkAuth();
     await loadUserData();
     await loadOrganization();
     await loadProjects();
     setupEventListeners();
-    console.log('Dashboard ready');
+    setupRealtimeSubscription();
+    console.log('✅ Dashboard ready!');
 });
 
 /**
- * Verify the user is authenticated.
- * Unsubscribes the Firebase listener as soon as we have a result so it
- * doesn't accumulate across re-renders.
- * @returns {Promise<void>}
+ * Verify user is authenticated
  */
-function checkAuth() {
-    return new Promise((resolve) => {
-        const unsubscribe = auth.onAuthStateChanged((user) => {
-            unsubscribe(); // clean up — we only need the first result
+async function checkAuth() {
+    return new Promise((resolve, reject) => {
+        auth.onAuthStateChanged(async (user) => {
             if (!user) {
-                console.log('Not authenticated — redirecting to login');
+                console.log('No user found, redirecting to login...');
                 window.location.href = 'login.html';
-                return; // do not resolve; navigation is in progress
+                reject();
+            } else {
+                currentUser = user;
+                console.log('User authenticated:', user.email);
+                resolve();
             }
-            currentUser = user;
-            console.log('Authenticated:', user.email);
-            resolve();
         });
     });
 }
 
 // ============================================
-// Data Loading
+// Data Loading Functions
 // ============================================
 
 /**
- * Load the current user's document and populate the sidebar header.
+ * Load user data from Firestore
  */
 async function loadUserData() {
     try {
         const userDoc = await db.collection('users').doc(currentUser.uid).get();
-
+        
         if (userDoc.exists) {
             const userData = userDoc.data();
             currentOrganization = userData.currentOrganization;
-
-            // Populate sidebar user info — both elements live inside the try
-            // block so userData is guaranteed to be defined here
-            const nameEl  = document.getElementById('user-name');
-            const emailEl = document.getElementById('user-email');
-            if (nameEl)  nameEl.textContent  = userData.name  || currentUser.email;
-            if (emailEl) emailEl.textContent = currentUser.email;
-
+            
+            // Update organization name in sidebar
+            const orgNameElement = document.getElementById('org-name');
+            if (orgNameElement) {
+                orgNameElement.textContent = userData.name || currentUser.email;
+            }
+            
+            // Update user info section
+            const userNameElement = document.getElementById('user-name');
+            if (userNameElement) {
+                userNameElement.textContent = userData.name || currentUser.displayName || 'User';
+            }
+            
+            const userEmailElement = document.getElementById('user-email');
+            if (userEmailElement) {
+                userEmailElement.textContent = currentUser.email;
+            }
+            
             console.log('User data loaded');
         } else {
-            console.warn('User document not found for UID:', currentUser.uid);
+            console.warn('User document not found for:', currentUser.uid);
+            
+            // Fallback: use Firebase auth data
+            const userNameElement = document.getElementById('user-name');
+            if (userNameElement) {
+                userNameElement.textContent = currentUser.displayName || currentUser.email.split('@')[0];
+            }
+            
+            const userEmailElement = document.getElementById('user-email');
+            if (userEmailElement) {
+                userEmailElement.textContent = currentUser.email;
+            }
         }
     } catch (error) {
         console.error('Error loading user data:', error);
@@ -94,60 +107,71 @@ async function loadUserData() {
 }
 
 /**
- * Load organisation details and display the org name in the sidebar.
+ * Load organization details
  */
 async function loadOrganization() {
     if (!currentOrganization) return;
-
+    
     try {
         const orgDoc = await db.collection('organizations').doc(currentOrganization).get();
-
+        
         if (orgDoc.exists) {
             const orgData = orgDoc.data();
-            const orgNameEl = document.getElementById('org-name');
-            if (orgNameEl) orgNameEl.textContent = orgData.name;
-            console.log('Organisation loaded:', orgData.name);
+            const orgNameElement = document.getElementById('org-name');
+            if (orgNameElement) {
+                orgNameElement.textContent = orgData.name;
+            }
+            console.log('Organization loaded:', orgData.name);
         }
     } catch (error) {
-        console.error('Error loading organisation:', error);
+        console.error('Error loading organization:', error);
     }
 }
 
 /**
- * Load all non-archived projects for the current organisation.
+ * Load all projects for current organization
  */
 async function loadProjects() {
     if (!currentOrganization) return;
-
+    
     try {
-        const snapshot = await db.collection('projects')
+        const projectsSnapshot = await db.collection('projects')
             .where('organizationId', '==', currentOrganization)
             .where('isArchived', '==', false)
-            .orderBy('createdAt', 'desc')
             .get();
-
+        
         const projectList = document.getElementById('project-list');
         if (!projectList) return;
-
+        
         projectList.innerHTML = '';
-
-        if (snapshot.empty) {
-            projectList.innerHTML =
-                '<div class="empty-state-small">No projects yet. Click + to create one.</div>';
+        
+        // Sort manually
+        const projects = [];
+        projectsSnapshot.forEach(doc => {
+            projects.push({ id: doc.id, ...doc.data() });
+        });
+        
+        projects.sort((a, b) => {
+            if (a.createdAt && b.createdAt) {
+                return b.createdAt.toDate() - a.createdAt.toDate();
+            }
+            return 0;
+        });
+        
+        if (projects.length === 0) {
+            projectList.innerHTML = '<div class="empty-state-small">No projects yet. Click + to create one.</div>';
             return;
         }
-
-        snapshot.forEach((doc) => {
-            const project = { id: doc.id, ...doc.data() };
-            const el = createProjectElement(project);
-            projectList.appendChild(el);
-            loadTaskCount(project.id, el);
+        
+        projects.forEach(project => {
+            const projectElement = createProjectElement(project);
+            projectList.appendChild(projectElement);
+            loadTaskCount(project.id, projectElement);
         });
-
-        // Auto-select the first project if none is already active
-        if (!currentProject) {
-            const first = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
-            selectProject(first);
+        
+        // Select first project if none selected
+        if (projects.length > 0 && !currentProject) {
+            selectProject(projects[0]);
         }
     } catch (error) {
         console.error('Error loading projects:', error);
@@ -156,9 +180,7 @@ async function loadProjects() {
 }
 
 /**
- * Create a sidebar project list item element.
- * @param {Object} project
- * @returns {HTMLElement}
+ * Create project list item element
  */
 function createProjectElement(project) {
     const div = document.createElement('div');
@@ -174,96 +196,90 @@ function createProjectElement(project) {
 }
 
 /**
- * Fetch the task count for a project and update the badge in the sidebar.
- * Uses the Firestore count() aggregate to avoid loading full documents.
- * Falls back to a regular get() for SDK versions older than 9.8.
- *
- * @param {string}      projectId
- * @param {HTMLElement} projectElement
+ * Load task count for a project and update UI
  */
 async function loadTaskCount(projectId, projectElement) {
     try {
-        const query = db.collection('tasks').where('projectId', '==', projectId);
-        let count;
-
-        if (typeof query.count === 'function') {
-            // SDK ≥ 9.8 — aggregate count, zero document reads
-            const snap = await query.count().get();
-            count = snap.data().count;
-        } else {
-            // Fallback for older SDK versions
-            const snap = await query.get();
-            count = snap.size;
-        }
-
+        const tasksSnapshot = await db.collection('tasks')
+            .where('projectId', '==', projectId)
+            .get();
+        
         const countSpan = projectElement.querySelector('.project-count');
-        if (countSpan) countSpan.textContent = count;
+        if (countSpan) {
+            countSpan.textContent = tasksSnapshot.size;
+        }
     } catch (error) {
         console.error('Error loading task count:', error);
     }
 }
 
 /**
- * Mark a project as active and load its tasks.
- * @param {Object} project
+ * Select a project and load its tasks
  */
 async function selectProject(project) {
     currentProject = project;
     console.log('Project selected:', project.name);
-
-    // Highlight the active item in the sidebar
-    document.querySelectorAll('.project-item').forEach((item) => {
-        item.classList.toggle('active', item.getAttribute('data-project-id') === project.id);
+    
+    // Update UI
+    document.querySelectorAll('.project-item').forEach(item => {
+        item.classList.remove('active');
+        if (item.getAttribute('data-project-id') === project.id) {
+            item.classList.add('active');
+        }
     });
-
-    // Update the main header
+    
+    // Update header
     const headerTitle = document.querySelector('.dashboard-header h1');
-    if (headerTitle) headerTitle.textContent = project.name;
-
-    // Start the real-time subscription for this project's tasks.
-    // setupRealtimeSubscription both sets up the listener AND renders the board,
-    // so there is no separate loadTasks() call needed here.
-    setupRealtimeSubscription();
+    if (headerTitle) {
+        headerTitle.textContent = project.name;
+    }
+    
+    // Load tasks for this project
+    await loadTasks();
 }
 
-// ============================================
-// Real-time Subscription
-// ============================================
-
 /**
- * Register a Firestore real-time listener for the current project's tasks.
- *
- * The listener renders the board directly from snapshot data — there is no
- * separate loadTasks() step, which previously caused an infinite loop:
- *   onSnapshot → loadTasks → setupRealtimeSubscription → onSnapshot → …
- *
- * Call this once when a project is selected. It cleans up the previous
- * listener automatically.
+ * Load tasks for current project
  */
-function setupRealtimeSubscription() {
+async function loadTasks() {
     if (!currentProject) return;
-
-    // Cancel the previous listener before registering a new one
+    
+    // Clean up previous subscription
     if (unsubscribeTasks) {
         unsubscribeTasks();
-        unsubscribeTasks = null;
     }
-
-    unsubscribeTasks = db.collection('tasks')
-        .where('projectId', '==', currentProject.id)
-        .orderBy('order', 'asc')
-        .orderBy('createdAt', 'desc')
-        .onSnapshot(
-            (snapshot) => {
-                const tasks = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-                console.log(`Real-time update: ${tasks.length} tasks`);
-                renderBoard(tasks);
-            },
-            (error) => {
-                console.error('Real-time subscription error:', error);
-                showToast('Lost real-time connection. Please refresh.', 'error');
+    
+    try {
+        const tasksSnapshot = await db.collection('tasks')
+            .where('projectId', '==', currentProject.id)
+            .get();
+        
+        const tasks = [];
+        tasksSnapshot.forEach(doc => {
+            tasks.push({ id: doc.id, ...doc.data() });
+        });
+        
+        // Sort manually
+        tasks.sort((a, b) => {
+            if (a.order && b.order) {
+                return a.order - b.order;
             }
-        );
+            if (a.createdAt && b.createdAt) {
+                return b.createdAt.toDate() - a.createdAt.toDate();
+            }
+            return 0;
+        });
+        
+        console.log(`Loaded ${tasks.length} tasks`);
+        renderBoard(tasks);
+        
+        // Set up real-time listener
+        setupRealtimeSubscription();
+        
+    } catch (error) {
+        console.error('Error loading tasks:', error);
+        showToast('Error loading tasks', 'error');
+    }
 }
 
 // ============================================
@@ -271,45 +287,46 @@ function setupRealtimeSubscription() {
 // ============================================
 
 /**
- * Render the Kanban board, grouping tasks into three columns.
- * @param {Array} tasks
+ * Render the board view with tasks organized by status
  */
 function renderBoard(tasks) {
     const columns = {
-        'todo':        { title: 'To Do',       tasks: [], icon: 'fa-circle',       color: '#9ca3af' },
-        'in-progress': { title: 'In Progress',  tasks: [], icon: 'fa-spinner',      color: '#3b82f6' },
-        'done':        { title: 'Done',          tasks: [], icon: 'fa-check-circle', color: '#10b981' },
+        'todo': { title: 'To Do', tasks: [], icon: 'fa-circle', color: '#9ca3af' },
+        'in-progress': { title: 'In Progress', tasks: [], icon: 'fa-spinner', color: '#3b82f6' },
+        'done': { title: 'Done', tasks: [], icon: 'fa-check-circle', color: '#10b981' }
     };
-
-    tasks.forEach((task) => {
+    
+    // Organize tasks by status
+    tasks.forEach(task => {
         const status = task.status || 'todo';
-        if (columns[status]) columns[status].tasks.push(task);
+        if (columns[status]) {
+            columns[status].tasks.push(task);
+        }
     });
-
+    
     const boardView = document.getElementById('board-view');
     if (!boardView) return;
-
+    
     boardView.innerHTML = '';
-
+    
     for (const [key, column] of Object.entries(columns)) {
-        boardView.appendChild(createColumnElement(key, column));
+        const columnElement = createColumnElement(key, column);
+        boardView.appendChild(columnElement);
     }
-
+    
+    // Setup drag and drop after rendering
     setupDragAndDrop();
 }
 
 /**
- * Build a board column element.
- * @param {string} status
- * @param {Object} column
- * @returns {HTMLElement}
+ * Create a board column element
  */
 function createColumnElement(status, column) {
-    const div = document.createElement('div');
-    div.className = 'board-column';
-    div.setAttribute('data-status', status);
-
-    div.innerHTML = `
+    const columnDiv = document.createElement('div');
+    columnDiv.className = 'board-column';
+    columnDiv.setAttribute('data-status', status);
+    
+    columnDiv.innerHTML = `
         <div class="column-header">
             <span class="column-title">
                 <i class="fas ${column.icon}" style="color: ${column.color}"></i>
@@ -318,47 +335,43 @@ function createColumnElement(status, column) {
             <span class="column-count">${column.tasks.length}</span>
         </div>
         <div class="tasks-container" data-status="${status}">
-            ${column.tasks.map(createTaskCard).join('')}
+            ${column.tasks.map(task => createTaskCard(task)).join('')}
         </div>
     `;
-
-    return div;
+    
+    return columnDiv;
 }
 
 /**
- * Return the HTML string for a task card.
- * @param {Object} task
- * @returns {string}
+ * Create a task card element with onclick handler
  */
 function createTaskCard(task) {
-    const priorityClass = task.priority === 'high'   ? 'priority-high'   :
-                          task.priority === 'medium' ? 'priority-medium' : 'priority-low';
-    const priorityIcon  = task.priority === 'high'   ? 'fa-arrow-up'     :
-                          task.priority === 'medium' ? 'fa-minus'        : 'fa-arrow-down';
-
-    // Note: openComments is called via a data attribute + delegated listener
-    // in setupEventListeners() — not an inline onclick — so window export is
-    // no longer required for this handler.
+    const priorityClass = task.priority === 'high' ? 'priority-high' : 
+                         (task.priority === 'medium' ? 'priority-medium' : 'priority-low');
+    
+    const priorityIcon = task.priority === 'high' ? 'fa-arrow-up' : 
+                        (task.priority === 'medium' ? 'fa-minus' : 'fa-arrow-down');
+    
+    // Escape task ID for safe use in onclick
+    const safeTaskId = task.id.replace(/'/g, "\\'");
+    
     return `
-        <div class="task-card" draggable="true"
-             data-task-id="${escapeHtml(task.id)}"
-             data-status="${escapeHtml(task.status || 'todo')}">
+        <div class="task-card" 
+             draggable="true" 
+             data-task-id="${task.id}" 
+             data-status="${task.status || 'todo'}" 
+             onclick="openTaskDetail('${safeTaskId}')">
             <div class="task-title">${escapeHtml(task.title)}</div>
-            ${task.description
-                ? `<div class="task-description">${escapeHtml(task.description.substring(0, 100))}</div>`
-                : ''}
+            ${task.description ? `<div class="task-description">${escapeHtml(task.description.substring(0, 100))}</div>` : ''}
             <div class="task-meta">
                 <span class="priority ${priorityClass}">
-                    <i class="fas ${priorityIcon}"></i> ${escapeHtml(task.priority || 'medium')}
+                    <i class="fas ${priorityIcon}"></i> ${task.priority || 'medium'}
                 </span>
                 <span class="assignee">
                     <i class="fas fa-user"></i>
-                    ${task.assignedTo ? escapeHtml(task.assignedTo.substring(0, 8)) : 'Unassigned'}
+                    ${task.assignedTo ? task.assignedTo.substring(0, 8) : 'Unassigned'}
                 </span>
-                <button class="comment-btn"
-                        data-task-id="${escapeHtml(task.id)}"
-                        data-task-title="${escapeHtml(task.title)}"
-                        aria-label="View comments">
+                <button class="comment-btn" onclick="event.stopPropagation(); openTaskDetail('${safeTaskId}')">
                     <i class="fas fa-comment"></i>
                 </button>
             </div>
@@ -367,56 +380,79 @@ function createTaskCard(task) {
 }
 
 // ============================================
-// Drag and Drop
+// Drag and Drop Functionality
 // ============================================
 
 let draggedTask = null;
 
+/**
+ * Setup drag and drop event listeners
+ */
 function setupDragAndDrop() {
-    document.querySelectorAll('.task-card').forEach((card) => {
-        card.addEventListener('dragstart', handleDragStart);
-        card.addEventListener('dragend',   handleDragEnd);
+    const tasks = document.querySelectorAll('.task-card');
+    const containers = document.querySelectorAll('.tasks-container');
+    
+    tasks.forEach(task => {
+        task.setAttribute('draggable', 'true');
+        task.addEventListener('dragstart', handleDragStart);
+        task.addEventListener('dragend', handleDragEnd);
     });
-
-    document.querySelectorAll('.tasks-container').forEach((container) => {
+    
+    containers.forEach(container => {
         container.addEventListener('dragover', handleDragOver);
-        container.addEventListener('drop',     handleDrop);
+        container.addEventListener('drop', handleDrop);
     });
 }
 
+/**
+ * Handle drag start event
+ */
 function handleDragStart(e) {
     draggedTask = this;
     e.dataTransfer.setData('text/plain', this.dataset.taskId);
     this.style.opacity = '0.5';
 }
 
-function handleDragEnd() {
-    if (draggedTask) draggedTask.style.opacity = '';
+/**
+ * Handle drag end event
+ */
+function handleDragEnd(e) {
+    if (draggedTask) {
+        draggedTask.style.opacity = '';
+    }
     draggedTask = null;
 }
 
+/**
+ * Handle drag over event
+ */
 function handleDragOver(e) {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
 }
 
+/**
+ * Handle drop event - update task status
+ */
 async function handleDrop(e) {
     e.preventDefault();
     const container = e.target.closest('.tasks-container');
     if (!container || !draggedTask) return;
-
+    
     const newStatus = container.dataset.status;
-    const taskId    = draggedTask.dataset.taskId;
+    const taskId = draggedTask.dataset.taskId;
     const oldStatus = draggedTask.dataset.status;
-
+    
     if (newStatus === oldStatus) return;
-
+    
     try {
         await db.collection('tasks').doc(taskId).update({
-            status:    newStatus,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            status: newStatus,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
+        
         showToast('Task status updated', 'success');
+        
     } catch (error) {
         console.error('Error updating task status:', error);
         showToast('Error updating task', 'error');
@@ -424,43 +460,49 @@ async function handleDrop(e) {
 }
 
 // ============================================
-// Task CRUD
+// Task CRUD Operations
 // ============================================
 
 /**
- * Create a new task in Firestore for the current project.
- * @param {Object} taskData
- * @returns {Promise<boolean>}
+ * Create a new task
  */
 async function createTask(taskData) {
+    console.log('createTask called with:', taskData);
+    
     if (!currentProject) {
         showToast('Please select a project first', 'warning');
+        console.log('No project selected');
         return false;
     }
+    
     if (!taskData.title) {
         showToast('Please enter a task title', 'warning');
         return false;
     }
-
+    
     try {
-        await db.collection('tasks').add({
-            projectId:      currentProject.id,
-            title:          taskData.title,
-            description:    taskData.description   || '',
-            priority:       taskData.priority      || 'medium',
-            status:         'todo',
-            assignedTo:     taskData.assignedTo    || null,
-            dueDate:        taskData.dueDate       || null,
+        const task = {
+            projectId: currentProject.id,
+            title: taskData.title,
+            description: taskData.description || '',
+            priority: taskData.priority || 'medium',
+            status: 'todo',
+            assignedTo: taskData.assignedTo || null,
+            dueDate: taskData.dueDate || null,
             estimatedHours: taskData.estimatedHours || 0,
-            tags:           taskData.tags          || [],
-            order:          Date.now(),
-            createdBy:      currentUser.uid,
-            createdAt:      firebase.firestore.FieldValue.serverTimestamp(),
-            updatedAt:      firebase.firestore.FieldValue.serverTimestamp(),
-        });
-
-        showToast('Task created', 'success');
+            tags: taskData.tags || [],
+            order: Date.now(),
+            createdBy: currentUser.uid,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        
+        console.log('Saving task to Firestore:', task);
+        const docRef = await db.collection('tasks').add(task);
+        console.log('Task created with ID:', docRef.id);
+        showToast('Task created successfully', 'success');
         return true;
+        
     } catch (error) {
         console.error('Error creating task:', error);
         showToast('Error creating task: ' + error.message, 'error');
@@ -469,107 +511,138 @@ async function createTask(taskData) {
 }
 
 // ============================================
-// Project CRUD
+// Task Detail & Comments System
 // ============================================
 
 /**
- * Create a new project in the current organisation.
- * @param {Object} projectData
- * @returns {Promise<boolean>}
+ * Open task detail modal (shows comments and task info)
  */
-async function createProject(projectData) {
-    if (!currentOrganization) return false;
-
+async function openTaskDetail(taskId) {
+    console.log('🔍 Opening task detail for:', taskId);
+    currentTaskForComments = taskId;
+    
     try {
-        await db.collection('projects').add({
-            organizationId: currentOrganization,
-            name:           projectData.name,
-            description:    projectData.description || '',
-            color:          projectData.color       || '#6366f1',
-            isArchived:     false,
-            createdBy:      currentUser.uid,
-            createdAt:      firebase.firestore.FieldValue.serverTimestamp(),
-        });
-
-        showToast('Project created', 'success');
-        await loadProjects();
-        return true;
+        // Fetch task data to display title
+        const taskDoc = await db.collection('tasks').doc(taskId).get();
+        
+        if (taskDoc.exists) {
+            const task = taskDoc.data();
+            const modalTitle = document.getElementById('comment-task-title');
+            if (modalTitle) {
+                modalTitle.textContent = task.title;
+            }
+        } else {
+            const modalTitle = document.getElementById('comment-task-title');
+            if (modalTitle) {
+                modalTitle.textContent = 'Task Comments';
+            }
+        }
+        
+        // Load and display comments
+        await loadComments(taskId);
+        
+        // Open modal
+        const modal = document.getElementById('comment-modal');
+        if (modal) {
+            modal.style.display = 'flex';
+            modal.classList.add('active');
+            console.log('✅ Comment modal opened');
+        }
+        
     } catch (error) {
-        console.error('Error creating project:', error);
-        showToast('Error creating project', 'error');
-        return false;
+        console.error('Error opening task detail:', error);
+        showToast('Error loading task details', 'error');
     }
 }
 
-// ============================================
-// Comments
-// ============================================
-
-async function openComments(taskId, taskTitle) {
-    currentTaskForComments = taskId;
-    const modalTitle = document.getElementById('comment-task-title');
-    if (modalTitle) modalTitle.textContent = `Comments: ${taskTitle}`;
-    await loadComments(taskId);
-    document.getElementById('comment-modal').classList.add('active');
-}
-
+/**
+ * Load comments for a task
+ */
 async function loadComments(taskId) {
     try {
-        const snapshot = await db.collection('comments')
+        console.log('📝 Loading comments for task:', taskId);
+        
+        const commentsSnapshot = await db.collection('comments')
             .where('taskId', '==', taskId)
             .orderBy('createdAt', 'desc')
             .get();
-
-        const list = document.getElementById('comments-list');
-        if (!list) return;
-
-        list.innerHTML = '';
-
-        if (snapshot.empty) {
-            list.innerHTML =
-                '<div class="empty-state"><p><i class="fas fa-comments"></i><br>No comments yet</p></div>';
+        
+        const commentsList = document.getElementById('comments-list');
+        if (!commentsList) {
+            console.error('Comments list element not found');
             return;
         }
-
-        snapshot.forEach((doc) => {
-            list.appendChild(createCommentElement(doc.data()));
+        
+        commentsList.innerHTML = '';
+        
+        if (commentsSnapshot.empty) {
+            commentsList.innerHTML = '<div class="empty-state"><p><i class="fas fa-comments"></i><br>No comments yet</p></div>';
+            console.log('No comments found');
+            return;
+        }
+        
+        console.log(`✅ Found ${commentsSnapshot.size} comments`);
+        
+        commentsSnapshot.forEach(doc => {
+            const comment = doc.data();
+            const commentElement = createCommentElement(comment);
+            commentsList.appendChild(commentElement);
         });
+        
     } catch (error) {
         console.error('Error loading comments:', error);
+        const commentsList = document.getElementById('comments-list');
+        if (commentsList) {
+            commentsList.innerHTML = '<div class="empty-state"><p>Error loading comments</p></div>';
+        }
     }
 }
 
+/**
+ * Create comment element
+ */
 function createCommentElement(comment) {
     const div = document.createElement('div');
     div.className = 'comment-item';
+    
+    let timestamp = 'Just now';
+    if (comment.createdAt && comment.createdAt.toDate) {
+        timestamp = new Date(comment.createdAt.toDate()).toLocaleString();
+    }
+    
     div.innerHTML = `
         <div class="comment-author">
-            <i class="fas fa-user-circle"></i> ${escapeHtml(comment.userName || 'User')}
+            <i class="fas fa-user-circle"></i> 
+            ${escapeHtml(comment.userName || 'Anonymous')}
         </div>
         <div class="comment-content">${escapeHtml(comment.content)}</div>
         <div class="comment-time">
-            ${comment.createdAt ? new Date(comment.createdAt.toDate()).toLocaleString() : 'Just now'}
+            <i class="far fa-clock"></i> ${timestamp}
         </div>
     `;
     return div;
 }
 
+/**
+ * Add a comment to a task
+ */
 async function addComment(taskId, content) {
     if (!content.trim()) return false;
-
+    
     try {
         await db.collection('comments').add({
-            taskId,
-            userId:    currentUser.uid,
-            userName:  currentUser.displayName || currentUser.email,
-            content:   content.trim(),
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            taskId: taskId,
+            userId: currentUser.uid,
+            userName: currentUser.displayName || currentUser.email,
+            content: content.trim(),
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-
+        
         await loadComments(taskId);
         document.getElementById('new-comment').value = '';
         showToast('Comment added', 'success');
         return true;
+        
     } catch (error) {
         console.error('Error adding comment:', error);
         showToast('Error adding comment', 'error');
@@ -578,196 +651,279 @@ async function addComment(taskId, content) {
 }
 
 // ============================================
-// Sprints (placeholder)
+// Project CRUD Operations
 // ============================================
 
-async function loadSprints() {
-    const container = document.getElementById('sprint-tasks');
-    if (container) {
-        container.innerHTML =
-            '<div class="empty-state"><p><i class="fas fa-calendar-alt"></i><br>Sprint feature coming soon!</p></div>';
+/**
+ * Create a new project
+ */
+async function createProject(projectData) {
+    if (!currentOrganization) return false;
+    
+    try {
+        const project = {
+            organizationId: currentOrganization,
+            name: projectData.name,
+            description: projectData.description || '',
+            color: projectData.color || '#6366f1',
+            isArchived: false,
+            createdBy: currentUser.uid,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        
+        await db.collection('projects').add(project);
+        showToast('Project created successfully', 'success');
+        await loadProjects();
+        return true;
+        
+    } catch (error) {
+        console.error('Error creating project:', error);
+        showToast('Error creating project', 'error');
+        return false;
     }
+}
+
+// ============================================
+// Real-time Subscriptions
+// ============================================
+
+/**
+ * Set up real-time listener for tasks
+ */
+function setupRealtimeSubscription() {
+    if (!currentProject) return;
+    
+    // Clean up previous subscription
+    if (unsubscribeTasks) {
+        unsubscribeTasks();
+    }
+    
+    unsubscribeTasks = db.collection('tasks')
+        .where('projectId', '==', currentProject.id)
+        .onSnapshot((snapshot) => {
+            console.log('Real-time update: tasks changed');
+            loadTasks();
+        }, (error) => {
+            console.error('Realtime subscription error:', error);
+        });
+}
+
+// ============================================
+// UI Event Listeners
+// ============================================
+
+/**
+ * Setup all event listeners
+ */
+function setupEventListeners() {
+    console.log('Setting up event listeners...');
+    
+    // Navigation
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            const view = item.dataset.view;
+            
+            document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+            item.classList.add('active');
+            
+            if (view === 'board') {
+                document.getElementById('board-view').style.display = 'flex';
+                document.getElementById('sprints-view').classList.remove('active');
+                currentView = 'board';
+            } else if (view === 'sprints') {
+                document.getElementById('board-view').style.display = 'none';
+                document.getElementById('sprints-view').classList.add('active');
+                currentView = 'sprints';
+                loadSprints();
+            }
+        });
+    });
+    
+    // Task form submission
+    const taskForm = document.getElementById('task-form');
+    if (taskForm) {
+        taskForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const taskData = {
+                title: document.getElementById('task-title').value,
+                description: document.getElementById('task-description').value,
+                priority: document.getElementById('task-priority').value,
+                assignedTo: document.getElementById('task-assignee').value,
+                dueDate: document.getElementById('task-due-date').value,
+                estimatedHours: parseFloat(document.getElementById('task-estimate')?.value || 0)
+            };
+            
+            const success = await createTask(taskData);
+            if (success) {
+                closeTaskModal();
+                taskForm.reset();
+            }
+        });
+    }
+    
+    // Project form submission
+    const projectForm = document.getElementById('project-form');
+    if (projectForm) {
+        projectForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const projectData = {
+                name: document.getElementById('project-name').value,
+                description: document.getElementById('project-description').value,
+                color: document.getElementById('project-color')?.value
+            };
+            
+            const success = await createProject(projectData);
+            if (success) {
+                closeProjectModal();
+                projectForm.reset();
+            }
+        });
+    }
+    
+    // Add comment button
+    const addCommentBtn = document.getElementById('add-comment-btn');
+    if (addCommentBtn) {
+        // Remove existing listeners to avoid duplicates
+        const newAddBtn = addCommentBtn.cloneNode(true);
+        addCommentBtn.parentNode.replaceChild(newAddBtn, addCommentBtn);
+        
+        newAddBtn.addEventListener('click', async () => {
+            const content = document.getElementById('new-comment').value;
+            console.log('💬 Add comment clicked, content:', content);
+            
+            if (!content || !content.trim()) {
+                showToast('Please enter a comment', 'warning');
+                return;
+            }
+            
+            if (!currentTaskForComments) {
+                showToast('No task selected', 'error');
+                return;
+            }
+            
+            await addComment(currentTaskForComments, content);
+        });
+    }
+    
+    // Logout button
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', async () => {
+            console.log('Logging out...');
+            await auth.signOut();
+            localStorage.removeItem('oriental_user');
+            window.location.href = 'login.html';
+        });
+    }
+    
+    console.log('✅ Event listeners setup complete');
 }
 
 // ============================================
 // Modal Controls
 // ============================================
 
-function openTaskModal() {
-    if (!currentProject) {
-        showToast('Please select a project first', 'warning');
-        return;
-    }
-    document.getElementById('task-modal').classList.add('active');
-}
-
 function closeTaskModal() {
-    document.getElementById('task-modal').classList.remove('active');
-    document.getElementById('task-form')?.reset();
-}
-
-function openProjectModal() {
-    document.getElementById('project-modal').classList.add('active');
+    const modal = document.getElementById('task-modal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('active');
+    }
+    const form = document.getElementById('task-form');
+    if (form) form.reset();
+    console.log('Task modal closed');
 }
 
 function closeProjectModal() {
-    document.getElementById('project-modal').classList.remove('active');
-    document.getElementById('project-form')?.reset();
+    const modal = document.getElementById('project-modal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('active');
+    }
+    const form = document.getElementById('project-form');
+    if (form) form.reset();
+    console.log('Project modal closed');
 }
 
-function openSprintModal() {
+function closeSprintModal() {
+    const modal = document.getElementById('sprint-modal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('active');
+    }
+    const form = document.getElementById('sprint-form');
+    if (form) form.reset();
+    console.log('Sprint modal closed');
+}
+
+function closeCommentModal() {
+    const modal = document.getElementById('comment-modal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('active');
+    }
+    const textarea = document.getElementById('new-comment');
+    if (textarea) textarea.value = '';
+    console.log('Comment modal closed');
+}
+
+function openTaskModal() {
+    console.log('Opening task modal');
     if (!currentProject) {
         showToast('Please select a project first', 'warning');
         return;
     }
-    document.getElementById('sprint-modal').classList.add('active');
+    const modal = document.getElementById('task-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.add('active');
+        console.log('Task modal opened');
+    } else {
+        console.error('Task modal not found');
+    }
 }
 
-function closeSprintModal() {
-    document.getElementById('sprint-modal').classList.remove('active');
-    document.getElementById('sprint-form')?.reset();
+function openProjectModal() {
+    console.log('Opening project modal');
+    const modal = document.getElementById('project-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.add('active');
+        console.log('Project modal opened');
+    } else {
+        console.error('Project modal not found');
+    }
 }
 
-function closeCommentModal() {
-    document.getElementById('comment-modal').classList.remove('active');
-    const textarea = document.getElementById('new-comment');
-    if (textarea) textarea.value = '';
+function openSprintModal() {
+    console.log('Opening sprint modal');
+    if (!currentProject) {
+        showToast('Please select a project first', 'warning');
+        return;
+    }
+    const modal = document.getElementById('sprint-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.add('active');
+        console.log('Sprint modal opened');
+    } else {
+        console.error('Sprint modal not found');
+    }
 }
 
 // ============================================
-// Event Listeners
+// Sprint Functions (Placeholder for future enhancement)
 // ============================================
 
-/**
- * Attach all event listeners in one place.
- * No inline onclick attributes are used — all handlers are registered here.
- */
-function setupEventListeners() {
-    // ---- Navigation (Board / Sprints) ----
-    document.querySelectorAll('.nav-item').forEach((item) => {
-        item.addEventListener('click', (e) => {
-            e.preventDefault();
-            const view = item.dataset.view;
-
-            document.querySelectorAll('.nav-item').forEach((nav) => nav.classList.remove('active'));
-            item.classList.add('active');
-
-            // Use classList for all visibility toggling — no style.display
-            const boardView   = document.getElementById('board-view');
-            const sprintsView = document.getElementById('sprints-view');
-
-            if (view === 'board') {
-                boardView.classList.remove('hidden');
-                sprintsView.classList.add('hidden');
-                currentView = 'board';
-            } else if (view === 'sprints') {
-                boardView.classList.add('hidden');
-                sprintsView.classList.remove('hidden');
-                currentView = 'sprints';
-                loadSprints();
-            }
-        });
-    });
-
-    // ---- New Task button ----
-    document.getElementById('create-task-btn')
-        ?.addEventListener('click', openTaskModal);
-
-    // ---- Add Project button ----
-    document.getElementById('add-project-btn')
-        ?.addEventListener('click', openProjectModal);
-
-    // ---- Create Sprint button ----
-    document.getElementById('create-sprint-btn')
-        ?.addEventListener('click', openSprintModal);
-
-    // ---- Modal close buttons ----
-    document.querySelectorAll('.close-modal').forEach((btn) => {
-        btn.addEventListener('click', () => {
-            // Find the parent modal and remove the active class
-            const modal = btn.closest('.modal');
-            if (modal) modal.classList.remove('active');
-        });
-    });
-
-    // ---- Cancel buttons in modals ----
-    document.querySelectorAll('[data-dismiss="modal"]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-            btn.closest('.modal')?.classList.remove('active');
-        });
-    });
-
-    // ---- Task form ----
-    document.getElementById('task-form')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const taskData = {
-            title:          document.getElementById('task-title').value,
-            description:    document.getElementById('task-description').value,
-            priority:       document.getElementById('task-priority').value,
-            assignedTo:     document.getElementById('task-assignee').value,
-            dueDate:        document.getElementById('task-due-date').value,
-            estimatedHours: parseFloat(document.getElementById('task-estimate')?.value || 0),
-        };
-        const success = await createTask(taskData);
-        if (success) closeTaskModal();
-    });
-
-    // ---- Project form ----
-    document.getElementById('project-form')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const projectData = {
-            name:        document.getElementById('project-name').value,
-            description: document.getElementById('project-description').value,
-            color:       document.getElementById('project-color')?.value,
-        };
-        const success = await createProject(projectData);
-        if (success) closeProjectModal();
-    });
-
-    // ---- Sprint form ----
-    document.getElementById('sprint-form')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        // Sprint creation logic goes here when the feature is implemented
-        showToast('Sprint feature coming soon!', 'info');
-        closeSprintModal();
-    });
-
-    // ---- Add Comment button ----
-    document.getElementById('add-comment-btn')?.addEventListener('click', async () => {
-        const content = document.getElementById('new-comment').value;
-        await addComment(currentTaskForComments, content);
-    });
-
-    // ---- Comment modal close ----
-    // The generic .close-modal handler above covers this, but keep the
-    // explicit close as well in case the modal has its own Cancel button.
-    document.querySelector('#comment-modal .btn-secondary')
-        ?.addEventListener('click', closeCommentModal);
-
-    // ---- Delegated listener for comment buttons on task cards ----
-    // Task cards are re-rendered on every real-time update so we delegate
-    // to the board container to avoid re-attaching on every render.
-    document.getElementById('board-view')?.addEventListener('click', (e) => {
-        const btn = e.target.closest('.comment-btn');
-        if (!btn) return;
-        e.stopPropagation();
-        const { taskId, taskTitle } = btn.dataset;
-        if (taskId) openComments(taskId, taskTitle || 'Task');
-    });
-
-    // ---- Logout buttons (icon in user-info bar + text button in sidebar footer) ----
-    // Both buttons share the same handler; they now have distinct IDs.
-    const handleLogout = async () => {
-        console.log('Signing out…');
-        if (unsubscribeTasks) unsubscribeTasks();
-        await auth.signOut();
-        window.location.href = 'login.html';
-    };
-
-    document.getElementById('logout-btn-icon')?.addEventListener('click', handleLogout);
-    document.getElementById('logout-btn-sidebar')?.addEventListener('click', handleLogout);
-
-    console.log('Event listeners ready');
+async function loadSprints() {
+    console.log('Loading sprints view');
+    const sprintContainer = document.getElementById('sprint-tasks');
+    if (sprintContainer) {
+        sprintContainer.innerHTML = '<div class="empty-state"><p><i class="fas fa-calendar-alt"></i><br>Sprint feature coming soon!</p></div>';
+    }
 }
 
 // ============================================
@@ -775,9 +931,7 @@ function setupEventListeners() {
 // ============================================
 
 /**
- * Escape HTML entities to prevent XSS.
- * @param {string} text
- * @returns {string}
+ * Escape HTML to prevent XSS attacks
  */
 function escapeHtml(text) {
     if (!text) return '';
@@ -787,22 +941,35 @@ function escapeHtml(text) {
 }
 
 /**
- * Display a brief toast notification.
- * @param {string} message
- * @param {'info'|'success'|'warning'|'error'} type
+ * Show toast notification
  */
 function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    
     const icons = {
         success: 'fa-check-circle',
-        error:   'fa-exclamation-circle',
+        error: 'fa-exclamation-circle',
         warning: 'fa-exclamation-triangle',
-        info:    'fa-info-circle',
+        info: 'fa-info-circle'
     };
-
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    toast.innerHTML = `<i class="fas ${icons[type] || icons.info}"></i> ${escapeHtml(message)}`;
+    
+    toast.innerHTML = `<i class="fas ${icons[type] || icons.info}"></i> ${message}`;
     document.body.appendChild(toast);
-
-    setTimeout(() => toast.remove(), 3000);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
 }
+
+// ============================================
+// Global Exports (for inline onclick handlers)
+// ============================================
+window.openTaskDetail = openTaskDetail;
+window.closeTaskModal = closeTaskModal;
+window.closeProjectModal = closeProjectModal;
+window.closeSprintModal = closeSprintModal;
+window.closeCommentModal = closeCommentModal;
+window.openTaskModal = openTaskModal;
+window.openProjectModal = openProjectModal;
+window.openSprintModal = openSprintModal;
