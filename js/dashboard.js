@@ -1,9 +1,9 @@
 /**
  * Oriental - Dashboard Module
- * Version: 1.1.0
+ * Version: 1.2.0
  * 
  * Main application logic including task management, project handling,
- * real-time updates, drag-and-drop functionality, and comments.
+ * real-time updates, drag-and-drop functionality, comments, and CRUD operations.
  */
 
 // ============================================
@@ -180,7 +180,7 @@ async function loadProjects() {
 }
 
 /**
- * Create project list item element
+ * Create project list item element with delete button
  */
 function createProjectElement(project) {
     const div = document.createElement('div');
@@ -189,9 +189,17 @@ function createProjectElement(project) {
     div.innerHTML = `
         <div class="project-color" style="background: ${project.color || '#6366f1'}"></div>
         <span class="project-name">${escapeHtml(project.name)}</span>
-        <span class="project-count">0</span>
+        <span class="project-count" id="project-count-${project.id}">0</span>
+        <button class="delete-project-btn" onclick="event.stopPropagation(); deleteProject('${project.id}', '${escapeHtml(project.name)}')">
+            <i class="fas fa-trash"></i>
+        </button>
     `;
-    div.addEventListener('click', () => selectProject(project));
+    div.addEventListener('click', (e) => {
+        // Don't select project if clicking delete button
+        if (!e.target.closest('.delete-project-btn')) {
+            selectProject(project);
+        }
+    });
     return div;
 }
 
@@ -369,7 +377,7 @@ function createTaskCard(task) {
                 </span>
                 <span class="assignee">
                     <i class="fas fa-user"></i>
-                    ${task.assignedTo ? task.assignedTo.substring(0, 8) : 'Unassigned'}
+                    ${task.assignedTo ? escapeHtml(task.assignedTo.substring(0, 8)) : 'Unassigned'}
                 </span>
                 <button class="comment-btn" onclick="event.stopPropagation(); openTaskDetail('${safeTaskId}')">
                     <i class="fas fa-comment"></i>
@@ -510,35 +518,192 @@ async function createTask(taskData) {
     }
 }
 
+/**
+ * Update an existing task
+ */
+async function updateTask(taskId, taskData) {
+    console.log('Updating task:', taskId, taskData);
+    
+    try {
+        await db.collection('tasks').doc(taskId).update({
+            title: taskData.title,
+            description: taskData.description || '',
+            priority: taskData.priority || 'medium',
+            assignedTo: taskData.assignedTo || null,
+            dueDate: taskData.dueDate || null,
+            estimatedHours: taskData.estimatedHours || 0,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        showToast('Task updated successfully', 'success');
+        return true;
+        
+    } catch (error) {
+        console.error('Error updating task:', error);
+        showToast('Error updating task: ' + error.message, 'error');
+        return false;
+    }
+}
+
+/**
+ * Delete a task
+ */
+async function deleteTask(taskId) {
+    if (!confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
+        return false;
+    }
+    
+    try {
+        // Delete associated comments first
+        const commentsSnapshot = await db.collection('comments')
+            .where('taskId', '==', taskId)
+            .get();
+        
+        const batch = db.batch();
+        commentsSnapshot.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+        
+        // Delete task
+        const taskRef = db.collection('tasks').doc(taskId);
+        batch.delete(taskRef);
+        
+        await batch.commit();
+        
+        showToast('Task deleted successfully', 'success');
+        
+        // Close modal if open
+        closeCommentModal();
+        
+        return true;
+        
+    } catch (error) {
+        console.error('Error deleting task:', error);
+        showToast('Error deleting task: ' + error.message, 'error');
+        return false;
+    }
+}
+
+// ============================================
+// Project CRUD Operations
+// ============================================
+
+/**
+ * Create a new project
+ */
+async function createProject(projectData) {
+    if (!currentOrganization) return false;
+    
+    try {
+        const project = {
+            organizationId: currentOrganization,
+            name: projectData.name,
+            description: projectData.description || '',
+            color: projectData.color || '#6366f1',
+            isArchived: false,
+            createdBy: currentUser.uid,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        
+        await db.collection('projects').add(project);
+        showToast('Project created successfully', 'success');
+        await loadProjects();
+        return true;
+        
+    } catch (error) {
+        console.error('Error creating project:', error);
+        showToast('Error creating project', 'error');
+        return false;
+    }
+}
+
+/**
+ * Delete a project
+ */
+async function deleteProject(projectId, projectName) {
+    if (!confirm(`Delete project "${projectName}"? This will also delete ALL tasks and comments in this project. This action cannot be undone.`)) {
+        return false;
+    }
+    
+    try {
+        // Get all tasks in this project
+        const tasksSnapshot = await db.collection('tasks')
+            .where('projectId', '==', projectId)
+            .get();
+        
+        const batch = db.batch();
+        
+        // Delete all comments for each task, then delete tasks
+        for (const taskDoc of tasksSnapshot.docs) {
+            const commentsSnapshot = await db.collection('comments')
+                .where('taskId', '==', taskDoc.id)
+                .get();
+            
+            commentsSnapshot.forEach(commentDoc => {
+                batch.delete(commentDoc.ref);
+            });
+            
+            batch.delete(taskDoc.ref);
+        }
+        
+        // Delete the project
+        const projectRef = db.collection('projects').doc(projectId);
+        batch.delete(projectRef);
+        
+        await batch.commit();
+        
+        showToast(`Project "${projectName}" deleted successfully`, 'success');
+        
+        // Reload projects
+        await loadProjects();
+        
+        return true;
+        
+    } catch (error) {
+        console.error('Error deleting project:', error);
+        showToast('Error deleting project: ' + error.message, 'error');
+        return false;
+    }
+}
+
 // ============================================
 // Task Detail & Comments System
 // ============================================
 
 /**
- * Open task detail modal (shows comments and task info)
+ * Open task detail modal with edit capability
  */
 async function openTaskDetail(taskId) {
     console.log('🔍 Opening task detail for:', taskId);
     currentTaskForComments = taskId;
     
     try {
-        // Fetch task data to display title
+        // Fetch task data
         const taskDoc = await db.collection('tasks').doc(taskId).get();
         
-        if (taskDoc.exists) {
-            const task = taskDoc.data();
-            const modalTitle = document.getElementById('comment-task-title');
-            if (modalTitle) {
-                modalTitle.textContent = task.title;
-            }
-        } else {
-            const modalTitle = document.getElementById('comment-task-title');
-            if (modalTitle) {
-                modalTitle.textContent = 'Task Comments';
-            }
+        if (!taskDoc.exists) {
+            showToast('Task not found', 'error');
+            return;
         }
         
-        // Load and display comments
+        const task = { id: taskDoc.id, ...taskDoc.data() };
+        
+        // Populate edit form in modal
+        document.getElementById('edit-task-id').value = task.id;
+        document.getElementById('edit-task-title').value = task.title || '';
+        document.getElementById('edit-task-description').value = task.description || '';
+        document.getElementById('edit-task-priority').value = task.priority || 'medium';
+        document.getElementById('edit-task-assignee').value = task.assignedTo || '';
+        document.getElementById('edit-task-due-date').value = task.dueDate || '';
+        document.getElementById('edit-task-estimate').value = task.estimatedHours || 0;
+        
+        // Set modal title
+        const modalTitle = document.getElementById('comment-task-title');
+        if (modalTitle) {
+            modalTitle.textContent = `Task: ${task.title}`;
+        }
+        
+        // Load comments
         await loadComments(taskId);
         
         // Open modal
@@ -546,7 +711,7 @@ async function openTaskDetail(taskId) {
         if (modal) {
             modal.style.display = 'flex';
             modal.classList.add('active');
-            console.log('✅ Comment modal opened');
+            console.log('✅ Task detail modal opened');
         }
         
     } catch (error) {
@@ -651,39 +816,6 @@ async function addComment(taskId, content) {
 }
 
 // ============================================
-// Project CRUD Operations
-// ============================================
-
-/**
- * Create a new project
- */
-async function createProject(projectData) {
-    if (!currentOrganization) return false;
-    
-    try {
-        const project = {
-            organizationId: currentOrganization,
-            name: projectData.name,
-            description: projectData.description || '',
-            color: projectData.color || '#6366f1',
-            isArchived: false,
-            createdBy: currentUser.uid,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
-        
-        await db.collection('projects').add(project);
-        showToast('Project created successfully', 'success');
-        await loadProjects();
-        return true;
-        
-    } catch (error) {
-        console.error('Error creating project:', error);
-        showToast('Error creating project', 'error');
-        return false;
-    }
-}
-
-// ============================================
 // Real-time Subscriptions
 // ============================================
 
@@ -783,16 +915,53 @@ function setupEventListeners() {
         });
     }
     
+    // Save Task Changes button
+    const saveTaskBtn = document.getElementById('save-task-btn');
+    if (saveTaskBtn) {
+        saveTaskBtn.addEventListener('click', async () => {
+            const taskId = document.getElementById('edit-task-id').value;
+            if (!taskId) return;
+            
+            const taskData = {
+                title: document.getElementById('edit-task-title').value,
+                description: document.getElementById('edit-task-description').value,
+                priority: document.getElementById('edit-task-priority').value,
+                assignedTo: document.getElementById('edit-task-assignee').value,
+                dueDate: document.getElementById('edit-task-due-date').value,
+                estimatedHours: parseFloat(document.getElementById('edit-task-estimate').value || 0)
+            };
+            
+            if (!taskData.title) {
+                showToast('Please enter a task title', 'warning');
+                return;
+            }
+            
+            const success = await updateTask(taskId, taskData);
+            if (success) {
+                closeCommentModal();
+            }
+        });
+    }
+    
+    // Delete Task button
+    const deleteTaskBtn = document.getElementById('delete-task-btn');
+    if (deleteTaskBtn) {
+        deleteTaskBtn.addEventListener('click', async () => {
+            const taskId = document.getElementById('edit-task-id').value;
+            if (taskId) {
+                await deleteTask(taskId);
+            }
+        });
+    }
+    
     // Add comment button
     const addCommentBtn = document.getElementById('add-comment-btn');
     if (addCommentBtn) {
-        // Remove existing listeners to avoid duplicates
         const newAddBtn = addCommentBtn.cloneNode(true);
         addCommentBtn.parentNode.replaceChild(newAddBtn, addCommentBtn);
         
         newAddBtn.addEventListener('click', async () => {
             const content = document.getElementById('new-comment').value;
-            console.log('💬 Add comment clicked, content:', content);
             
             if (!content || !content.trim()) {
                 showToast('Please enter a comment', 'warning');
@@ -966,6 +1135,9 @@ function showToast(message, type = 'info') {
 // Global Exports (for inline onclick handlers)
 // ============================================
 window.openTaskDetail = openTaskDetail;
+window.deleteTask = deleteTask;
+window.deleteProject = deleteProject;
+window.updateTask = updateTask;
 window.closeTaskModal = closeTaskModal;
 window.closeProjectModal = closeProjectModal;
 window.closeSprintModal = closeSprintModal;
