@@ -1,9 +1,9 @@
 /**
  * Oriental - Dashboard Module
- * Version: 1.2.0
+ * Version: 2.0.0
  * 
  * Main application logic including task management, project handling,
- * real-time updates, drag-and-drop functionality, comments, and CRUD operations.
+ * real-time updates, drag-and-drop functionality, comments, search, and filters.
  */
 
 // ============================================
@@ -15,6 +15,14 @@ let currentProject = null;
 let currentView = 'board';
 let currentTaskForComments = null;
 let unsubscribeTasks = null;
+let allTasks = [];
+let filteredTasks = [];
+let searchTerm = '';
+let activeFilters = {
+    priorities: [],
+    statuses: [],
+    dueDates: []
+};
 
 // ============================================
 // Initialization
@@ -68,13 +76,11 @@ async function loadUserData() {
             const userData = userDoc.data();
             currentOrganization = userData.currentOrganization;
             
-            // Update organization name in sidebar
             const orgNameElement = document.getElementById('org-name');
             if (orgNameElement) {
                 orgNameElement.textContent = userData.name || currentUser.email;
             }
             
-            // Update user info section
             const userNameElement = document.getElementById('user-name');
             if (userNameElement) {
                 userNameElement.textContent = userData.name || currentUser.displayName || 'User';
@@ -89,7 +95,6 @@ async function loadUserData() {
         } else {
             console.warn('User document not found for:', currentUser.uid);
             
-            // Fallback: use Firebase auth data
             const userNameElement = document.getElementById('user-name');
             if (userNameElement) {
                 userNameElement.textContent = currentUser.displayName || currentUser.email.split('@')[0];
@@ -145,7 +150,6 @@ async function loadProjects() {
         
         projectList.innerHTML = '';
         
-        // Sort manually
         const projects = [];
         projectsSnapshot.forEach(doc => {
             projects.push({ id: doc.id, ...doc.data() });
@@ -169,7 +173,6 @@ async function loadProjects() {
             loadTaskCount(project.id, projectElement);
         });
         
-        // Select first project if none selected
         if (projects.length > 0 && !currentProject) {
             selectProject(projects[0]);
         }
@@ -195,7 +198,6 @@ function createProjectElement(project) {
         </button>
     `;
     div.addEventListener('click', (e) => {
-        // Don't select project if clicking delete button
         if (!e.target.closest('.delete-project-btn')) {
             selectProject(project);
         }
@@ -228,7 +230,6 @@ async function selectProject(project) {
     currentProject = project;
     console.log('Project selected:', project.name);
     
-    // Update UI
     document.querySelectorAll('.project-item').forEach(item => {
         item.classList.remove('active');
         if (item.getAttribute('data-project-id') === project.id) {
@@ -236,13 +237,11 @@ async function selectProject(project) {
         }
     });
     
-    // Update header
     const headerTitle = document.querySelector('.dashboard-header h1');
     if (headerTitle) {
         headerTitle.textContent = project.name;
     }
     
-    // Load tasks for this project
     await loadTasks();
 }
 
@@ -252,7 +251,6 @@ async function selectProject(project) {
 async function loadTasks() {
     if (!currentProject) return;
     
-    // Clean up previous subscription
     if (unsubscribeTasks) {
         unsubscribeTasks();
     }
@@ -262,13 +260,12 @@ async function loadTasks() {
             .where('projectId', '==', currentProject.id)
             .get();
         
-        const tasks = [];
+        allTasks = [];
         tasksSnapshot.forEach(doc => {
-            tasks.push({ id: doc.id, ...doc.data() });
+            allTasks.push({ id: doc.id, ...doc.data() });
         });
         
-        // Sort manually
-        tasks.sort((a, b) => {
+        allTasks.sort((a, b) => {
             if (a.order && b.order) {
                 return a.order - b.order;
             }
@@ -278,16 +275,270 @@ async function loadTasks() {
             return 0;
         });
         
-        console.log(`Loaded ${tasks.length} tasks`);
-        renderBoard(tasks);
+        console.log(`Loaded ${allTasks.length} tasks`);
+        applySearchAndFilter();
         
-        // Set up real-time listener
         setupRealtimeSubscription();
+        setupSearchAndFilter();
         
     } catch (error) {
         console.error('Error loading tasks:', error);
         showToast('Error loading tasks', 'error');
     }
+}
+
+// ============================================
+// Search and Filter Functions
+// ============================================
+
+/**
+ * Setup search and filter event listeners
+ */
+function setupSearchAndFilter() {
+    const searchInput = document.getElementById('search-tasks');
+    const clearSearch = document.getElementById('clear-search');
+    
+    if (searchInput) {
+        searchInput.removeEventListener('input', handleSearchInput);
+        searchInput.addEventListener('input', handleSearchInput);
+    }
+    
+    if (clearSearch) {
+        clearSearch.removeEventListener('click', handleClearSearch);
+        clearSearch.addEventListener('click', handleClearSearch);
+    }
+    
+    const filterBtn = document.getElementById('filter-btn');
+    const filterDropdown = document.getElementById('filter-dropdown');
+    
+    if (filterBtn) {
+        filterBtn.removeEventListener('click', handleFilterBtnClick);
+        filterBtn.addEventListener('click', handleFilterBtnClick);
+        
+        document.removeEventListener('click', handleOutsideClick);
+        document.addEventListener('click', handleOutsideClick);
+    }
+    
+    const applyFilters = document.getElementById('apply-filters');
+    if (applyFilters) {
+        applyFilters.removeEventListener('click', handleApplyFilters);
+        applyFilters.addEventListener('click', handleApplyFilters);
+    }
+    
+    const clearFilters = document.getElementById('clear-filters');
+    if (clearFilters) {
+        clearFilters.removeEventListener('click', handleClearFilters);
+        clearFilters.addEventListener('click', handleClearFilters);
+    }
+}
+
+function handleSearchInput(e) {
+    searchTerm = e.target.value.toLowerCase();
+    const clearSearch = document.getElementById('clear-search');
+    if (clearSearch) {
+        clearSearch.style.display = searchTerm ? 'block' : 'none';
+    }
+    applySearchAndFilter();
+}
+
+function handleClearSearch() {
+    const searchInput = document.getElementById('search-tasks');
+    if (searchInput) {
+        searchInput.value = '';
+        searchTerm = '';
+    }
+    const clearSearch = document.getElementById('clear-search');
+    if (clearSearch) {
+        clearSearch.style.display = 'none';
+    }
+    applySearchAndFilter();
+}
+
+function handleFilterBtnClick(e) {
+    e.stopPropagation();
+    const filterDropdown = document.getElementById('filter-dropdown');
+    if (filterDropdown) {
+        filterDropdown.classList.toggle('show');
+    }
+}
+
+function handleOutsideClick(e) {
+    const filterBtn = document.getElementById('filter-btn');
+    const filterDropdown = document.getElementById('filter-dropdown');
+    if (filterDropdown && filterBtn && !filterBtn.contains(e.target) && !filterDropdown.contains(e.target)) {
+        filterDropdown.classList.remove('show');
+    }
+}
+
+function handleApplyFilters() {
+    activeFilters.priorities = Array.from(document.querySelectorAll('.filter-priority:checked'))
+        .map(cb => cb.value);
+    
+    activeFilters.statuses = Array.from(document.querySelectorAll('.filter-status:checked'))
+        .map(cb => cb.value);
+    
+    activeFilters.dueDates = Array.from(document.querySelectorAll('.filter-due:checked'))
+        .map(cb => cb.value);
+    
+    const filterDropdown = document.getElementById('filter-dropdown');
+    if (filterDropdown) {
+        filterDropdown.classList.remove('show');
+    }
+    updateFilterBadge();
+    applySearchAndFilter();
+}
+
+function handleClearFilters() {
+    document.querySelectorAll('.filter-priority, .filter-status, .filter-due')
+        .forEach(cb => cb.checked = false);
+    
+    activeFilters = { priorities: [], statuses: [], dueDates: [] };
+    updateFilterBadge();
+    applySearchAndFilter();
+}
+
+/**
+ * Update filter badge display
+ */
+function updateFilterBadge() {
+    let badgeContainer = document.getElementById('active-filters');
+    const totalFilters = activeFilters.priorities.length + activeFilters.statuses.length + activeFilters.dueDates.length;
+    
+    if (!badgeContainer) return;
+    
+    if (totalFilters === 0) {
+        badgeContainer.style.display = 'none';
+        badgeContainer.innerHTML = '';
+        return;
+    }
+    
+    badgeContainer.style.display = 'flex';
+    badgeContainer.innerHTML = '';
+    
+    activeFilters.priorities.forEach(p => {
+        badgeContainer.innerHTML += `
+            <div class="filter-badge">
+                <i class="fas fa-flag"></i> ${p}
+                <button onclick="removeFilter('priority', '${p}')">&times;</button>
+            </div>
+        `;
+    });
+    
+    activeFilters.statuses.forEach(s => {
+        const statusName = s === 'todo' ? 'To Do' : (s === 'in-progress' ? 'In Progress' : 'Done');
+        badgeContainer.innerHTML += `
+            <div class="filter-badge">
+                <i class="fas fa-circle"></i> ${statusName}
+                <button onclick="removeFilter('status', '${s}')">&times;</button>
+            </div>
+        `;
+    });
+    
+    activeFilters.dueDates.forEach(d => {
+        const dueName = d === 'overdue' ? 'Overdue' : (d === 'today' ? 'Due Today' : 'This Week');
+        badgeContainer.innerHTML += `
+            <div class="filter-badge">
+                <i class="fas fa-calendar"></i> ${dueName}
+                <button onclick="removeFilter('dueDate', '${d}')">&times;</button>
+            </div>
+        `;
+    });
+}
+
+/**
+ * Remove a specific filter
+ */
+window.removeFilter = function(type, value) {
+    if (type === 'priority') {
+        activeFilters.priorities = activeFilters.priorities.filter(p => p !== value);
+        const checkbox = document.querySelector(`.filter-priority[value="${value}"]`);
+        if (checkbox) checkbox.checked = false;
+    } else if (type === 'status') {
+        activeFilters.statuses = activeFilters.statuses.filter(s => s !== value);
+        const checkbox = document.querySelector(`.filter-status[value="${value}"]`);
+        if (checkbox) checkbox.checked = false;
+    } else if (type === 'dueDate') {
+        activeFilters.dueDates = activeFilters.dueDates.filter(d => d !== value);
+        const checkbox = document.querySelector(`.filter-due[value="${value}"]`);
+        if (checkbox) checkbox.checked = false;
+    }
+    
+    updateFilterBadge();
+    applySearchAndFilter();
+};
+
+/**
+ * Get due date status
+ */
+function getDueDateStatus(dueDate) {
+    if (!dueDate) return 'none';
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const due = new Date(dueDate);
+    due.setHours(0, 0, 0, 0);
+    
+    if (due < today) return 'overdue';
+    if (due.getTime() === today.getTime()) return 'today';
+    
+    const weekFromNow = new Date(today);
+    weekFromNow.setDate(today.getDate() + 7);
+    if (due <= weekFromNow) return 'week';
+    
+    return 'future';
+}
+
+/**
+ * Get due date display text
+ */
+function getDueDateDisplay(dueDate) {
+    if (!dueDate) return null;
+    
+    const status = getDueDateStatus(dueDate);
+    const date = new Date(dueDate).toLocaleDateString();
+    
+    const labels = {
+        overdue: `⚠️ Overdue: ${date}`,
+        today: `📅 Today: ${date}`,
+        week: `📆 Due: ${date}`,
+        future: `📅 Due: ${date}`
+    };
+    
+    return labels[status];
+}
+
+/**
+ * Apply search and filter to tasks
+ */
+function applySearchAndFilter() {
+    if (!allTasks) return;
+    
+    filteredTasks = allTasks.filter(task => {
+        if (searchTerm) {
+            const matchesTitle = task.title?.toLowerCase().includes(searchTerm);
+            const matchesDesc = task.description?.toLowerCase().includes(searchTerm);
+            const matchesTags = task.tags?.some(tag => tag.toLowerCase().includes(searchTerm));
+            if (!matchesTitle && !matchesDesc && !matchesTags) return false;
+        }
+        
+        if (activeFilters.priorities.length > 0) {
+            if (!activeFilters.priorities.includes(task.priority)) return false;
+        }
+        
+        if (activeFilters.statuses.length > 0) {
+            const taskStatus = task.status || 'todo';
+            if (!activeFilters.statuses.includes(taskStatus)) return false;
+        }
+        
+        if (activeFilters.dueDates.length > 0) {
+            const dueStatus = getDueDateStatus(task.dueDate);
+            if (!activeFilters.dueDates.includes(dueStatus)) return false;
+        }
+        
+        return true;
+    });
+    
+    renderBoard(filteredTasks);
 }
 
 // ============================================
@@ -304,7 +555,6 @@ function renderBoard(tasks) {
         'done': { title: 'Done', tasks: [], icon: 'fa-check-circle', color: '#10b981' }
     };
     
-    // Organize tasks by status
     tasks.forEach(task => {
         const status = task.status || 'todo';
         if (columns[status]) {
@@ -322,7 +572,6 @@ function renderBoard(tasks) {
         boardView.appendChild(columnElement);
     }
     
-    // Setup drag and drop after rendering
     setupDragAndDrop();
 }
 
@@ -351,7 +600,7 @@ function createColumnElement(status, column) {
 }
 
 /**
- * Create a task card element with onclick handler
+ * Create a task card element with due date and search highlight
  */
 function createTaskCard(task) {
     const priorityClass = task.priority === 'high' ? 'priority-high' : 
@@ -360,8 +609,15 @@ function createTaskCard(task) {
     const priorityIcon = task.priority === 'high' ? 'fa-arrow-up' : 
                         (task.priority === 'medium' ? 'fa-minus' : 'fa-arrow-down');
     
-    // Escape task ID for safe use in onclick
     const safeTaskId = task.id.replace(/'/g, "\\'");
+    const dueDateInfo = getDueDateDisplay(task.dueDate);
+    const dueDateClass = task.dueDate ? getDueDateStatus(task.dueDate) : '';
+    
+    let highlightedTitle = escapeHtml(task.title);
+    if (searchTerm) {
+        const regex = new RegExp(`(${searchTerm})`, 'gi');
+        highlightedTitle = highlightedTitle.replace(regex, '<mark class="search-highlight">$1</mark>');
+    }
     
     return `
         <div class="task-card" 
@@ -369,12 +625,15 @@ function createTaskCard(task) {
              data-task-id="${task.id}" 
              data-status="${task.status || 'todo'}" 
              onclick="openTaskDetail('${safeTaskId}')">
-            <div class="task-title">${escapeHtml(task.title)}</div>
+            <div class="task-title">${highlightedTitle}</div>
             ${task.description ? `<div class="task-description">${escapeHtml(task.description.substring(0, 100))}</div>` : ''}
             <div class="task-meta">
                 <span class="priority ${priorityClass}">
                     <i class="fas ${priorityIcon}"></i> ${task.priority || 'medium'}
                 </span>
+                ${dueDateInfo ? `<span class="task-due-date due-${dueDateClass}">
+                    <i class="fas fa-calendar-alt"></i> ${escapeHtml(dueDateInfo)}
+                </span>` : ''}
                 <span class="assignee">
                     <i class="fas fa-user"></i>
                     ${task.assignedTo ? escapeHtml(task.assignedTo.substring(0, 8)) : 'Unassigned'}
@@ -393,55 +652,47 @@ function createTaskCard(task) {
 
 let draggedTask = null;
 
-/**
- * Setup drag and drop event listeners
- */
 function setupDragAndDrop() {
     const tasks = document.querySelectorAll('.task-card');
     const containers = document.querySelectorAll('.tasks-container');
     
     tasks.forEach(task => {
         task.setAttribute('draggable', 'true');
+        task.removeEventListener('dragstart', handleDragStart);
+        task.removeEventListener('dragend', handleDragEnd);
         task.addEventListener('dragstart', handleDragStart);
         task.addEventListener('dragend', handleDragEnd);
     });
     
     containers.forEach(container => {
+        container.removeEventListener('dragover', handleDragOver);
+        container.removeEventListener('drop', handleDrop);
         container.addEventListener('dragover', handleDragOver);
         container.addEventListener('drop', handleDrop);
     });
 }
 
-/**
- * Handle drag start event
- */
 function handleDragStart(e) {
     draggedTask = this;
     e.dataTransfer.setData('text/plain', this.dataset.taskId);
+    e.dataTransfer.effectAllowed = 'move';
+    this.classList.add('dragging');
     this.style.opacity = '0.5';
 }
 
-/**
- * Handle drag end event
- */
 function handleDragEnd(e) {
     if (draggedTask) {
+        draggedTask.classList.remove('dragging');
         draggedTask.style.opacity = '';
     }
     draggedTask = null;
 }
 
-/**
- * Handle drag over event
- */
 function handleDragOver(e) {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
 }
 
-/**
- * Handle drop event - update task status
- */
 async function handleDrop(e) {
     e.preventDefault();
     const container = e.target.closest('.tasks-container');
@@ -479,7 +730,6 @@ async function createTask(taskData) {
     
     if (!currentProject) {
         showToast('Please select a project first', 'warning');
-        console.log('No project selected');
         return false;
     }
     
@@ -497,17 +747,15 @@ async function createTask(taskData) {
             status: 'todo',
             assignedTo: taskData.assignedTo || null,
             dueDate: taskData.dueDate || null,
-            estimatedHours: taskData.estimatedHours || 0,
-            tags: taskData.tags || [],
+            estimatedHours: parseFloat(taskData.estimatedHours) || 0,
+            tags: taskData.tags ? taskData.tags.split(',').map(t => t.trim()) : [],
             order: Date.now(),
             createdBy: currentUser.uid,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
         
-        console.log('Saving task to Firestore:', task);
-        const docRef = await db.collection('tasks').add(task);
-        console.log('Task created with ID:', docRef.id);
+        await db.collection('tasks').add(task);
         showToast('Task created successfully', 'success');
         return true;
         
@@ -525,16 +773,21 @@ async function updateTask(taskId, taskData) {
     console.log('Updating task:', taskId, taskData);
     
     try {
-        await db.collection('tasks').doc(taskId).update({
+        const updateData = {
             title: taskData.title,
             description: taskData.description || '',
             priority: taskData.priority || 'medium',
             assignedTo: taskData.assignedTo || null,
             dueDate: taskData.dueDate || null,
-            estimatedHours: taskData.estimatedHours || 0,
+            estimatedHours: parseFloat(taskData.estimatedHours) || 0,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        };
         
+        if (taskData.tags) {
+            updateData.tags = taskData.tags.split(',').map(t => t.trim());
+        }
+        
+        await db.collection('tasks').doc(taskId).update(updateData);
         showToast('Task updated successfully', 'success');
         return true;
         
@@ -554,7 +807,6 @@ async function deleteTask(taskId) {
     }
     
     try {
-        // Delete associated comments first
         const commentsSnapshot = await db.collection('comments')
             .where('taskId', '==', taskId)
             .get();
@@ -564,17 +816,12 @@ async function deleteTask(taskId) {
             batch.delete(doc.ref);
         });
         
-        // Delete task
         const taskRef = db.collection('tasks').doc(taskId);
         batch.delete(taskRef);
         
         await batch.commit();
-        
         showToast('Task deleted successfully', 'success');
-        
-        // Close modal if open
         closeCommentModal();
-        
         return true;
         
     } catch (error) {
@@ -626,14 +873,12 @@ async function deleteProject(projectId, projectName) {
     }
     
     try {
-        // Get all tasks in this project
         const tasksSnapshot = await db.collection('tasks')
             .where('projectId', '==', projectId)
             .get();
         
         const batch = db.batch();
         
-        // Delete all comments for each task, then delete tasks
         for (const taskDoc of tasksSnapshot.docs) {
             const commentsSnapshot = await db.collection('comments')
                 .where('taskId', '==', taskDoc.id)
@@ -646,17 +891,12 @@ async function deleteProject(projectId, projectName) {
             batch.delete(taskDoc.ref);
         }
         
-        // Delete the project
         const projectRef = db.collection('projects').doc(projectId);
         batch.delete(projectRef);
         
         await batch.commit();
-        
         showToast(`Project "${projectName}" deleted successfully`, 'success');
-        
-        // Reload projects
         await loadProjects();
-        
         return true;
         
     } catch (error) {
@@ -678,7 +918,6 @@ async function openTaskDetail(taskId) {
     currentTaskForComments = taskId;
     
     try {
-        // Fetch task data
         const taskDoc = await db.collection('tasks').doc(taskId).get();
         
         if (!taskDoc.exists) {
@@ -688,7 +927,6 @@ async function openTaskDetail(taskId) {
         
         const task = { id: taskDoc.id, ...taskDoc.data() };
         
-        // Populate edit form in modal
         document.getElementById('edit-task-id').value = task.id;
         document.getElementById('edit-task-title').value = task.title || '';
         document.getElementById('edit-task-description').value = task.description || '';
@@ -696,22 +934,19 @@ async function openTaskDetail(taskId) {
         document.getElementById('edit-task-assignee').value = task.assignedTo || '';
         document.getElementById('edit-task-due-date').value = task.dueDate || '';
         document.getElementById('edit-task-estimate').value = task.estimatedHours || 0;
+        document.getElementById('edit-task-tags').value = task.tags ? task.tags.join(', ') : '';
         
-        // Set modal title
         const modalTitle = document.getElementById('comment-task-title');
         if (modalTitle) {
             modalTitle.textContent = `Task: ${task.title}`;
         }
         
-        // Load comments
         await loadComments(taskId);
         
-        // Open modal
         const modal = document.getElementById('comment-modal');
         if (modal) {
             modal.style.display = 'flex';
             modal.classList.add('active');
-            console.log('✅ Task detail modal opened');
         }
         
     } catch (error) {
@@ -725,28 +960,20 @@ async function openTaskDetail(taskId) {
  */
 async function loadComments(taskId) {
     try {
-        console.log('📝 Loading comments for task:', taskId);
-        
         const commentsSnapshot = await db.collection('comments')
             .where('taskId', '==', taskId)
             .orderBy('createdAt', 'desc')
             .get();
         
         const commentsList = document.getElementById('comments-list');
-        if (!commentsList) {
-            console.error('Comments list element not found');
-            return;
-        }
+        if (!commentsList) return;
         
         commentsList.innerHTML = '';
         
         if (commentsSnapshot.empty) {
             commentsList.innerHTML = '<div class="empty-state"><p><i class="fas fa-comments"></i><br>No comments yet</p></div>';
-            console.log('No comments found');
             return;
         }
-        
-        console.log(`✅ Found ${commentsSnapshot.size} comments`);
         
         commentsSnapshot.forEach(doc => {
             const comment = doc.data();
@@ -756,10 +983,6 @@ async function loadComments(taskId) {
         
     } catch (error) {
         console.error('Error loading comments:', error);
-        const commentsList = document.getElementById('comments-list');
-        if (commentsList) {
-            commentsList.innerHTML = '<div class="empty-state"><p>Error loading comments</p></div>';
-        }
     }
 }
 
@@ -819,13 +1042,9 @@ async function addComment(taskId, content) {
 // Real-time Subscriptions
 // ============================================
 
-/**
- * Set up real-time listener for tasks
- */
 function setupRealtimeSubscription() {
     if (!currentProject) return;
     
-    // Clean up previous subscription
     if (unsubscribeTasks) {
         unsubscribeTasks();
     }
@@ -844,13 +1063,9 @@ function setupRealtimeSubscription() {
 // UI Event Listeners
 // ============================================
 
-/**
- * Setup all event listeners
- */
 function setupEventListeners() {
     console.log('Setting up event listeners...');
     
-    // Navigation
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
@@ -872,7 +1087,6 @@ function setupEventListeners() {
         });
     });
     
-    // Task form submission
     const taskForm = document.getElementById('task-form');
     if (taskForm) {
         taskForm.addEventListener('submit', async (e) => {
@@ -884,7 +1098,8 @@ function setupEventListeners() {
                 priority: document.getElementById('task-priority').value,
                 assignedTo: document.getElementById('task-assignee').value,
                 dueDate: document.getElementById('task-due-date').value,
-                estimatedHours: parseFloat(document.getElementById('task-estimate')?.value || 0)
+                estimatedHours: document.getElementById('task-estimate').value,
+                tags: document.getElementById('task-tags').value
             };
             
             const success = await createTask(taskData);
@@ -895,7 +1110,6 @@ function setupEventListeners() {
         });
     }
     
-    // Project form submission
     const projectForm = document.getElementById('project-form');
     if (projectForm) {
         projectForm.addEventListener('submit', async (e) => {
@@ -915,7 +1129,6 @@ function setupEventListeners() {
         });
     }
     
-    // Save Task Changes button
     const saveTaskBtn = document.getElementById('save-task-btn');
     if (saveTaskBtn) {
         saveTaskBtn.addEventListener('click', async () => {
@@ -928,7 +1141,8 @@ function setupEventListeners() {
                 priority: document.getElementById('edit-task-priority').value,
                 assignedTo: document.getElementById('edit-task-assignee').value,
                 dueDate: document.getElementById('edit-task-due-date').value,
-                estimatedHours: parseFloat(document.getElementById('edit-task-estimate').value || 0)
+                estimatedHours: document.getElementById('edit-task-estimate').value,
+                tags: document.getElementById('edit-task-tags').value
             };
             
             if (!taskData.title) {
@@ -943,7 +1157,6 @@ function setupEventListeners() {
         });
     }
     
-    // Delete Task button
     const deleteTaskBtn = document.getElementById('delete-task-btn');
     if (deleteTaskBtn) {
         deleteTaskBtn.addEventListener('click', async () => {
@@ -954,7 +1167,6 @@ function setupEventListeners() {
         });
     }
     
-    // Add comment button
     const addCommentBtn = document.getElementById('add-comment-btn');
     if (addCommentBtn) {
         const newAddBtn = addCommentBtn.cloneNode(true);
@@ -977,18 +1189,14 @@ function setupEventListeners() {
         });
     }
     
-    // Logout button
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
-            console.log('Logging out...');
             await auth.signOut();
             localStorage.removeItem('oriental_user');
             window.location.href = 'login.html';
         });
     }
-    
-    console.log('✅ Event listeners setup complete');
 }
 
 // ============================================
@@ -1003,7 +1211,6 @@ function closeTaskModal() {
     }
     const form = document.getElementById('task-form');
     if (form) form.reset();
-    console.log('Task modal closed');
 }
 
 function closeProjectModal() {
@@ -1014,7 +1221,6 @@ function closeProjectModal() {
     }
     const form = document.getElementById('project-form');
     if (form) form.reset();
-    console.log('Project modal closed');
 }
 
 function closeSprintModal() {
@@ -1025,7 +1231,6 @@ function closeSprintModal() {
     }
     const form = document.getElementById('sprint-form');
     if (form) form.reset();
-    console.log('Sprint modal closed');
 }
 
 function closeCommentModal() {
@@ -1036,11 +1241,9 @@ function closeCommentModal() {
     }
     const textarea = document.getElementById('new-comment');
     if (textarea) textarea.value = '';
-    console.log('Comment modal closed');
 }
 
 function openTaskModal() {
-    console.log('Opening task modal');
     if (!currentProject) {
         showToast('Please select a project first', 'warning');
         return;
@@ -1049,26 +1252,18 @@ function openTaskModal() {
     if (modal) {
         modal.style.display = 'flex';
         modal.classList.add('active');
-        console.log('Task modal opened');
-    } else {
-        console.error('Task modal not found');
     }
 }
 
 function openProjectModal() {
-    console.log('Opening project modal');
     const modal = document.getElementById('project-modal');
     if (modal) {
         modal.style.display = 'flex';
         modal.classList.add('active');
-        console.log('Project modal opened');
-    } else {
-        console.error('Project modal not found');
     }
 }
 
 function openSprintModal() {
-    console.log('Opening sprint modal');
     if (!currentProject) {
         showToast('Please select a project first', 'warning');
         return;
@@ -1077,18 +1272,14 @@ function openSprintModal() {
     if (modal) {
         modal.style.display = 'flex';
         modal.classList.add('active');
-        console.log('Sprint modal opened');
-    } else {
-        console.error('Sprint modal not found');
     }
 }
 
 // ============================================
-// Sprint Functions (Placeholder for future enhancement)
+// Sprint Functions
 // ============================================
 
 async function loadSprints() {
-    console.log('Loading sprints view');
     const sprintContainer = document.getElementById('sprint-tasks');
     if (sprintContainer) {
         sprintContainer.innerHTML = '<div class="empty-state"><p><i class="fas fa-calendar-alt"></i><br>Sprint feature coming soon!</p></div>';
@@ -1099,9 +1290,6 @@ async function loadSprints() {
 // Utility Functions
 // ============================================
 
-/**
- * Escape HTML to prevent XSS attacks
- */
 function escapeHtml(text) {
     if (!text) return '';
     const div = document.createElement('div');
@@ -1109,9 +1297,6 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-/**
- * Show toast notification
- */
 function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = 'toast';
@@ -1132,12 +1317,13 @@ function showToast(message, type = 'info') {
 }
 
 // ============================================
-// Global Exports (for inline onclick handlers)
+// Global Exports
 // ============================================
 window.openTaskDetail = openTaskDetail;
 window.deleteTask = deleteTask;
 window.deleteProject = deleteProject;
 window.updateTask = updateTask;
+window.removeFilter = removeFilter;
 window.closeTaskModal = closeTaskModal;
 window.closeProjectModal = closeProjectModal;
 window.closeSprintModal = closeSprintModal;
