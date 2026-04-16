@@ -10,19 +10,19 @@
 </head>
 <body>
     <div class="dashboard">
-        <!-- Mobile Header -->
-        <div class="mobile-header">
-            <button class="mobile-menu-btn" id="mobile-menu-btn">
-                <i class="fas fa-bars"></i>
-            </button>
-            <div class="mobile-logo">
-                <i class="fas fa-mountain-sun"></i>
-                <span>oriental</span>
-            </div>
-            <button class="mobile-add-btn" id="mobile-add-btn" onclick="openTaskModal()">
-                <i class="fas fa-plus"></i>
-            </button>
-        </div>
+        <<!-- Mobile Header -->
+<div class="mobile-header">
+    <button class="mobile-menu-btn" id="mobile-menu-btn">
+        <i class="fas fa-bars"></i>
+    </button>
+    <div class="mobile-logo">
+        <i class="fas fa-mountain-sun"></i>
+        <span>oriental</span>
+    </div>
+    <button class="mobile-add-btn" id="mobile-add-btn" onclick="openTaskModal()">
+        <i class="fas fa-plus"></i>
+    </button>
+</div>
         
         <!-- Sidebar Overlay -->
         <div class="sidebar-overlay" id="sidebar-overlay"></div>
@@ -472,5 +472,21 @@
             });
         });
     </script>
+    <!-- Mobile Floating Action Button for Projects -->
+<div class="fab-container" id="fab-container">
+    <button class="fab fab-main" id="fab-main">
+        <i class="fas fa-plus"></i>
+    </button>
+    <div class="fab-actions">
+        <button class="fab-action" id="fab-add-task" onclick="openTaskModal()">
+            <i class="fas fa-tasks"></i>
+            <span>Task</span>
+        </button>
+        <button class="fab-action" id="fab-add-project" onclick="openProjectModal()">
+            <i class="fas fa-folder"></i>
+            <span>Project</span>
+        </button>
+    </div>
+</div>
 </body>
 </html>

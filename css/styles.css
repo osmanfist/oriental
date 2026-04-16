@@ -1724,3 +1724,97 @@ hr {
         border: 1px solid var(--gray-300);
     }
 }
+/* ============================================
+   Mobile Floating Action Button (FAB)
+   ============================================ */
+.fab-container {
+    position: fixed;
+    bottom: 80px;
+    right: var(--spacing-lg);
+    z-index: 25;
+    display: none;
+}
+
+.fab-main {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--primary-600);
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    box-shadow: var(--shadow-lg);
+    transition: background 0.2s;
+}
+
+.fab-main:hover {
+    background: var(--primary-700);
+}
+
+.fab-actions {
+    position: absolute;
+    bottom: 70px;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: visibility 0.2s, opacity 0.2s, transform 0.2s;
+}
+
+.fab-container.open .fab-actions {
+    visibility: visible;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.fab-action {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    background: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--gray-700);
+    box-shadow: var(--shadow-md);
+    white-space: nowrap;
+}
+
+.fab-action i {
+    font-size: 16px;
+    color: var(--primary-600);
+}
+
+.fab-action:hover {
+    background: var(--gray-50);
+}
+
+/* Show FAB only on mobile */
+@media (max-width: 768px) {
+    .fab-container {
+        display: block;
+    }
+    
+    /* Hide the regular add project button on mobile (optional) */
+    .projects-header .add-project-btn {
+        display: flex;
+        width: 44px;
+        height: 44px;
+        font-size: 20px;
+        align-items: center;
+        justify-content: center;
+        background: var(--primary-50);
+        border-radius: 50%;
+    }
+}
