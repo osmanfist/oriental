@@ -1,15 +1,21 @@
 /**
  * Oriental - Dashboard Module
- * Version: 2.1.0
+ * Version: 2.3.0
  * 
  * Main application logic including task management, project handling,
  * real-time updates, drag-and-drop functionality, comments, search, and filters.
- * Updated with mobile fixes and improved organization loading.
+ * Updated with loading skeletons, confirmation dialogs, enhanced empty states,
+ * undo delete, keyboard shortcuts, and FIXED FLICKERING.
  */
 
 // ============================================
 // Global State Variables
 // ============================================
+// Undo Delete Variables
+let deletedItem = null;
+let deletedItemType = null;
+let undoTimeout = null;
+const UNDO_DURATION = 20000; // 20 seconds to undo
 let currentUser = null;
 let currentOrganization = null;
 let currentProject = null;
@@ -24,6 +30,7 @@ let activeFilters = {
     statuses: [],
     dueDates: []
 };
+let taskReloadTimeout = null; // For debouncing real-time updates
 
 // ============================================
 // Initialization
@@ -41,6 +48,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupEventListeners();
     setupRealtimeSubscription();
     setupMobileNavigation();
+    setupKeyboardShortcuts();
     console.log('✅ Dashboard ready!');
 });
 
@@ -64,6 +72,136 @@ async function checkAuth() {
 }
 
 // ============================================
+// Loading Skeleton Functions
+// ============================================
+
+/**
+ * Show project list skeleton
+ */
+function showProjectSkeleton() {
+    const projectList = document.getElementById('project-list');
+    if (!projectList) return;
+    
+    projectList.innerHTML = `
+        <div class="project-skeleton">
+            <div class="skeleton-color"></div>
+            <div class="skeleton-text"></div>
+            <div class="skeleton-count"></div>
+        </div>
+        <div class="project-skeleton">
+            <div class="skeleton-color"></div>
+            <div class="skeleton-text"></div>
+            <div class="skeleton-count"></div>
+        </div>
+        <div class="project-skeleton">
+            <div class="skeleton-color"></div>
+            <div class="skeleton-text"></div>
+            <div class="skeleton-count"></div>
+        </div>
+    `;
+}
+
+/**
+ * Show board skeleton
+ */
+function showBoardSkeleton() {
+    const boardView = document.getElementById('board-view');
+    if (!boardView) return;
+    
+    boardView.innerHTML = `
+        <div class="column-skeleton">
+            <div class="skeleton-header"></div>
+            <div class="skeleton-card">
+                <div class="skeleton-card-title"></div>
+                <div class="skeleton-card-meta"></div>
+            </div>
+            <div class="skeleton-card">
+                <div class="skeleton-card-title"></div>
+                <div class="skeleton-card-meta"></div>
+            </div>
+        </div>
+        <div class="column-skeleton">
+            <div class="skeleton-header"></div>
+            <div class="skeleton-card">
+                <div class="skeleton-card-title"></div>
+                <div class="skeleton-card-meta"></div>
+            </div>
+        </div>
+        <div class="column-skeleton">
+            <div class="skeleton-header"></div>
+            <div class="skeleton-card">
+                <div class="skeleton-card-title"></div>
+                <div class="skeleton-card-meta"></div>
+            </div>
+            <div class="skeleton-card">
+                <div class="skeleton-card-title"></div>
+                <div class="skeleton-card-meta"></div>
+            </div>
+        </div>
+    `;
+}
+
+// ============================================
+// Confirmation Dialog Functions
+// ============================================
+
+/**
+ * Show custom confirmation dialog
+ * @param {string} title - Dialog title
+ * @param {string} message - Dialog message
+ * @param {string} type - 'danger' or 'warning' or 'info'
+ * @returns {Promise<boolean>} - Resolves with true if confirmed, false if cancelled
+ */
+function showConfirmDialog(title, message, type = 'danger') {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.className = 'confirm-dialog-overlay';
+        
+        const dialog = document.createElement('div');
+        dialog.className = 'confirm-dialog';
+        
+        const okButtonClass = type === 'danger' ? 'confirm-ok' : 'confirm-ok-success';
+        const okButtonText = type === 'danger' ? 'Delete' : 'Confirm';
+        
+        dialog.innerHTML = `
+            <h3>${escapeHtml(title)}</h3>
+            <p>${escapeHtml(message)}</p>
+            <div class="confirm-dialog-actions">
+                <button class="confirm-cancel">Cancel</button>
+                <button class="${okButtonClass}">${okButtonText}</button>
+            </div>
+        `;
+        
+        overlay.appendChild(dialog);
+        document.body.appendChild(overlay);
+        
+        const cancelBtn = dialog.querySelector('.confirm-cancel');
+        const okBtn = dialog.querySelector(`.${okButtonClass}`);
+        
+        const cleanup = () => {
+            overlay.remove();
+        };
+        
+        cancelBtn.addEventListener('click', () => {
+            cleanup();
+            resolve(false);
+        });
+        
+        okBtn.addEventListener('click', () => {
+            cleanup();
+            resolve(true);
+        });
+        
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                cleanup();
+                resolve(false);
+            }
+        });
+    });
+}
+
+// ============================================
 // Data Loading Functions
 // ============================================
 
@@ -81,13 +219,11 @@ async function loadUserData() {
             currentOrganization = userData.currentOrganization;
             console.log('Organization loaded:', currentOrganization);
             
-            // Update organization name in sidebar
             const orgNameElement = document.getElementById('org-name');
             if (orgNameElement) {
                 orgNameElement.textContent = userData.name || currentUser.email;
             }
             
-            // Update user info section
             const userNameElement = document.getElementById('user-name');
             if (userNameElement) {
                 userNameElement.textContent = userData.name || currentUser.displayName || 'User';
@@ -98,7 +234,6 @@ async function loadUserData() {
                 userEmailElement.textContent = currentUser.email;
             }
             
-            // Force reload projects if organization was just loaded
             if (currentOrganization) {
                 await loadProjects();
             }
@@ -106,7 +241,6 @@ async function loadUserData() {
         } else {
             console.warn('User document not found for:', currentUser.uid);
             
-            // Fallback: use Firebase auth data
             const userNameElement = document.getElementById('user-name');
             if (userNameElement) {
                 userNameElement.textContent = currentUser.displayName || currentUser.email.split('@')[0];
@@ -117,7 +251,6 @@ async function loadUserData() {
                 userEmailElement.textContent = currentUser.email;
             }
             
-            // Try to create missing user document
             await createMissingUserDocument();
         }
     } catch (error) {
@@ -133,7 +266,6 @@ async function createMissingUserDocument() {
     try {
         console.log('Creating missing user document...');
         
-        // Check if user has any organizations
         const orgsSnapshot = await db.collection('organizations')
             .where('members', 'array-contains', currentUser.uid)
             .get();
@@ -144,7 +276,6 @@ async function createMissingUserDocument() {
             orgId = orgsSnapshot.docs[0].id;
             console.log('Found existing organization:', orgId);
         } else {
-            // Create new organization
             const orgName = prompt('Welcome! Please enter your organization name:', 'My Team');
             if (!orgName) return;
             
@@ -159,7 +290,6 @@ async function createMissingUserDocument() {
             orgId = orgRef.id;
             console.log('Organization created:', orgId);
             
-            // Create default project
             await db.collection('projects').add({
                 name: 'Getting Started',
                 description: 'Welcome to Oriental! This is your first project.',
@@ -171,7 +301,6 @@ async function createMissingUserDocument() {
             });
         }
         
-        // Create user document
         await db.collection('users').doc(currentUser.uid).set({
             name: currentUser.displayName || currentUser.email.split('@')[0],
             email: currentUser.email,
@@ -184,13 +313,11 @@ async function createMissingUserDocument() {
         currentOrganization = orgId;
         console.log('User document created successfully');
         
-        // Update UI
         const orgNameElement = document.getElementById('org-name');
         if (orgNameElement) {
             orgNameElement.textContent = currentUser.displayName || currentUser.email.split('@')[0];
         }
         
-        // Reload projects
         await loadProjects();
         showToast('Organization created successfully', 'success');
         
@@ -241,6 +368,8 @@ async function loadProjects() {
         return;
     }
     
+    showProjectSkeleton();
+    
     try {
         const projectsSnapshot = await db.collection('projects')
             .where('organizationId', '==', currentOrganization)
@@ -265,7 +394,15 @@ async function loadProjects() {
         });
         
         if (projects.length === 0) {
-            projectList.innerHTML = '<div class="empty-state-small">No projects yet. Click + to create one.</div>';
+            projectList.innerHTML = `
+                <div class="empty-state-small empty-projects">
+                    <i class="fas fa-folder-open"></i>
+                    <p>No projects yet</p>
+                    <button class="btn-primary" style="margin-top: 12px; padding: 8px 16px; font-size: 12px;" onclick="openProjectModal()">
+                        <i class="fas fa-plus"></i> Create Project
+                    </button>
+                </div>
+            `;
             return;
         }
         
@@ -295,7 +432,7 @@ function createProjectElement(project) {
         <div class="project-color" style="background: ${project.color || '#6366f1'}"></div>
         <span class="project-name">${escapeHtml(project.name)}</span>
         <span class="project-count" id="project-count-${project.id}">0</span>
-        <button class="delete-project-btn" onclick="event.stopPropagation(); deleteProject('${project.id}', '${escapeHtml(project.name)}')">
+        <button class="delete-project-btn" onclick="event.stopPropagation(); deleteProjectWithUndo('${project.id}', { name: '${escapeHtml(project.name)}', organizationId: '${project.organizationId}', description: '${escapeHtml(project.description || '')}', color: '${project.color}', createdBy: '${project.createdBy}' })">
             <i class="fas fa-trash"></i>
         </button>
     `;
@@ -344,17 +481,24 @@ async function selectProject(project) {
         headerTitle.textContent = project.name;
     }
     
-    await loadTasks();
+    // Show skeleton on project change
+    await loadTasks(true);
 }
 
 /**
- * Load tasks for current project
+ * Load tasks for current project - FIXED FLICKERING
+ * @param {boolean} showSkeleton - Whether to show loading skeleton (false for real-time updates)
  */
-async function loadTasks() {
+async function loadTasks(showSkeleton = true) {
     if (!currentProject) return;
     
     if (unsubscribeTasks) {
         unsubscribeTasks();
+    }
+    
+    // Only show skeleton on initial load, not on real-time updates
+    if (showSkeleton) {
+        showBoardSkeleton();
     }
     
     try {
@@ -385,7 +529,13 @@ async function loadTasks() {
         
     } catch (error) {
         console.error('Error loading tasks:', error);
-        showToast('Error loading tasks', 'error');
+        if (showSkeleton) {
+            showToast('Error loading tasks', 'error');
+            const boardView = document.getElementById('board-view');
+            if (boardView) {
+                boardView.innerHTML = '<div class="empty-state"><p><i class="fas fa-exclamation-triangle"></i><br>Error loading tasks. Please refresh.</p></div>';
+            }
+        }
     }
 }
 
@@ -610,6 +760,22 @@ function getDueDateDisplay(dueDate) {
 }
 
 /**
+ * Clear search and reload
+ */
+function clearSearchAndReload() {
+    const searchInput = document.getElementById('search-tasks');
+    if (searchInput) {
+        searchInput.value = '';
+        searchTerm = '';
+        const clearSearch = document.getElementById('clear-search');
+        if (clearSearch) clearSearch.style.display = 'none';
+    }
+    applySearchAndFilter();
+}
+
+window.clearSearchAndReload = clearSearchAndReload;
+
+/**
  * Apply search and filter to tasks
  */
 function applySearchAndFilter() {
@@ -640,6 +806,23 @@ function applySearchAndFilter() {
         return true;
     });
     
+    if (filteredTasks.length === 0 && searchTerm) {
+        const boardView = document.getElementById('board-view');
+        if (boardView) {
+            boardView.innerHTML = `
+                <div class="empty-state empty-search" style="width: 100%;">
+                    <i class="fas fa-search"></i>
+                    <h3>No matching tasks</h3>
+                    <p>No tasks found matching "${escapeHtml(searchTerm)}"</p>
+                    <button class="btn-secondary" onclick="clearSearchAndReload()">
+                        <i class="fas fa-undo"></i> Clear Search
+                    </button>
+                </div>
+            `;
+        }
+        return;
+    }
+    
     renderBoard(filteredTasks);
 }
 
@@ -651,6 +834,23 @@ function applySearchAndFilter() {
  * Render the board view with tasks organized by status
  */
 function renderBoard(tasks) {
+    if (tasks.length === 0 && !searchTerm) {
+        const boardView = document.getElementById('board-view');
+        if (boardView) {
+            boardView.innerHTML = `
+                <div class="empty-state empty-tasks" style="width: 100%;">
+                    <i class="fas fa-tasks"></i>
+                    <h3>No tasks yet</h3>
+                    <p>Get started by creating your first task</p>
+                    <button class="btn-primary" onclick="openTaskModal()">
+                        <i class="fas fa-plus"></i> Create Task
+                    </button>
+                </div>
+            `;
+        }
+        return;
+    }
+    
     const columns = {
         'todo': { title: 'To Do', tasks: [], icon: 'fa-circle', color: '#9ca3af' },
         'in-progress': { title: 'In Progress', tasks: [], icon: 'fa-spinner', color: '#3b82f6' },
@@ -900,39 +1100,6 @@ async function updateTask(taskId, taskData) {
     }
 }
 
-/**
- * Delete a task
- */
-async function deleteTask(taskId) {
-    if (!confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
-        return false;
-    }
-    
-    try {
-        const commentsSnapshot = await db.collection('comments')
-            .where('taskId', '==', taskId)
-            .get();
-        
-        const batch = db.batch();
-        commentsSnapshot.forEach(doc => {
-            batch.delete(doc.ref);
-        });
-        
-        const taskRef = db.collection('tasks').doc(taskId);
-        batch.delete(taskRef);
-        
-        await batch.commit();
-        showToast('Task deleted successfully', 'success');
-        closeCommentModal();
-        return true;
-        
-    } catch (error) {
-        console.error('Error deleting task:', error);
-        showToast('Error deleting task: ' + error.message, 'error');
-        return false;
-    }
-}
-
 // ============================================
 // Project CRUD Operations
 // ============================================
@@ -969,48 +1136,6 @@ async function createProject(projectData) {
     } catch (error) {
         console.error('Error creating project:', error);
         showToast('Error creating project: ' + error.message, 'error');
-        return false;
-    }
-}
-
-/**
- * Delete a project
- */
-async function deleteProject(projectId, projectName) {
-    if (!confirm(`Delete project "${projectName}"? This will also delete ALL tasks and comments in this project. This action cannot be undone.`)) {
-        return false;
-    }
-    
-    try {
-        const tasksSnapshot = await db.collection('tasks')
-            .where('projectId', '==', projectId)
-            .get();
-        
-        const batch = db.batch();
-        
-        for (const taskDoc of tasksSnapshot.docs) {
-            const commentsSnapshot = await db.collection('comments')
-                .where('taskId', '==', taskDoc.id)
-                .get();
-            
-            commentsSnapshot.forEach(commentDoc => {
-                batch.delete(commentDoc.ref);
-            });
-            
-            batch.delete(taskDoc.ref);
-        }
-        
-        const projectRef = db.collection('projects').doc(projectId);
-        batch.delete(projectRef);
-        
-        await batch.commit();
-        showToast(`Project "${projectName}" deleted successfully`, 'success');
-        await loadProjects();
-        return true;
-        
-    } catch (error) {
-        console.error('Error deleting project:', error);
-        showToast('Error deleting project: ' + error.message, 'error');
         return false;
     }
 }
@@ -1148,7 +1273,7 @@ async function addComment(taskId, content) {
 }
 
 // ============================================
-// Real-time Subscriptions
+// Real-time Subscriptions - FIXED FLICKERING
 // ============================================
 
 function setupRealtimeSubscription() {
@@ -1162,7 +1287,30 @@ function setupRealtimeSubscription() {
         .where('projectId', '==', currentProject.id)
         .onSnapshot((snapshot) => {
             console.log('Real-time update: tasks changed');
-            loadTasks();
+            
+            // Debounce rapid updates to prevent flickering
+            if (taskReloadTimeout) {
+                clearTimeout(taskReloadTimeout);
+            }
+            
+            taskReloadTimeout = setTimeout(() => {
+                // Direct update without skeleton - prevents flickering
+                const tasks = [];
+                snapshot.forEach(doc => {
+                    tasks.push({ id: doc.id, ...doc.data() });
+                });
+                
+                tasks.sort((a, b) => {
+                    if (a.order && b.order) return a.order - b.order;
+                    if (a.createdAt && b.createdAt) return b.createdAt.toDate() - a.createdAt.toDate();
+                    return 0;
+                });
+                
+                allTasks = tasks;
+                applySearchAndFilter(); // Re-renders without skeleton
+                taskReloadTimeout = null;
+            }, 100);
+            
         }, (error) => {
             console.error('Realtime subscription error:', error);
         });
@@ -1266,12 +1414,34 @@ function setupEventListeners() {
         });
     }
     
+    // Delete Task button - Updated with undo
     const deleteTaskBtn = document.getElementById('delete-task-btn');
     if (deleteTaskBtn) {
         deleteTaskBtn.addEventListener('click', async () => {
             const taskId = document.getElementById('edit-task-id').value;
+            const taskTitle = document.getElementById('edit-task-title').value;
+            const taskDescription = document.getElementById('edit-task-description').value;
+            const taskPriority = document.getElementById('edit-task-priority').value;
+            const taskAssignee = document.getElementById('edit-task-assignee').value;
+            const taskDueDate = document.getElementById('edit-task-due-date').value;
+            const taskEstimate = document.getElementById('edit-task-estimate').value;
+            const taskTags = document.getElementById('edit-task-tags').value;
+            
             if (taskId) {
-                await deleteTask(taskId);
+                const taskData = {
+                    projectId: currentProject.id,
+                    title: taskTitle,
+                    description: taskDescription,
+                    priority: taskPriority,
+                    assignedTo: taskAssignee,
+                    dueDate: taskDueDate,
+                    estimatedHours: parseFloat(taskEstimate),
+                    tags: taskTags ? taskTags.split(',').map(t => t.trim()) : [],
+                    status: 'todo',
+                    order: Date.now(),
+                    createdBy: currentUser.uid
+                };
+                await deleteTaskWithUndo(taskId, taskData);
             }
         });
     }
@@ -1313,7 +1483,6 @@ function setupEventListeners() {
 // ============================================
 
 function setupMobileNavigation() {
-    // Mobile menu button
     const mobileMenuBtn = document.getElementById('mobile-menu-btn');
     const sidebar = document.getElementById('sidebar');
     const sidebarOverlay = document.getElementById('sidebar-overlay');
@@ -1343,7 +1512,6 @@ function setupMobileNavigation() {
         sidebarOverlay.addEventListener('click', closeSidebar);
     }
     
-    // Bottom navigation
     const bottomNavItems = document.querySelectorAll('.bottom-nav-item');
     const navItems = document.querySelectorAll('.nav-item');
     
@@ -1355,7 +1523,6 @@ function setupMobileNavigation() {
                 document.getElementById('sprints-view').classList.add('hidden');
                 document.getElementById('current-view').textContent = 'Board';
                 
-                // Update active states
                 bottomNavItems.forEach(nav => nav.classList.remove('active'));
                 item.classList.add('active');
                 navItems.forEach(nav => nav.classList.remove('active'));
@@ -1366,7 +1533,6 @@ function setupMobileNavigation() {
                 document.getElementById('current-view').textContent = 'Sprints';
                 loadSprints();
                 
-                // Update active states
                 bottomNavItems.forEach(nav => nav.classList.remove('active'));
                 item.classList.add('active');
                 navItems.forEach(nav => nav.classList.remove('active'));
@@ -1375,7 +1541,6 @@ function setupMobileNavigation() {
         });
     });
     
-    // Bottom add button
     const bottomAddBtn = document.getElementById('bottom-add-btn');
     if (bottomAddBtn) {
         bottomAddBtn.addEventListener('click', () => {
@@ -1383,7 +1548,6 @@ function setupMobileNavigation() {
         });
     }
     
-    // Close sidebar when clicking a nav link on mobile
     navItems.forEach(item => {
         item.addEventListener('click', () => {
             if (window.innerWidth <= 768) {
@@ -1455,7 +1619,6 @@ function openProjectModal() {
     
     if (!currentOrganization) {
         showToast('Loading organization... Please wait', 'warning');
-        // Try to reload user data
         loadUserData().then(() => {
             if (currentOrganization) {
                 const modal = document.getElementById('project-modal');
@@ -1533,11 +1696,482 @@ function showToast(message, type = 'info') {
 }
 
 // ============================================
+// Undo Delete Functions
+// ============================================
+
+/**
+ * Show undo toast notification
+ * @param {string} message - Message to display
+ * @param {function} undoFunction - Function to call when undo is clicked
+ */
+function showUndoToast(message, undoFunction) {
+    // Remove existing undo toast
+    const existingToast = document.querySelector('.undo-toast');
+    if (existingToast) existingToast.remove();
+    
+    // Clear existing timeout
+    if (undoTimeout) {
+        clearTimeout(undoTimeout);
+        undoTimeout = null;
+    }
+    
+    // Create toast
+    const toast = document.createElement('div');
+    toast.className = 'undo-toast';
+    toast.innerHTML = `
+        <span>${escapeHtml(message)}</span>
+        <button class="undo-btn">Undo</button>
+    `;
+    document.body.appendChild(toast);
+    
+    // Handle undo button click
+    const undoBtn = toast.querySelector('.undo-btn');
+    undoBtn.addEventListener('click', () => {
+        undoFunction();
+        toast.remove();
+        if (undoTimeout) clearTimeout(undoTimeout);
+        showToast('Action undone', 'success');
+    });
+    
+    // Auto-dismiss after UNDO_DURATION
+    undoTimeout = setTimeout(() => {
+        if (toast && toast.parentNode) {
+            toast.remove();
+        }
+        undoTimeout = null;
+        deletedItem = null;
+        deletedItemType = null;
+    }, UNDO_DURATION);
+}
+
+/**
+ * Delete a task with undo support
+ */
+async function deleteTaskWithUndo(taskId, taskData) {
+    // Store deleted item for potential undo
+    deletedItem = { id: taskId, ...taskData };
+    deletedItemType = 'task';
+    
+    // Delete from database
+    try {
+        const commentsSnapshot = await db.collection('comments')
+            .where('taskId', '==', taskId)
+            .get();
+        
+        const batch = db.batch();
+        commentsSnapshot.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+        
+        const taskRef = db.collection('tasks').doc(taskId);
+        batch.delete(taskRef);
+        
+        await batch.commit();
+        
+        // Show undo toast
+        showUndoToast('Task deleted', () => undoDelete());
+        
+        // Close modal if open
+        closeCommentModal();
+        
+        // Reload tasks
+        await loadTasks();
+        
+    } catch (error) {
+        console.error('Error deleting task:', error);
+        showToast('Error deleting task: ' + error.message, 'error');
+        deletedItem = null;
+        deletedItemType = null;
+    }
+}
+
+/**
+ * Delete a project with undo support
+ */
+async function deleteProjectWithUndo(projectId, projectData) {
+    // Store deleted item for potential undo
+    deletedItem = { id: projectId, ...projectData };
+    deletedItemType = 'project';
+    
+    try {
+        const tasksSnapshot = await db.collection('tasks')
+            .where('projectId', '==', projectId)
+            .get();
+        
+        const batch = db.batch();
+        const deletedTasks = [];
+        
+        for (const taskDoc of tasksSnapshot.docs) {
+            const commentsSnapshot = await db.collection('comments')
+                .where('taskId', '==', taskDoc.id)
+                .get();
+            
+            commentsSnapshot.forEach(commentDoc => {
+                batch.delete(commentDoc.ref);
+            });
+            
+            batch.delete(taskDoc.ref);
+            deletedTasks.push({ id: taskDoc.id, ...taskDoc.data() });
+        }
+        
+        const projectRef = db.collection('projects').doc(projectId);
+        batch.delete(projectRef);
+        
+        await batch.commit();
+        
+        // Store deleted tasks for potential undo
+        if (deletedItem) {
+            deletedItem.tasks = deletedTasks;
+        }
+        
+        // Show undo toast
+        showUndoToast(`Project "${projectData.name}" deleted`, () => undoDelete());
+        
+        // Reload projects
+        await loadProjects();
+        
+    } catch (error) {
+        console.error('Error deleting project:', error);
+        showToast('Error deleting project: ' + error.message, 'error');
+        deletedItem = null;
+        deletedItemType = null;
+    }
+}
+
+/**
+ * Undo the last delete operation
+ */
+async function undoDelete() {
+    if (!deletedItem || !deletedItemType) {
+        console.log('Nothing to undo');
+        return;
+    }
+    
+    try {
+        if (deletedItemType === 'task') {
+            // Restore task
+            const taskData = {
+                projectId: deletedItem.projectId,
+                title: deletedItem.title,
+                description: deletedItem.description || '',
+                priority: deletedItem.priority || 'medium',
+                status: deletedItem.status || 'todo',
+                assignedTo: deletedItem.assignedTo || null,
+                dueDate: deletedItem.dueDate || null,
+                estimatedHours: deletedItem.estimatedHours || 0,
+                tags: deletedItem.tags || [],
+                order: deletedItem.order || Date.now(),
+                createdBy: deletedItem.createdBy,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            
+            await db.collection('tasks').add(taskData);
+            console.log('Task restored');
+            
+        } else if (deletedItemType === 'project') {
+            // Restore project
+            const projectData = {
+                organizationId: deletedItem.organizationId,
+                name: deletedItem.name,
+                description: deletedItem.description || '',
+                color: deletedItem.color || '#16a34a',
+                isArchived: false,
+                createdBy: deletedItem.createdBy,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            
+            const projectRef = await db.collection('projects').add(projectData);
+            console.log('Project restored:', projectRef.id);
+            
+            // Restore tasks if any
+            if (deletedItem.tasks && deletedItem.tasks.length > 0) {
+                for (const task of deletedItem.tasks) {
+                    const taskData = {
+                        projectId: projectRef.id,
+                        title: task.title,
+                        description: task.description || '',
+                        priority: task.priority || 'medium',
+                        status: task.status || 'todo',
+                        assignedTo: task.assignedTo || null,
+                        dueDate: task.dueDate || null,
+                        estimatedHours: task.estimatedHours || 0,
+                        tags: task.tags || [],
+                        order: task.order || Date.now(),
+                        createdBy: task.createdBy,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+                    await db.collection('tasks').add(taskData);
+                }
+                console.log(`${deletedItem.tasks.length} tasks restored`);
+            }
+        }
+        
+        // Clear deleted item
+        deletedItem = null;
+        deletedItemType = null;
+        
+        // Reload data
+        if (deletedItemType === 'project') {
+            await loadProjects();
+        } else {
+            await loadTasks();
+        }
+        
+    } catch (error) {
+        console.error('Error undoing delete:', error);
+        showToast('Error undoing action', 'error');
+    }
+}
+
+// ============================================
+// Keyboard Shortcuts
+// ============================================
+
+/**
+ * Setup keyboard shortcuts
+ * Shortcuts:
+ *   N - New Task
+ *   P - New Project
+ *   / - Focus Search
+ *   S - Focus Filter
+ *   Esc - Close modal / Clear search
+ *   ? - Show shortcuts help
+ *   B - Go to Board view
+ *   R - Go to Sprints view
+ *   Ctrl/Cmd + Z - Undo Delete
+ */
+function setupKeyboardShortcuts() {
+    document.addEventListener('keydown', (e) => {
+        // Don't trigger shortcuts when typing in input fields
+        const isTyping = e.target.matches('input, textarea, select, [contenteditable]');
+        
+        // Help modal - always available
+        if (e.key === '?' && !isTyping) {
+            e.preventDefault();
+            showShortcutsHelp();
+            return;
+        }
+        
+        // Escape - close modals and clear search
+        if (e.key === 'Escape') {
+            if (isTyping) {
+                // Clear search if typing in search
+                const searchInput = document.getElementById('search-tasks');
+                if (document.activeElement === searchInput && searchInput.value) {
+                    searchInput.value = '';
+                    searchTerm = '';
+                    applySearchAndFilter();
+                    const clearSearch = document.getElementById('clear-search');
+                    if (clearSearch) clearSearch.style.display = 'none';
+                }
+            } else {
+                // Close any open modal
+                closeAllModals();
+            }
+            return;
+        }
+        
+        // Skip if typing in input fields for other shortcuts
+        if (isTyping) return;
+        
+        // N - New Task
+        if (e.key === 'n' || e.key === 'N') {
+            e.preventDefault();
+            if (currentProject) {
+                openTaskModal();
+            } else {
+                showToast('Please select a project first', 'warning');
+            }
+        }
+        
+        // P - New Project
+        if (e.key === 'p' || e.key === 'P') {
+            e.preventDefault();
+            openProjectModal();
+        }
+        
+        // / - Focus Search
+        if (e.key === '/') {
+            e.preventDefault();
+            const searchInput = document.getElementById('search-tasks');
+            if (searchInput) {
+                searchInput.focus();
+                searchInput.select();
+            }
+        }
+        
+        // S - Focus Filter button
+        if (e.key === 's' || e.key === 'S') {
+            e.preventDefault();
+            const filterBtn = document.getElementById('filter-btn');
+            if (filterBtn) {
+                filterBtn.click();
+            }
+        }
+        
+        // B - Board view
+        if (e.key === 'b' || e.key === 'B') {
+            e.preventDefault();
+            switchToBoardView();
+        }
+        
+        // R - Sprints view
+        if (e.key === 'r' || e.key === 'R') {
+            e.preventDefault();
+            switchToSprintsView();
+        }
+        
+        // Ctrl/Cmd + Z - Undo last delete
+        if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+            e.preventDefault();
+            if (deletedItem) {
+                undoDelete();
+            }
+        }
+    });
+}
+
+/**
+ * Close all open modals
+ */
+function closeAllModals() {
+    closeTaskModal();
+    closeProjectModal();
+    closeSprintModal();
+    closeCommentModal();
+    
+    // Close filter dropdown
+    const filterDropdown = document.getElementById('filter-dropdown');
+    if (filterDropdown) {
+        filterDropdown.classList.remove('show');
+    }
+}
+
+/**
+ * Switch to Board view
+ */
+function switchToBoardView() {
+    document.getElementById('board-view').style.display = 'flex';
+    document.getElementById('sprints-view').classList.add('hidden');
+    document.getElementById('current-view').textContent = 'Board';
+    
+    // Update active states
+    document.querySelectorAll('.nav-item, .bottom-nav-item').forEach(item => {
+        if (item.dataset?.view === 'board') {
+            item.classList.add('active');
+        } else {
+            item.classList.remove('active');
+        }
+    });
+}
+
+/**
+ * Switch to Sprints view
+ */
+function switchToSprintsView() {
+    document.getElementById('board-view').style.display = 'none';
+    document.getElementById('sprints-view').classList.remove('hidden');
+    document.getElementById('current-view').textContent = 'Sprints';
+    loadSprints();
+    
+    // Update active states
+    document.querySelectorAll('.nav-item, .bottom-nav-item').forEach(item => {
+        if (item.dataset?.view === 'sprints') {
+            item.classList.add('active');
+        } else {
+            item.classList.remove('active');
+        }
+    });
+}
+
+/**
+ * Show keyboard shortcuts help modal
+ */
+function showShortcutsHelp() {
+    // Create help modal
+    let helpModal = document.getElementById('shortcuts-help-modal');
+    
+    if (!helpModal) {
+        helpModal = document.createElement('div');
+        helpModal.id = 'shortcuts-help-modal';
+        helpModal.className = 'modal';
+        helpModal.innerHTML = `
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h3><i class="fas fa-keyboard"></i> Keyboard Shortcuts</h3>
+                    <button class="close-modal" onclick="closeShortcutsHelp()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="shortcuts-grid">
+                        <div class="shortcut-item">
+                            <kbd>N</kbd>
+                            <span>New Task</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <kbd>P</kbd>
+                            <span>New Project</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <kbd>/</kbd>
+                            <span>Focus Search</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <kbd>S</kbd>
+                            <span>Focus Filter</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <kbd>B</kbd>
+                            <span>Board View</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <kbd>R</kbd>
+                            <span>Sprints View</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <kbd>Esc</kbd>
+                            <span>Close Modal / Clear Search</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <kbd>Ctrl+Z</kbd> / <kbd>⌘+Z</kbd>
+                            <span>Undo Delete</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <kbd>?</kbd>
+                            <span>Show this help</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-secondary" onclick="closeShortcutsHelp()">Close</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(helpModal);
+    }
+    
+    helpModal.classList.add('active');
+    helpModal.style.display = 'flex';
+}
+
+/**
+ * Close shortcuts help modal
+ */
+function closeShortcutsHelp() {
+    const helpModal = document.getElementById('shortcuts-help-modal');
+    if (helpModal) {
+        helpModal.classList.remove('active');
+        helpModal.style.display = 'none';
+    }
+}
+
+window.closeShortcutsHelp = closeShortcutsHelp;
+
+// ============================================
 // Global Exports
 // ============================================
 window.openTaskDetail = openTaskDetail;
-window.deleteTask = deleteTask;
-window.deleteProject = deleteProject;
 window.updateTask = updateTask;
 window.removeFilter = removeFilter;
 window.closeTaskModal = closeTaskModal;
@@ -1547,3 +2181,7 @@ window.closeCommentModal = closeCommentModal;
 window.openTaskModal = openTaskModal;
 window.openProjectModal = openProjectModal;
 window.openSprintModal = openSprintModal;
+window.clearSearchAndReload = clearSearchAndReload;
+window.deleteProjectWithUndo = deleteProjectWithUndo;
+window.deleteTaskWithUndo = deleteTaskWithUndo;
+window.closeShortcutsHelp = closeShortcutsHelp;
