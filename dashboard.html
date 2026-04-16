@@ -243,7 +243,10 @@
                         </div>
                         <div class="form-group">
                             <label for="task-assignee">Assign to</label>
-                            <input type="text" id="task-assignee" placeholder="Assignee name">
+                            <select id="task-assignee">
+                                <option value="">Unassigned</option>
+                                <!-- Options will be populated dynamically from team members -->
+                            </select>
                         </div>
                     </div>
                     <div class="form-row">
@@ -362,7 +365,10 @@
                         </div>
                         <div class="form-group">
                             <label for="edit-task-assignee">Assignee</label>
-                            <input type="text" id="edit-task-assignee" placeholder="Assignee name">
+                            <select id="edit-task-assignee">
+                                <option value="">Unassigned</option>
+                                <!-- Options will be populated dynamically from team members -->
+                            </select>
                         </div>
                     </div>
                     <div class="form-row">

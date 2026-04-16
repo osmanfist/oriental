@@ -1,10 +1,10 @@
 /**
  * Oriental - Dashboard Module
- * Version: 2.4.0
+ * Version: 2.5.0
  * 
  * Main application logic including task management, project handling,
  * real-time updates, drag-and-drop functionality, comments, search, filters,
- * sorting, assignee filtering, mobile drag & drop, and pull to refresh.
+ * sorting, assignee filtering (real users), mobile drag & drop, and pull to refresh.
  */
 
 // ============================================
@@ -25,6 +25,7 @@ let allTasks = [];
 let filteredTasks = [];
 let searchTerm = '';
 let currentSort = 'created-desc';
+let teamMembers = []; // New: Store team members for assignee dropdown
 let activeFilters = {
     priorities: [],
     statuses: [],
@@ -45,6 +46,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await checkAuth();
     await loadUserData();
     await loadOrganization();
+    await loadTeamMembers(); // New: Load team members
     await loadProjects();
     setupEventListeners();
     setupRealtimeSubscription();
@@ -202,6 +204,80 @@ function showConfirmDialog(title, message, type = 'danger') {
             }
         });
     });
+}
+
+// ============================================
+// Team Members (Real Assignees)
+// ============================================
+
+/**
+ * Load all team members from current organization
+ */
+async function loadTeamMembers() {
+    if (!currentOrganization) return;
+    
+    try {
+        console.log('Loading team members for organization:', currentOrganization);
+        
+        // Get all users who are members of this organization
+        const usersSnapshot = await db.collection('users')
+            .where('organizations', 'array-contains', currentOrganization)
+            .get();
+        
+        teamMembers = [];
+        usersSnapshot.forEach(doc => {
+            const userData = doc.data();
+            teamMembers.push({
+                id: doc.id,
+                name: userData.name || userData.email.split('@')[0],
+                email: userData.email,
+                avatar: userData.avatar || null
+            });
+        });
+        
+        // Also include current user if not already in list
+        const currentUserInList = teamMembers.some(m => m.id === currentUser.uid);
+        if (!currentUserInList) {
+            teamMembers.unshift({
+                id: currentUser.uid,
+                name: currentUser.displayName || currentUser.email.split('@')[0],
+                email: currentUser.email
+            });
+        }
+        
+        console.log(`Loaded ${teamMembers.length} team members`);
+        
+        // Update assignee dropdowns
+        updateAssigneeDropdowns();
+        
+    } catch (error) {
+        console.error('Error loading team members:', error);
+    }
+}
+
+/**
+ * Update all assignee dropdowns in forms
+ */
+function updateAssigneeDropdowns() {
+    // Update task creation modal assignee dropdown
+    const taskAssignee = document.getElementById('task-assignee');
+    if (taskAssignee) {
+        taskAssignee.innerHTML = '<option value="">Unassigned</option>';
+        teamMembers.forEach(member => {
+            taskAssignee.innerHTML += `<option value="${escapeHtml(member.name)}">${escapeHtml(member.name)} (${escapeHtml(member.email)})</option>`;
+        });
+    }
+    
+    // Update edit task modal assignee dropdown
+    const editAssignee = document.getElementById('edit-task-assignee');
+    if (editAssignee) {
+        const currentValue = editAssignee.value;
+        editAssignee.innerHTML = '<option value="">Unassigned</option>';
+        teamMembers.forEach(member => {
+            editAssignee.innerHTML += `<option value="${escapeHtml(member.name)}">${escapeHtml(member.name)} (${escapeHtml(member.email)})</option>`;
+        });
+        if (currentValue) editAssignee.value = currentValue;
+    }
 }
 
 // ============================================
@@ -1375,6 +1451,7 @@ async function refreshData() {
     try {
         await loadUserData();
         await loadOrganization();
+        await loadTeamMembers(); // Reload team members
         await loadProjects();
         if (currentProject) {
             await loadTasks();
@@ -1412,13 +1489,25 @@ async function createTask(taskData) {
     }
     
     try {
+        // Find assignee ID if assignee name is provided
+        let assigneeId = null;
+        let assigneeName = taskData.assignedTo || null;
+        
+        if (assigneeName && assigneeName !== 'Unassigned' && assigneeName !== '') {
+            const matchedMember = teamMembers.find(m => m.name === assigneeName);
+            if (matchedMember) {
+                assigneeId = matchedMember.id;
+            }
+        }
+        
         const task = {
             projectId: currentProject.id,
             title: taskData.title,
             description: taskData.description || '',
             priority: taskData.priority || 'medium',
             status: 'todo',
-            assignedTo: taskData.assignedTo || null,
+            assignedTo: assigneeName,
+            assignedToId: assigneeId,
             dueDate: taskData.dueDate || null,
             estimatedHours: parseFloat(taskData.estimatedHours) || 0,
             tags: taskData.tags ? taskData.tags.split(',').map(t => t.trim()) : [],
@@ -1446,11 +1535,23 @@ async function updateTask(taskId, taskData) {
     console.log('Updating task:', taskId, taskData);
     
     try {
+        // Find assignee ID if assignee name is provided
+        let assigneeId = null;
+        let assigneeName = taskData.assignedTo || null;
+        
+        if (assigneeName && assigneeName !== 'Unassigned' && assigneeName !== '') {
+            const matchedMember = teamMembers.find(m => m.name === assigneeName);
+            if (matchedMember) {
+                assigneeId = matchedMember.id;
+            }
+        }
+        
         const updateData = {
             title: taskData.title,
             description: taskData.description || '',
             priority: taskData.priority || 'medium',
-            assignedTo: taskData.assignedTo || null,
+            assignedTo: assigneeName,
+            assignedToId: assigneeId,
             dueDate: taskData.dueDate || null,
             estimatedHours: parseFloat(taskData.estimatedHours) || 0,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -1536,7 +1637,11 @@ async function openTaskDetail(taskId) {
         document.getElementById('edit-task-title').value = task.title || '';
         document.getElementById('edit-task-description').value = task.description || '';
         document.getElementById('edit-task-priority').value = task.priority || 'medium';
+        
+        // Update assignee dropdown before setting value
+        updateAssigneeDropdowns();
         document.getElementById('edit-task-assignee').value = task.assignedTo || '';
+        
         document.getElementById('edit-task-due-date').value = task.dueDate || '';
         document.getElementById('edit-task-estimate').value = task.estimatedHours || 0;
         document.getElementById('edit-task-tags').value = task.tags ? task.tags.join(', ') : '';
