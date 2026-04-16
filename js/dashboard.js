@@ -1,9 +1,10 @@
 /**
  * Oriental - Dashboard Module
- * Version: 2.0.0
+ * Version: 2.1.0
  * 
  * Main application logic including task management, project handling,
  * real-time updates, drag-and-drop functionality, comments, search, and filters.
+ * Updated with mobile fixes and improved organization loading.
  */
 
 // ============================================
@@ -39,6 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadProjects();
     setupEventListeners();
     setupRealtimeSubscription();
+    setupMobileNavigation();
     console.log('✅ Dashboard ready!');
 });
 
@@ -70,17 +72,22 @@ async function checkAuth() {
  */
 async function loadUserData() {
     try {
+        console.log('Loading user data for UID:', currentUser.uid);
+        
         const userDoc = await db.collection('users').doc(currentUser.uid).get();
         
         if (userDoc.exists) {
             const userData = userDoc.data();
             currentOrganization = userData.currentOrganization;
+            console.log('Organization loaded:', currentOrganization);
             
+            // Update organization name in sidebar
             const orgNameElement = document.getElementById('org-name');
             if (orgNameElement) {
                 orgNameElement.textContent = userData.name || currentUser.email;
             }
             
+            // Update user info section
             const userNameElement = document.getElementById('user-name');
             if (userNameElement) {
                 userNameElement.textContent = userData.name || currentUser.displayName || 'User';
@@ -91,10 +98,15 @@ async function loadUserData() {
                 userEmailElement.textContent = currentUser.email;
             }
             
-            console.log('User data loaded');
+            // Force reload projects if organization was just loaded
+            if (currentOrganization) {
+                await loadProjects();
+            }
+            
         } else {
             console.warn('User document not found for:', currentUser.uid);
             
+            // Fallback: use Firebase auth data
             const userNameElement = document.getElementById('user-name');
             if (userNameElement) {
                 userNameElement.textContent = currentUser.displayName || currentUser.email.split('@')[0];
@@ -104,6 +116,9 @@ async function loadUserData() {
             if (userEmailElement) {
                 userEmailElement.textContent = currentUser.email;
             }
+            
+            // Try to create missing user document
+            await createMissingUserDocument();
         }
     } catch (error) {
         console.error('Error loading user data:', error);
@@ -112,12 +127,90 @@ async function loadUserData() {
 }
 
 /**
+ * Create missing user document (for Google Sign-in users or edge cases)
+ */
+async function createMissingUserDocument() {
+    try {
+        console.log('Creating missing user document...');
+        
+        // Check if user has any organizations
+        const orgsSnapshot = await db.collection('organizations')
+            .where('members', 'array-contains', currentUser.uid)
+            .get();
+        
+        let orgId;
+        
+        if (!orgsSnapshot.empty) {
+            orgId = orgsSnapshot.docs[0].id;
+            console.log('Found existing organization:', orgId);
+        } else {
+            // Create new organization
+            const orgName = prompt('Welcome! Please enter your organization name:', 'My Team');
+            if (!orgName) return;
+            
+            const orgRef = await db.collection('organizations').add({
+                name: orgName,
+                slug: orgName.toLowerCase().replace(/ /g, '-'),
+                createdBy: currentUser.uid,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                members: [currentUser.uid],
+                settings: { defaultView: 'board', theme: 'light' }
+            });
+            orgId = orgRef.id;
+            console.log('Organization created:', orgId);
+            
+            // Create default project
+            await db.collection('projects').add({
+                name: 'Getting Started',
+                description: 'Welcome to Oriental! This is your first project.',
+                organizationId: orgId,
+                createdBy: currentUser.uid,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                isArchived: false,
+                color: '#16a34a'
+            });
+        }
+        
+        // Create user document
+        await db.collection('users').doc(currentUser.uid).set({
+            name: currentUser.displayName || currentUser.email.split('@')[0],
+            email: currentUser.email,
+            currentOrganization: orgId,
+            organizations: [orgId],
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            preferences: { notifications: true, emailDigest: 'daily' }
+        });
+        
+        currentOrganization = orgId;
+        console.log('User document created successfully');
+        
+        // Update UI
+        const orgNameElement = document.getElementById('org-name');
+        if (orgNameElement) {
+            orgNameElement.textContent = currentUser.displayName || currentUser.email.split('@')[0];
+        }
+        
+        // Reload projects
+        await loadProjects();
+        showToast('Organization created successfully', 'success');
+        
+    } catch (error) {
+        console.error('Error creating user document:', error);
+        showToast('Error setting up your account', 'error');
+    }
+}
+
+/**
  * Load organization details
  */
 async function loadOrganization() {
-    if (!currentOrganization) return;
+    if (!currentOrganization) {
+        console.log('No currentOrganization, waiting for loadUserData to set it');
+        return;
+    }
     
     try {
+        console.log('Loading organization:', currentOrganization);
         const orgDoc = await db.collection('organizations').doc(currentOrganization).get();
         
         if (orgDoc.exists) {
@@ -127,6 +220,12 @@ async function loadOrganization() {
                 orgNameElement.textContent = orgData.name;
             }
             console.log('Organization loaded:', orgData.name);
+        } else {
+            console.error('Organization document not found:', currentOrganization);
+            const orgNameElement = document.getElementById('org-name');
+            if (orgNameElement) {
+                orgNameElement.textContent = 'Organization Not Found';
+            }
         }
     } catch (error) {
         console.error('Error loading organization:', error);
@@ -137,7 +236,10 @@ async function loadOrganization() {
  * Load all projects for current organization
  */
 async function loadProjects() {
-    if (!currentOrganization) return;
+    if (!currentOrganization) {
+        console.log('No currentOrganization, skipping loadProjects');
+        return;
+    }
     
     try {
         const projectsSnapshot = await db.collection('projects')
@@ -839,14 +941,21 @@ async function deleteTask(taskId) {
  * Create a new project
  */
 async function createProject(projectData) {
-    if (!currentOrganization) return false;
+    if (!currentOrganization) {
+        console.log('No organization found, trying to reload...');
+        await loadUserData();
+        if (!currentOrganization) {
+            showToast('Unable to create project. Please refresh the page.', 'error');
+            return false;
+        }
+    }
     
     try {
         const project = {
             organizationId: currentOrganization,
             name: projectData.name,
             description: projectData.description || '',
-            color: projectData.color || '#6366f1',
+            color: projectData.color || '#16a34a',
             isArchived: false,
             createdBy: currentUser.uid,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -859,7 +968,7 @@ async function createProject(projectData) {
         
     } catch (error) {
         console.error('Error creating project:', error);
-        showToast('Error creating project', 'error');
+        showToast('Error creating project: ' + error.message, 'error');
         return false;
     }
 }
@@ -1200,6 +1309,91 @@ function setupEventListeners() {
 }
 
 // ============================================
+// Mobile Navigation
+// ============================================
+
+function setupMobileNavigation() {
+    // Mobile menu button
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarOverlay = document.getElementById('sidebar-overlay');
+    const sidebarCloseBtn = document.getElementById('sidebar-close-btn');
+    
+    function openSidebar() {
+        if (sidebar) sidebar.classList.add('open');
+        if (sidebarOverlay) sidebarOverlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+    
+    function closeSidebar() {
+        if (sidebar) sidebar.classList.remove('open');
+        if (sidebarOverlay) sidebarOverlay.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+    
+    if (mobileMenuBtn) {
+        mobileMenuBtn.addEventListener('click', openSidebar);
+    }
+    
+    if (sidebarCloseBtn) {
+        sidebarCloseBtn.addEventListener('click', closeSidebar);
+    }
+    
+    if (sidebarOverlay) {
+        sidebarOverlay.addEventListener('click', closeSidebar);
+    }
+    
+    // Bottom navigation
+    const bottomNavItems = document.querySelectorAll('.bottom-nav-item');
+    const navItems = document.querySelectorAll('.nav-item');
+    
+    bottomNavItems.forEach(item => {
+        item.addEventListener('click', () => {
+            const view = item.dataset.view;
+            if (view === 'board') {
+                document.getElementById('board-view').style.display = 'flex';
+                document.getElementById('sprints-view').classList.add('hidden');
+                document.getElementById('current-view').textContent = 'Board';
+                
+                // Update active states
+                bottomNavItems.forEach(nav => nav.classList.remove('active'));
+                item.classList.add('active');
+                navItems.forEach(nav => nav.classList.remove('active'));
+                document.querySelector('.nav-item[data-view="board"]')?.classList.add('active');
+            } else if (view === 'sprints') {
+                document.getElementById('board-view').style.display = 'none';
+                document.getElementById('sprints-view').classList.remove('hidden');
+                document.getElementById('current-view').textContent = 'Sprints';
+                loadSprints();
+                
+                // Update active states
+                bottomNavItems.forEach(nav => nav.classList.remove('active'));
+                item.classList.add('active');
+                navItems.forEach(nav => nav.classList.remove('active'));
+                document.querySelector('.nav-item[data-view="sprints"]')?.classList.add('active');
+            }
+        });
+    });
+    
+    // Bottom add button
+    const bottomAddBtn = document.getElementById('bottom-add-btn');
+    if (bottomAddBtn) {
+        bottomAddBtn.addEventListener('click', () => {
+            openTaskModal();
+        });
+    }
+    
+    // Close sidebar when clicking a nav link on mobile
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            if (window.innerWidth <= 768) {
+                setTimeout(closeSidebar, 150);
+            }
+        });
+    });
+}
+
+// ============================================
 // Modal Controls
 // ============================================
 
@@ -1256,10 +1450,32 @@ function openTaskModal() {
 }
 
 function openProjectModal() {
+    console.log('Opening project modal');
+    console.log('Current organization:', currentOrganization);
+    
+    if (!currentOrganization) {
+        showToast('Loading organization... Please wait', 'warning');
+        // Try to reload user data
+        loadUserData().then(() => {
+            if (currentOrganization) {
+                const modal = document.getElementById('project-modal');
+                if (modal) {
+                    modal.style.display = 'flex';
+                    modal.classList.add('active');
+                }
+            } else {
+                showToast('Unable to load organization. Please refresh the page.', 'error');
+            }
+        });
+        return;
+    }
+    
     const modal = document.getElementById('project-modal');
     if (modal) {
         modal.style.display = 'flex';
         modal.classList.add('active');
+    } else {
+        console.error('Project modal not found');
     }
 }
 
