@@ -1,8 +1,9 @@
 /**
  * Oriental - Global Styles
- * Version: 6.0.0
+ * Version: 7.0.0
  * Description: COMPLETELY STATIC - No transitions, no animations, no motion
  * Mobile-friendly with hamburger menu and bottom navigation
+ * Added: Sort dropdown, assignee filters, mobile drag & drop, pull to refresh
  */
 
 /* ============================================
@@ -783,6 +784,7 @@ body {
     display: flex;
     gap: var(--spacing-md);
     align-items: center;
+    flex-wrap: wrap;
 }
 
 .create-task-btn {
@@ -832,7 +834,6 @@ body {
     padding: 8px 16px;
     border-radius: var(--radius-lg);
     font-size: var(--font-size-xs);
-    transition: color 0.2s;
 }
 
 .bottom-nav-item i {
@@ -846,6 +847,93 @@ body {
 .bottom-nav-item:hover {
     color: var(--primary-600);
     background: var(--gray-50);
+}
+
+/* ============================================
+   Sort Dropdown
+   ============================================ */
+.sort-container {
+    position: relative;
+}
+
+.sort-btn {
+    background: white;
+    border: 2px solid var(--gray-200);
+    padding: 10px 16px;
+    border-radius: var(--radius-lg);
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: inherit;
+    font-size: var(--font-size-sm);
+    color: var(--gray-700);
+}
+
+.sort-btn:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-300);
+}
+
+.sort-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: white;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--gray-200);
+    min-width: 220px;
+    z-index: 100;
+    display: none;
+}
+
+.sort-dropdown.show {
+    display: block;
+}
+
+.sort-option {
+    padding: 12px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: var(--font-size-sm);
+    color: var(--gray-700);
+}
+
+.sort-option:hover {
+    background: var(--gray-50);
+    color: var(--primary-600);
+}
+
+.sort-option.active {
+    background: var(--primary-50);
+    color: var(--primary-600);
+}
+
+.sort-option i {
+    width: 20px;
+    font-size: 14px;
+}
+
+/* ============================================
+   Assignee Filters
+   ============================================ */
+.assignee-filters {
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.assignee-filters label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--gray-700);
 }
 
 /* ============================================
@@ -895,6 +983,13 @@ body {
 
 .tasks-container {
     min-height: 200px;
+}
+
+/* Mobile Drag & Drop */
+.tasks-container.drag-over {
+    background: var(--primary-50);
+    outline: 2px dashed var(--primary-300);
+    outline-offset: -2px;
 }
 
 /* Task Card */
@@ -1049,6 +1144,39 @@ body {
 
 .create-sprint-btn:hover {
     background: var(--primary-700);
+}
+
+/* ============================================
+   Pull to Refresh
+   ============================================ */
+.pull-to-refresh {
+    position: fixed;
+    top: -60px;
+    left: 0;
+    right: 0;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary-50);
+    color: var(--primary-600);
+    font-size: var(--font-size-sm);
+    gap: var(--spacing-sm);
+    z-index: 100;
+    transition: top 0.2s ease-out;
+}
+
+.pull-to-refresh.active {
+    top: 0;
+}
+
+.pull-to-refresh i {
+    font-size: 20px;
+    transition: transform 0.3s;
+}
+
+.pull-to-refresh.refreshing i {
+    animation: spin 0.8s linear infinite;
 }
 
 /* ============================================
@@ -1223,6 +1351,53 @@ hr {
 .toast.toast-error   { border-left-color: var(--error); }
 .toast.toast-warning { border-left-color: var(--warning); }
 .toast.toast-info    { border-left-color: var(--info); }
+
+/* ============================================
+   Undo Toast / Snackbar
+   ============================================ */
+.undo-toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--gray-900);
+    color: white;
+    padding: var(--spacing-md) var(--spacing-xl);
+    border-radius: var(--radius-lg);
+    z-index: 1100;
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
+    font-size: var(--font-size-sm);
+    max-width: 90%;
+    white-space: nowrap;
+}
+
+.undo-toast button {
+    background: var(--primary-600);
+    color: white;
+    border: none;
+    padding: 6px 16px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: 600;
+    font-family: inherit;
+}
+
+.undo-toast button:hover {
+    background: var(--primary-700);
+}
+
+@media (max-width: 768px) {
+    .undo-toast {
+        bottom: 80px;
+        white-space: normal;
+        flex-direction: column;
+        gap: var(--spacing-sm);
+        text-align: center;
+    }
+}
 
 /* ============================================
    Search & Filter
@@ -1409,17 +1584,34 @@ hr {
     text-align: center;
     padding: var(--spacing-3xl);
     color: var(--gray-400);
+    background: white;
+    border-radius: var(--radius-lg);
+    border: 1px dashed var(--gray-200);
 }
 
 .empty-state i {
-    font-size: 56px;
+    font-size: 64px;
     margin-bottom: var(--spacing-lg);
     display: block;
-    opacity: 0.4;
+    opacity: 0.5;
+    color: var(--primary-400);
+}
+
+.empty-state h3 {
+    font-size: var(--font-size-lg);
+    color: var(--gray-600);
+    margin-bottom: var(--spacing-sm);
 }
 
 .empty-state p {
-    font-size: var(--font-size-base);
+    font-size: var(--font-size-sm);
+    color: var(--gray-500);
+    margin-bottom: var(--spacing-lg);
+}
+
+.empty-state .btn-primary {
+    display: inline-flex;
+    margin-top: var(--spacing-md);
 }
 
 .empty-state-small {
@@ -1427,434 +1619,45 @@ hr {
     padding: var(--spacing-lg);
     color: var(--gray-400);
     font-size: var(--font-size-sm);
-}
-
-/* ============================================
-   Loading States
-   ============================================ */
-.loading-spinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid var(--primary-100);
-    border-top-color: var(--primary-600);
-    border-radius: 50%;
-    margin: var(--spacing-xl) auto;
-}
-
-/* ============================================
-   Utility Classes
-   ============================================ */
-.hidden {
-    display: none !important;
-}
-
-.text-center { text-align: center; }
-.text-right  { text-align: right; }
-
-.mt-1 { margin-top: var(--spacing-sm); }
-.mt-2 { margin-top: var(--spacing-md); }
-.mt-3 { margin-top: var(--spacing-lg); }
-.mb-1 { margin-bottom: var(--spacing-sm); }
-.mb-2 { margin-bottom: var(--spacing-md); }
-.mb-3 { margin-bottom: var(--spacing-lg); }
-
-/* ============================================
-   Mobile Responsive Styles
-   ============================================ */
-@media (max-width: 768px) {
-    /* Mobile Header */
-    .mobile-header {
-        display: flex;
-    }
-    
-    /* Bottom Navigation */
-    .bottom-nav {
-        display: flex;
-    }
-    
-    /* Sidebar */
-    .sidebar {
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-        z-index: 30;
-    }
-    
-    .sidebar.open {
-        transform: translateX(0);
-    }
-    
-    .sidebar-close-btn {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    
-    /* Hide desktop-only elements */
-    .desktop-only {
-        display: none !important;
-    }
-    
-    /* Main Content */
-    .main-content {
-        margin-left: 0;
-        padding: 80px var(--spacing-md) 80px var(--spacing-md);
-    }
-    
-    /* Dashboard Header */
-    .dashboard-header {
-        flex-direction: column;
-        align-items: stretch;
-        gap: var(--spacing-md);
-        margin-bottom: var(--spacing-lg);
-    }
-    
-    .dashboard-header h1 {
-        font-size: var(--font-size-2xl);
-    }
-    
-    /* Header Actions */
-    .header-actions {
-        flex-direction: column;
-        width: 100%;
-        gap: var(--spacing-sm);
-    }
-    
-    /* Search Container */
-    .search-container {
-        width: 100%;
-    }
-    
-    .search-input,
-    .search-input:focus {
-        width: 100%;
-    }
-    
-    /* Filter Container */
-    .filter-container {
-        width: 100%;
-    }
-    
-    .filter-btn {
-        width: 100%;
-        justify-content: center;
-    }
-    
-    .filter-btn .filter-text {
-        display: inline;
-    }
-    
-    .filter-dropdown {
-        position: fixed;
-        top: auto;
-        bottom: 80px;
-        left: var(--spacing-md);
-        right: var(--spacing-md);
-        width: auto;
-        min-width: auto;
-        max-height: 60vh;
-        overflow-y: auto;
-    }
-    
-    /* Board View */
-    .board-view {
-        flex-direction: column;
-        gap: var(--spacing-md);
-    }
-    
-    .board-column {
-        min-width: auto;
-        width: 100%;
-    }
-    
-    /* Task Card */
-    .task-card {
-        padding: 14px;
-    }
-    
-    .task-meta {
-        flex-wrap: wrap;
-        gap: 8px;
-    }
-    
-    /* Comment Button - Larger touch target */
-    .comment-btn {
-        padding: 8px 12px;
-        min-width: 44px;
-    }
-    
-    /* Delete Project Button - Always visible on mobile */
-    .delete-project-btn {
-        opacity: 1;
-    }
-    
-    /* Modals - Full screen on mobile */
-    .modal-content {
-        margin: var(--spacing-md);
-        max-width: calc(100% - 2rem);
-        max-height: 85vh;
-    }
-    
-    .modal-large {
-        max-width: calc(100% - 2rem);
-    }
-    
-    .modal-header {
-        padding: var(--spacing-lg);
-    }
-    
-    .modal-body {
-        padding: var(--spacing-lg);
-    }
-    
-    .modal-footer {
-        padding: var(--spacing-md) var(--spacing-lg);
-    }
-    
-    /* Form Elements - Larger touch targets */
-    .form-group input,
-    .form-group textarea,
-    .form-group select {
-        padding: 14px;
-        font-size: 16px; /* Prevents zoom on iOS */
-    }
-    
-    .btn {
-        padding: 14px 20px;
-        min-height: 48px;
-    }
-    
-    /* Sprint Header */
-    .sprint-info {
-        flex-direction: column;
-        gap: var(--spacing-md);
-        text-align: center;
-    }
-    
-    .create-sprint-btn {
-        width: 100%;
-        justify-content: center;
-    }
-    
-    /* Edit Task Actions */
-    .edit-task-actions {
-        flex-direction: column;
-    }
-    
-    .edit-task-actions button {
-        width: 100%;
-        justify-content: center;
-    }
-    
-    /* Toast on mobile */
-    .toast {
-        bottom: 80px;
-        right: var(--spacing-md);
-        left: var(--spacing-md);
-        max-width: none;
-    }
-}
-
-/* ============================================
-   Tablet Styles
-   ============================================ */
-@media (min-width: 769px) and (max-width: 1024px) {
-    .main-content {
-        padding: var(--spacing-xl);
-    }
-    
-    .board-column {
-        min-width: 280px;
-    }
-    
-    .search-input {
-        width: 180px;
-    }
-    
-    .search-input:focus {
-        width: 220px;
-    }
-}
-
-/* ============================================
-   Custom Scrollbar
-   ============================================ */
-::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-}
-
-::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-    background: var(--gray-300);
-    border-radius: 999px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: var(--primary-300);
-}
-
-/* ============================================
-   Print Styles
-   ============================================ */
-@media print {
-    .sidebar,
-    .mobile-header,
-    .bottom-nav,
-    .create-task-btn,
-    .sidebar-footer .logout-btn,
-    .add-project-btn,
-    .header-actions,
-    .filter-container,
-    .search-container {
-        display: none;
-    }
-
-    .main-content {
-        margin-left: 0;
-        padding: 0;
-    }
-
-    .task-card {
-        break-inside: avoid;
-        page-break-inside: avoid;
-        box-shadow: none;
-        border: 1px solid var(--gray-300);
-    }
-}
-/* ============================================
-   Mobile Floating Action Button (FAB)
-   ============================================ */
-.fab-container {
-    position: fixed;
-    bottom: 80px;
-    right: var(--spacing-lg);
-    z-index: 25;
-    display: none;
-}
-
-.fab-main {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background: var(--primary-600);
-    color: white;
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    box-shadow: var(--shadow-lg);
-    transition: background 0.2s;
-}
-
-.fab-main:hover {
-    background: var(--primary-700);
-}
-
-.fab-actions {
-    position: absolute;
-    bottom: 70px;
-    right: 0;
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-sm);
-    visibility: hidden;
-    opacity: 0;
-    transform: translateY(20px);
-    transition: visibility 0.2s, opacity 0.2s, transform 0.2s;
-}
-
-.fab-container.open .fab-actions {
-    visibility: visible;
-    opacity: 1;
-    transform: translateY(0);
-}
-
-.fab-action {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
     background: white;
-    border: none;
-    padding: 10px 16px;
     border-radius: var(--radius-lg);
-    cursor: pointer;
-    font-family: inherit;
-    font-size: var(--font-size-sm);
-    font-weight: 500;
-    color: var(--gray-700);
-    box-shadow: var(--shadow-md);
-    white-space: nowrap;
+    border: 1px dashed var(--gray-200);
 }
 
-.fab-action i {
-    font-size: 16px;
-    color: var(--primary-600);
+.empty-state-small i {
+    font-size: 32px;
+    margin-bottom: var(--spacing-sm);
+    display: block;
+    opacity: 0.5;
 }
 
-.fab-action:hover {
+.empty-tasks {
     background: var(--gray-50);
 }
 
-/* Show FAB only on mobile */
-@media (max-width: 768px) {
-    /* Make add project button larger and more visible */
-    .projects-header .add-project-btn {
-        width: 44px;
-        height: 44px;
-        background: var(--primary-50);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 20px;
-    }
-    
-    /* Make project items easier to tap */
-    .project-item {
-        padding: 12px var(--spacing-md);
-        margin-bottom: 4px;
-    }
-    
-    /* Ensure organization name is visible */
-    .org-name {
-        font-size: var(--font-size-base);
-    }
+.empty-projects {
+    background: var(--gray-50);
 }
+
+.empty-search {
+    background: var(--gray-50);
+}
+
 /* ============================================
    Loading Skeletons
    ============================================ */
-
-/* Skeleton base animation */
 @keyframes skeleton-pulse {
-    0% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.5;
-    }
-    100% {
-        opacity: 1;
-    }
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
 }
 
 .skeleton {
-    background: linear-gradient(
-        90deg,
-        var(--gray-200) 0%,
-        var(--gray-100) 50%,
-        var(--gray-200) 100%
-    );
+    background: linear-gradient(90deg, var(--gray-200) 0%, var(--gray-100) 50%, var(--gray-200) 100%);
     background-size: 200% 100%;
     border-radius: var(--radius-md);
     animation: skeleton-pulse 1.2s ease-in-out infinite;
 }
 
-/* Project list skeleton */
 .project-skeleton {
     display: flex;
     align-items: center;
@@ -1884,7 +1687,6 @@ hr {
     border-radius: var(--radius-sm);
 }
 
-/* Task card skeleton */
 .task-skeleton {
     background: white;
     border-radius: var(--radius-lg);
@@ -1921,7 +1723,6 @@ hr {
     border-radius: var(--radius-sm);
 }
 
-/* Board column skeleton */
 .column-skeleton {
     min-width: 320px;
     background: var(--gray-100);
@@ -1960,32 +1761,26 @@ hr {
     border-radius: var(--radius-sm);
 }
 
-/* Loading overlay */
-.loading-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(255, 255, 255, 0.9);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 2000;
-}
-
-.loading-spinner-large {
-    width: 48px;
-    height: 48px;
+/* ============================================
+   Loading States
+   ============================================ */
+.loading-spinner {
+    width: 40px;
+    height: 40px;
     border: 3px solid var(--primary-100);
     border-top-color: var(--primary-600);
     border-radius: 50%;
+    margin: var(--spacing-xl) auto;
     animation: spin 0.8s linear infinite;
 }
-/* ============================================
-   Custom Confirmation Dialog
-   ============================================ */
 
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ============================================
+   Confirmation Dialog
+   ============================================ */
 .confirm-dialog-overlay {
     position: fixed;
     top: 0;
@@ -2060,125 +1855,10 @@ hr {
 .confirm-dialog-actions .confirm-ok-success:hover {
     background: var(--primary-700);
 }
-/* ============================================
-   Empty States - Enhanced
-   ============================================ */
 
-.empty-state {
-    text-align: center;
-    padding: var(--spacing-3xl);
-    color: var(--gray-400);
-    background: white;
-    border-radius: var(--radius-lg);
-    border: 1px dashed var(--gray-200);
-}
-
-.empty-state i {
-    font-size: 64px;
-    margin-bottom: var(--spacing-lg);
-    display: block;
-    opacity: 0.5;
-    color: var(--primary-400);
-}
-
-.empty-state h3 {
-    font-size: var(--font-size-lg);
-    color: var(--gray-600);
-    margin-bottom: var(--spacing-sm);
-}
-
-.empty-state p {
-    font-size: var(--font-size-sm);
-    color: var(--gray-500);
-    margin-bottom: var(--spacing-lg);
-}
-
-.empty-state .btn-primary {
-    display: inline-flex;
-    margin-top: var(--spacing-md);
-}
-
-.empty-state-small {
-    text-align: center;
-    padding: var(--spacing-lg);
-    color: var(--gray-400);
-    font-size: var(--font-size-sm);
-    background: white;
-    border-radius: var(--radius-lg);
-    border: 1px dashed var(--gray-200);
-}
-
-.empty-state-small i {
-    font-size: 32px;
-    margin-bottom: var(--spacing-sm);
-    display: block;
-    opacity: 0.5;
-}
-
-/* Specific empty states */
-.empty-tasks {
-    background: var(--gray-50);
-}
-
-.empty-projects {
-    background: var(--gray-50);
-}
-
-.empty-search {
-    background: var(--gray-50);
-}
-/* ============================================
-   Undo Toast / Snackbar
-   ============================================ */
-
-.undo-toast {
-    position: fixed;
-    bottom: 80px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--gray-900);
-    color: white;
-    padding: var(--spacing-md) var(--spacing-xl);
-    border-radius: var(--radius-lg);
-    z-index: 1100;
-    box-shadow: var(--shadow-lg);
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-lg);
-    font-size: var(--font-size-sm);
-    max-width: 90%;
-    white-space: nowrap;
-}
-
-.undo-toast button {
-    background: var(--primary-600);
-    color: white;
-    border: none;
-    padding: 6px 16px;
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    font-weight: 600;
-    font-family: inherit;
-    transition: background 0.2s;
-}
-
-.undo-toast button:hover {
-    background: var(--primary-700);
-}
-
-@media (max-width: 768px) {
-    .undo-toast {
-        bottom: 80px;
-        white-space: normal;
-        flex-direction: column;
-        gap: var(--spacing-sm);
-        text-align: center;
-    }
-}
 /* ============================================
    Keyboard Shortcuts Help
    ============================================ */
-
 .shortcuts-grid {
     display: grid;
     grid-template-columns: auto 1fr;
@@ -2207,4 +1887,390 @@ hr {
 .shortcut-item span {
     color: var(--gray-700);
     font-size: var(--font-size-sm);
+}
+
+/* ============================================
+   Mobile Floating Action Button (FAB)
+   ============================================ */
+.fab-container {
+    position: fixed;
+    bottom: 80px;
+    right: var(--spacing-lg);
+    z-index: 25;
+    display: none;
+}
+
+.fab-main {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--primary-600);
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    box-shadow: var(--shadow-lg);
+}
+
+.fab-main:hover {
+    background: var(--primary-700);
+}
+
+.fab-actions {
+    position: absolute;
+    bottom: 70px;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: visibility 0.2s, opacity 0.2s, transform 0.2s;
+}
+
+.fab-container.open .fab-actions {
+    visibility: visible;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.fab-action {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    background: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--gray-700);
+    box-shadow: var(--shadow-md);
+    white-space: nowrap;
+}
+
+.fab-action i {
+    font-size: 16px;
+    color: var(--primary-600);
+}
+
+.fab-action:hover {
+    background: var(--gray-50);
+}
+
+/* ============================================
+   Utility Classes
+   ============================================ */
+.hidden {
+    display: none !important;
+}
+
+.text-center { text-align: center; }
+.text-right  { text-align: right; }
+
+.mt-1 { margin-top: var(--spacing-sm); }
+.mt-2 { margin-top: var(--spacing-md); }
+.mt-3 { margin-top: var(--spacing-lg); }
+.mb-1 { margin-bottom: var(--spacing-sm); }
+.mb-2 { margin-bottom: var(--spacing-md); }
+.mb-3 { margin-bottom: var(--spacing-lg); }
+
+/* ============================================
+   Mobile Responsive Styles
+   ============================================ */
+@media (max-width: 768px) {
+    .mobile-header {
+        display: flex;
+    }
+    
+    .bottom-nav {
+        display: flex;
+    }
+    
+    .fab-container {
+        display: block;
+    }
+    
+    .projects-header .add-project-btn {
+        width: 44px;
+        height: 44px;
+        background: var(--primary-50);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+    }
+    
+    .project-item {
+        padding: 12px var(--spacing-md);
+        margin-bottom: 4px;
+    }
+    
+    .org-name {
+        font-size: var(--font-size-base);
+    }
+    
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        z-index: 30;
+    }
+    
+    .sidebar.open {
+        transform: translateX(0);
+    }
+    
+    .sidebar-close-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .desktop-only {
+        display: none !important;
+    }
+    
+    .main-content {
+        margin-left: 0;
+        padding: 80px var(--spacing-md) 80px var(--spacing-md);
+    }
+    
+    .dashboard-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--spacing-md);
+        margin-bottom: var(--spacing-lg);
+    }
+    
+    .dashboard-header h1 {
+        font-size: var(--font-size-2xl);
+    }
+    
+    .header-actions {
+        flex-direction: column;
+        width: 100%;
+        gap: var(--spacing-sm);
+    }
+    
+    .search-container {
+        width: 100%;
+    }
+    
+    .search-input,
+    .search-input:focus {
+        width: 100%;
+    }
+    
+    .filter-container {
+        width: 100%;
+    }
+    
+    .filter-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .filter-btn .filter-text {
+        display: inline;
+    }
+    
+    .filter-dropdown {
+        position: fixed;
+        top: auto;
+        bottom: 80px;
+        left: var(--spacing-md);
+        right: var(--spacing-md);
+        width: auto;
+        min-width: auto;
+        max-height: 60vh;
+        overflow-y: auto;
+    }
+    
+    .sort-container {
+        width: 100%;
+    }
+    
+    .sort-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .sort-dropdown {
+        position: fixed;
+        top: auto;
+        bottom: 80px;
+        right: var(--spacing-md);
+        left: var(--spacing-md);
+        width: auto;
+    }
+    
+    .board-view {
+        flex-direction: column;
+        gap: var(--spacing-md);
+    }
+    
+    .board-column {
+        min-width: auto;
+        width: 100%;
+    }
+    
+    .task-card {
+        padding: 14px;
+    }
+    
+    .task-meta {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .comment-btn {
+        padding: 8px 12px;
+        min-width: 44px;
+    }
+    
+    .delete-project-btn {
+        opacity: 1;
+    }
+    
+    .modal-content {
+        margin: var(--spacing-md);
+        max-width: calc(100% - 2rem);
+        max-height: 85vh;
+    }
+    
+    .modal-large {
+        max-width: calc(100% - 2rem);
+    }
+    
+    .modal-header {
+        padding: var(--spacing-lg);
+    }
+    
+    .modal-body {
+        padding: var(--spacing-lg);
+    }
+    
+    .modal-footer {
+        padding: var(--spacing-md) var(--spacing-lg);
+    }
+    
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+        padding: 14px;
+        font-size: 16px;
+    }
+    
+    .btn {
+        padding: 14px 20px;
+        min-height: 48px;
+    }
+    
+    .sprint-info {
+        flex-direction: column;
+        gap: var(--spacing-md);
+        text-align: center;
+    }
+    
+    .create-sprint-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .edit-task-actions {
+        flex-direction: column;
+    }
+    
+    .edit-task-actions button {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .toast {
+        bottom: 80px;
+        right: var(--spacing-md);
+        left: var(--spacing-md);
+        max-width: none;
+    }
+}
+
+/* ============================================
+   Tablet Styles
+   ============================================ */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .main-content {
+        padding: var(--spacing-xl);
+    }
+    
+    .board-column {
+        min-width: 280px;
+    }
+    
+    .search-input {
+        width: 180px;
+    }
+    
+    .search-input:focus {
+        width: 220px;
+    }
+}
+
+/* ============================================
+   Custom Scrollbar
+   ============================================ */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--gray-300);
+    border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-300);
+}
+
+/* ============================================
+   Print Styles
+   ============================================ */
+@media print {
+    .sidebar,
+    .mobile-header,
+    .bottom-nav,
+    .create-task-btn,
+    .sidebar-footer .logout-btn,
+    .add-project-btn,
+    .header-actions,
+    .filter-container,
+    .search-container,
+    .sort-container,
+    .fab-container,
+    .pull-to-refresh {
+        display: none;
+    }
+
+    .main-content {
+        margin-left: 0;
+        padding: 0;
+    }
+
+    .task-card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid var(--gray-300);
+    }
 }

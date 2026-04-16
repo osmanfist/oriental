@@ -9,20 +9,26 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <div class="dashboard">
-        <<!-- Mobile Header -->
-<div class="mobile-header">
-    <button class="mobile-menu-btn" id="mobile-menu-btn">
-        <i class="fas fa-bars"></i>
-    </button>
-    <div class="mobile-logo">
-        <i class="fas fa-mountain-sun"></i>
-        <span>oriental</span>
+    <!-- Pull to Refresh -->
+    <div class="pull-to-refresh" id="pull-to-refresh">
+        <i class="fas fa-arrow-down"></i>
+        <span>Pull to refresh</span>
     </div>
-    <button class="mobile-add-btn" id="mobile-add-btn" onclick="openTaskModal()">
-        <i class="fas fa-plus"></i>
-    </button>
-</div>
+
+    <div class="dashboard">
+        <!-- Mobile Header -->
+        <div class="mobile-header">
+            <button class="mobile-menu-btn" id="mobile-menu-btn">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="mobile-logo">
+                <i class="fas fa-mountain-sun"></i>
+                <span>oriental</span>
+            </div>
+            <button class="mobile-add-btn" id="mobile-add-btn" onclick="openTaskModal()">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
         
         <!-- Sidebar Overlay -->
         <div class="sidebar-overlay" id="sidebar-overlay"></div>
@@ -96,6 +102,33 @@
                         </button>
                     </div>
                     
+                    <!-- Sort Dropdown -->
+                    <div class="sort-container">
+                        <button class="sort-btn" id="sort-btn">
+                            <i class="fas fa-sort-amount-down"></i> <span class="sort-text">Sort</span>
+                        </button>
+                        <div class="sort-dropdown" id="sort-dropdown">
+                            <div class="sort-option" data-sort="priority-desc">
+                                <i class="fas fa-arrow-down"></i> Priority (High to Low)
+                            </div>
+                            <div class="sort-option" data-sort="priority-asc">
+                                <i class="fas fa-arrow-up"></i> Priority (Low to High)
+                            </div>
+                            <div class="sort-option" data-sort="due-date-asc">
+                                <i class="fas fa-calendar-alt"></i> Due Date (Earliest first)
+                            </div>
+                            <div class="sort-option" data-sort="due-date-desc">
+                                <i class="fas fa-calendar-alt"></i> Due Date (Latest first)
+                            </div>
+                            <div class="sort-option active" data-sort="created-desc">
+                                <i class="fas fa-clock"></i> Created (Newest first)
+                            </div>
+                            <div class="sort-option" data-sort="created-asc">
+                                <i class="fas fa-clock"></i> Created (Oldest first)
+                            </div>
+                        </div>
+                    </div>
+                    
                     <!-- Filter Dropdown -->
                     <div class="filter-container">
                         <button class="filter-btn" id="filter-btn">
@@ -119,6 +152,12 @@
                                 <label><input type="checkbox" value="overdue" class="filter-due"> Overdue</label>
                                 <label><input type="checkbox" value="today" class="filter-due"> Due Today</label>
                                 <label><input type="checkbox" value="week" class="filter-due"> This Week</label>
+                            </div>
+                            <div class="filter-section">
+                                <h4>Assignee</h4>
+                                <div id="assignee-filters" class="assignee-filters">
+                                    <label><input type="checkbox" value="unassigned" class="filter-assignee"> Unassigned</label>
+                                </div>
                             </div>
                             <div class="filter-actions">
                                 <button class="btn-secondary" id="clear-filters">Clear All</button>
@@ -371,6 +410,23 @@
         </div>
     </div>
     
+    <!-- Mobile Floating Action Button for Projects -->
+    <div class="fab-container" id="fab-container">
+        <button class="fab fab-main" id="fab-main">
+            <i class="fas fa-plus"></i>
+        </button>
+        <div class="fab-actions">
+            <button class="fab-action" id="fab-add-task" onclick="openTaskModal()">
+                <i class="fas fa-tasks"></i>
+                <span>Task</span>
+            </button>
+            <button class="fab-action" id="fab-add-project" onclick="openProjectModal()">
+                <i class="fas fa-folder"></i>
+                <span>Project</span>
+            </button>
+        </div>
+    </div>
+    
     <!-- Firebase Scripts -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
@@ -379,114 +435,5 @@
     <!-- Application Scripts -->
     <script src="js/firebase-config.js"></script>
     <script src="js/dashboard.js"></script>
-    
-    <!-- Mobile Menu Script -->
-    <script>
-        // Mobile menu functionality
-        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-        const sidebar = document.getElementById('sidebar');
-        const sidebarOverlay = document.getElementById('sidebar-overlay');
-        const sidebarCloseBtn = document.getElementById('sidebar-close-btn');
-        
-        function openSidebar() {
-            sidebar.classList.add('open');
-            sidebarOverlay.classList.add('active');
-            document.body.style.overflow = 'hidden';
-        }
-        
-        function closeSidebar() {
-            sidebar.classList.remove('open');
-            sidebarOverlay.classList.remove('active');
-            document.body.style.overflow = '';
-        }
-        
-        if (mobileMenuBtn) {
-            mobileMenuBtn.addEventListener('click', openSidebar);
-        }
-        
-        if (sidebarCloseBtn) {
-            sidebarCloseBtn.addEventListener('click', closeSidebar);
-        }
-        
-        if (sidebarOverlay) {
-            sidebarOverlay.addEventListener('click', closeSidebar);
-        }
-        
-        // Bottom navigation
-        const bottomNavItems = document.querySelectorAll('.bottom-nav-item');
-        const navItems = document.querySelectorAll('.nav-item');
-        
-        function switchView(view) {
-            // Update bottom nav
-            bottomNavItems.forEach(item => {
-                if (item.dataset.view === view) {
-                    item.classList.add('active');
-                } else {
-                    item.classList.remove('active');
-                }
-            });
-            
-            // Update sidebar nav
-            navItems.forEach(item => {
-                if (item.dataset.view === view) {
-                    item.classList.add('active');
-                } else {
-                    item.classList.remove('active');
-                }
-            });
-            
-            // Switch view content
-            if (view === 'board') {
-                document.getElementById('board-view').style.display = 'flex';
-                document.getElementById('sprints-view').classList.add('hidden');
-                document.getElementById('current-view').textContent = 'Board';
-            } else if (view === 'sprints') {
-                document.getElementById('board-view').style.display = 'none';
-                document.getElementById('sprints-view').classList.remove('hidden');
-                document.getElementById('current-view').textContent = 'Sprints';
-                if (typeof loadSprints === 'function') loadSprints();
-            }
-        }
-        
-        bottomNavItems.forEach(item => {
-            item.addEventListener('click', () => {
-                const view = item.dataset.view;
-                if (view) switchView(view);
-            });
-        });
-        
-        // Bottom add button
-        const bottomAddBtn = document.getElementById('bottom-add-btn');
-        if (bottomAddBtn) {
-            bottomAddBtn.addEventListener('click', () => {
-                if (typeof openTaskModal === 'function') openTaskModal();
-            });
-        }
-        
-        // Close sidebar when clicking a nav link (mobile)
-        navItems.forEach(item => {
-            item.addEventListener('click', () => {
-                if (window.innerWidth <= 768) {
-                    setTimeout(closeSidebar, 150);
-                }
-            });
-        });
-    </script>
-    <!-- Mobile Floating Action Button for Projects -->
-<div class="fab-container" id="fab-container">
-    <button class="fab fab-main" id="fab-main">
-        <i class="fas fa-plus"></i>
-    </button>
-    <div class="fab-actions">
-        <button class="fab-action" id="fab-add-task" onclick="openTaskModal()">
-            <i class="fas fa-tasks"></i>
-            <span>Task</span>
-        </button>
-        <button class="fab-action" id="fab-add-project" onclick="openProjectModal()">
-            <i class="fas fa-folder"></i>
-            <span>Project</span>
-        </button>
-    </div>
-</div>
 </body>
 </html>

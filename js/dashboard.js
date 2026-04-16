@@ -1,11 +1,10 @@
 /**
  * Oriental - Dashboard Module
- * Version: 2.3.0
+ * Version: 2.4.0
  * 
  * Main application logic including task management, project handling,
- * real-time updates, drag-and-drop functionality, comments, search, and filters.
- * Updated with loading skeletons, confirmation dialogs, enhanced empty states,
- * undo delete, keyboard shortcuts, and FIXED FLICKERING.
+ * real-time updates, drag-and-drop functionality, comments, search, filters,
+ * sorting, assignee filtering, mobile drag & drop, and pull to refresh.
  */
 
 // ============================================
@@ -25,10 +24,12 @@ let unsubscribeTasks = null;
 let allTasks = [];
 let filteredTasks = [];
 let searchTerm = '';
+let currentSort = 'created-desc';
 let activeFilters = {
     priorities: [],
     statuses: [],
-    dueDates: []
+    dueDates: [],
+    assignees: []
 };
 let taskReloadTimeout = null; // For debouncing real-time updates
 
@@ -49,6 +50,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupRealtimeSubscription();
     setupMobileNavigation();
     setupKeyboardShortcuts();
+    setupSorting();
+    setupPullToRefresh();
     console.log('✅ Dashboard ready!');
 });
 
@@ -481,13 +484,12 @@ async function selectProject(project) {
         headerTitle.textContent = project.name;
     }
     
-    // Show skeleton on project change
     await loadTasks(true);
 }
 
 /**
- * Load tasks for current project - FIXED FLICKERING
- * @param {boolean} showSkeleton - Whether to show loading skeleton (false for real-time updates)
+ * Load tasks for current project
+ * @param {boolean} showSkeleton - Whether to show loading skeleton
  */
 async function loadTasks(showSkeleton = true) {
     if (!currentProject) return;
@@ -496,7 +498,6 @@ async function loadTasks(showSkeleton = true) {
         unsubscribeTasks();
     }
     
-    // Only show skeleton on initial load, not on real-time updates
     if (showSkeleton) {
         showBoardSkeleton();
     }
@@ -511,17 +512,12 @@ async function loadTasks(showSkeleton = true) {
             allTasks.push({ id: doc.id, ...doc.data() });
         });
         
-        allTasks.sort((a, b) => {
-            if (a.order && b.order) {
-                return a.order - b.order;
-            }
-            if (a.createdAt && b.createdAt) {
-                return b.createdAt.toDate() - a.createdAt.toDate();
-            }
-            return 0;
-        });
-        
         console.log(`Loaded ${allTasks.length} tasks`);
+        
+        // Load assignee filters
+        loadAssigneeFilters();
+        
+        // Apply search, filters, and sorting
         applySearchAndFilter();
         
         setupRealtimeSubscription();
@@ -537,6 +533,144 @@ async function loadTasks(showSkeleton = true) {
             }
         }
     }
+}
+
+// ============================================
+// Task Sorting Functions
+// ============================================
+
+/**
+ * Sort tasks based on current sort option
+ */
+function sortTasks(tasks) {
+    const sorted = [...tasks];
+    
+    switch(currentSort) {
+        case 'priority-desc':
+            const priorityOrder = { high: 3, medium: 2, low: 1 };
+            sorted.sort((a, b) => (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0));
+            break;
+        case 'priority-asc':
+            const priorityOrderAsc = { high: 3, medium: 2, low: 1 };
+            sorted.sort((a, b) => (priorityOrderAsc[a.priority] || 0) - (priorityOrderAsc[b.priority] || 0));
+            break;
+        case 'due-date-asc':
+            sorted.sort((a, b) => {
+                if (!a.dueDate && !b.dueDate) return 0;
+                if (!a.dueDate) return 1;
+                if (!b.dueDate) return -1;
+                return new Date(a.dueDate) - new Date(b.dueDate);
+            });
+            break;
+        case 'due-date-desc':
+            sorted.sort((a, b) => {
+                if (!a.dueDate && !b.dueDate) return 0;
+                if (!a.dueDate) return 1;
+                if (!b.dueDate) return -1;
+                return new Date(b.dueDate) - new Date(a.dueDate);
+            });
+            break;
+        case 'created-asc':
+            sorted.sort((a, b) => {
+                if (!a.createdAt && !b.createdAt) return 0;
+                if (!a.createdAt) return 1;
+                if (!b.createdAt) return -1;
+                return a.createdAt.toDate() - b.createdAt.toDate();
+            });
+            break;
+        case 'created-desc':
+        default:
+            sorted.sort((a, b) => {
+                if (!a.createdAt && !b.createdAt) return 0;
+                if (!a.createdAt) return 1;
+                if (!b.createdAt) return -1;
+                return b.createdAt.toDate() - a.createdAt.toDate();
+            });
+            break;
+    }
+    return sorted;
+}
+
+/**
+ * Setup sort dropdown
+ */
+function setupSorting() {
+    const sortBtn = document.getElementById('sort-btn');
+    const sortDropdown = document.getElementById('sort-dropdown');
+    
+    if (sortBtn) {
+        sortBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            sortDropdown.classList.toggle('show');
+        });
+    }
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (sortBtn && !sortBtn.contains(e.target) && sortDropdown && !sortDropdown.contains(e.target)) {
+            sortDropdown.classList.remove('show');
+        }
+    });
+    
+    // Handle sort option clicks
+    document.querySelectorAll('.sort-option').forEach(option => {
+        option.addEventListener('click', () => {
+            const sortValue = option.dataset.sort;
+            if (sortValue) {
+                currentSort = sortValue;
+                
+                // Update active class
+                document.querySelectorAll('.sort-option').forEach(opt => opt.classList.remove('active'));
+                option.classList.add('active');
+                
+                // Update sort button icon
+                const sortIcon = sortBtn?.querySelector('i');
+                if (sortIcon) {
+                    const iconMap = {
+                        'priority-desc': 'fa-arrow-down',
+                        'priority-asc': 'fa-arrow-up',
+                        'due-date-asc': 'fa-calendar-alt',
+                        'due-date-desc': 'fa-calendar-alt',
+                        'created-desc': 'fa-clock',
+                        'created-asc': 'fa-clock'
+                    };
+                    sortIcon.className = `fas ${iconMap[sortValue] || 'fa-sort-amount-down'}`;
+                }
+                
+                sortDropdown.classList.remove('show');
+                applySearchAndFilter();
+            }
+        });
+    });
+}
+
+// ============================================
+// Assignee Filter Functions
+// ============================================
+
+/**
+ * Load assignees from tasks for filtering
+ */
+function loadAssigneeFilters() {
+    const assignees = new Set();
+    allTasks.forEach(task => {
+        if (task.assignedTo && task.assignedTo.trim()) {
+            assignees.add(task.assignedTo);
+        }
+    });
+    
+    const assigneeContainer = document.getElementById('assignee-filters');
+    if (!assigneeContainer) return;
+    
+    // Clear existing assignee checkboxes (keep the unassigned one)
+    const existingLabels = assigneeContainer.querySelectorAll('label:not(:first-child)');
+    existingLabels.forEach(label => label.remove());
+    
+    assignees.forEach(assignee => {
+        const label = document.createElement('label');
+        label.innerHTML = `<input type="checkbox" value="${escapeHtml(assignee)}" class="filter-assignee"> ${escapeHtml(assignee)}`;
+        assigneeContainer.appendChild(label);
+    });
 }
 
 // ============================================
@@ -632,6 +766,9 @@ function handleApplyFilters() {
     activeFilters.dueDates = Array.from(document.querySelectorAll('.filter-due:checked'))
         .map(cb => cb.value);
     
+    activeFilters.assignees = Array.from(document.querySelectorAll('.filter-assignee:checked'))
+        .map(cb => cb.value);
+    
     const filterDropdown = document.getElementById('filter-dropdown');
     if (filterDropdown) {
         filterDropdown.classList.remove('show');
@@ -641,10 +778,10 @@ function handleApplyFilters() {
 }
 
 function handleClearFilters() {
-    document.querySelectorAll('.filter-priority, .filter-status, .filter-due')
+    document.querySelectorAll('.filter-priority, .filter-status, .filter-due, .filter-assignee')
         .forEach(cb => cb.checked = false);
     
-    activeFilters = { priorities: [], statuses: [], dueDates: [] };
+    activeFilters = { priorities: [], statuses: [], dueDates: [], assignees: [] };
     updateFilterBadge();
     applySearchAndFilter();
 }
@@ -654,7 +791,8 @@ function handleClearFilters() {
  */
 function updateFilterBadge() {
     let badgeContainer = document.getElementById('active-filters');
-    const totalFilters = activeFilters.priorities.length + activeFilters.statuses.length + activeFilters.dueDates.length;
+    const totalFilters = activeFilters.priorities.length + activeFilters.statuses.length + 
+                         activeFilters.dueDates.length + activeFilters.assignees.length;
     
     if (!badgeContainer) return;
     
@@ -695,6 +833,15 @@ function updateFilterBadge() {
             </div>
         `;
     });
+    
+    activeFilters.assignees.forEach(a => {
+        badgeContainer.innerHTML += `
+            <div class="filter-badge">
+                <i class="fas fa-user"></i> ${escapeHtml(a)}
+                <button onclick="removeFilter('assignee', '${escapeHtml(a)}')">&times;</button>
+            </div>
+        `;
+    });
 }
 
 /**
@@ -712,6 +859,10 @@ window.removeFilter = function(type, value) {
     } else if (type === 'dueDate') {
         activeFilters.dueDates = activeFilters.dueDates.filter(d => d !== value);
         const checkbox = document.querySelector(`.filter-due[value="${value}"]`);
+        if (checkbox) checkbox.checked = false;
+    } else if (type === 'assignee') {
+        activeFilters.assignees = activeFilters.assignees.filter(a => a !== value);
+        const checkbox = document.querySelector(`.filter-assignee[value="${value}"]`);
         if (checkbox) checkbox.checked = false;
     }
     
@@ -776,12 +927,13 @@ function clearSearchAndReload() {
 window.clearSearchAndReload = clearSearchAndReload;
 
 /**
- * Apply search and filter to tasks
+ * Apply search, filter, and sort to tasks
  */
 function applySearchAndFilter() {
     if (!allTasks) return;
     
-    filteredTasks = allTasks.filter(task => {
+    let tasks = allTasks.filter(task => {
+        // Search filter
         if (searchTerm) {
             const matchesTitle = task.title?.toLowerCase().includes(searchTerm);
             const matchesDesc = task.description?.toLowerCase().includes(searchTerm);
@@ -789,23 +941,37 @@ function applySearchAndFilter() {
             if (!matchesTitle && !matchesDesc && !matchesTags) return false;
         }
         
+        // Priority filter
         if (activeFilters.priorities.length > 0) {
             if (!activeFilters.priorities.includes(task.priority)) return false;
         }
         
+        // Status filter
         if (activeFilters.statuses.length > 0) {
             const taskStatus = task.status || 'todo';
             if (!activeFilters.statuses.includes(taskStatus)) return false;
         }
         
+        // Due date filter
         if (activeFilters.dueDates.length > 0) {
             const dueStatus = getDueDateStatus(task.dueDate);
             if (!activeFilters.dueDates.includes(dueStatus)) return false;
         }
         
+        // Assignee filter
+        if (activeFilters.assignees.length > 0) {
+            const taskAssignee = task.assignedTo || 'unassigned';
+            if (!activeFilters.assignees.includes(taskAssignee)) return false;
+        }
+        
         return true;
     });
     
+    // Apply sorting
+    tasks = sortTasks(tasks);
+    filteredTasks = tasks;
+    
+    // Show empty search state if no results
     if (filteredTasks.length === 0 && searchTerm) {
         const boardView = document.getElementById('board-view');
         if (boardView) {
@@ -875,6 +1041,7 @@ function renderBoard(tasks) {
     }
     
     setupDragAndDrop();
+    setupMobileDragAndDrop();
 }
 
 /**
@@ -1018,6 +1185,210 @@ async function handleDrop(e) {
         console.error('Error updating task status:', error);
         showToast('Error updating task', 'error');
     }
+}
+
+// ============================================
+// Mobile Drag and Drop (Touch Support)
+// ============================================
+
+let touchStartY = null;
+let touchCurrentY = null;
+let isDragging = false;
+
+function setupMobileDragAndDrop() {
+    if (window.innerWidth > 768) return; // Only for mobile
+    
+    const tasks = document.querySelectorAll('.task-card');
+    
+    tasks.forEach(task => {
+        task.removeEventListener('touchstart', handleTouchStart);
+        task.removeEventListener('touchmove', handleTouchMove);
+        task.removeEventListener('touchend', handleTouchEnd);
+        
+        task.addEventListener('touchstart', handleTouchStart);
+        task.addEventListener('touchmove', handleTouchMove);
+        task.addEventListener('touchend', handleTouchEnd);
+    });
+}
+
+function handleTouchStart(e) {
+    e.preventDefault();
+    draggedTask = this;
+    touchStartY = e.touches[0].clientY;
+    isDragging = false;
+    this.style.opacity = '0.5';
+    this.style.transition = 'opacity 0.2s';
+}
+
+function handleTouchMove(e) {
+    if (!draggedTask) return;
+    e.preventDefault();
+    
+    touchCurrentY = e.touches[0].clientY;
+    const deltaY = Math.abs(touchCurrentY - touchStartY);
+    
+    if (deltaY > 10 && !isDragging) {
+        isDragging = true;
+    }
+    
+    if (isDragging) {
+        const touch = e.touches[0];
+        const elementAtTouch = document.elementsFromPoint(touch.clientX, touch.clientY);
+        
+        for (const element of elementAtTouch) {
+            if (element.classList && element.classList.contains('tasks-container')) {
+                document.querySelectorAll('.tasks-container').forEach(container => {
+                    container.classList.remove('drag-over');
+                });
+                element.classList.add('drag-over');
+                break;
+            }
+        }
+    }
+}
+
+async function handleTouchEnd(e) {
+    if (!draggedTask) {
+        resetDrag();
+        return;
+    }
+    
+    e.preventDefault();
+    
+    if (isDragging) {
+        const touch = e.changedTouches[0];
+        const elementAtTouch = document.elementsFromPoint(touch.clientX, touch.clientY);
+        
+        let targetContainer = null;
+        for (const element of elementAtTouch) {
+            if (element.classList && element.classList.contains('tasks-container')) {
+                targetContainer = element;
+                break;
+            }
+        }
+        
+        if (targetContainer) {
+            const newStatus = targetContainer.dataset.status;
+            const taskId = draggedTask.dataset.taskId;
+            const oldStatus = draggedTask.dataset.status;
+            
+            if (newStatus !== oldStatus) {
+                try {
+                    await db.collection('tasks').doc(taskId).update({
+                        status: newStatus,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    showToast('Task moved', 'success');
+                } catch (error) {
+                    console.error('Error updating task status:', error);
+                    showToast('Error moving task', 'error');
+                }
+            }
+        }
+    } else {
+        const taskId = draggedTask.dataset.taskId;
+        if (taskId) {
+            openTaskDetail(taskId);
+        }
+    }
+    
+    resetDrag();
+}
+
+function resetDrag() {
+    if (draggedTask) {
+        draggedTask.style.opacity = '';
+        draggedTask.style.transition = '';
+    }
+    draggedTask = null;
+    touchStartY = null;
+    touchCurrentY = null;
+    isDragging = false;
+    
+    document.querySelectorAll('.tasks-container').forEach(container => {
+        container.classList.remove('drag-over');
+    });
+}
+
+// ============================================
+// Pull to Refresh
+// ============================================
+
+let pullStartY = 0;
+let isRefreshing = false;
+let pullElement = null;
+
+function setupPullToRefresh() {
+    pullElement = document.getElementById('pull-to-refresh');
+    if (!pullElement) return;
+    
+    document.addEventListener('touchstart', (e) => {
+        if (window.scrollY === 0) {
+            pullStartY = e.touches[0].clientY;
+        }
+    });
+    
+    document.addEventListener('touchmove', (e) => {
+        if (isRefreshing) return;
+        if (window.scrollY > 0) return;
+        
+        const currentY = e.touches[0].clientY;
+        const pullDistance = currentY - pullStartY;
+        
+        if (pullDistance > 0 && pullDistance < 100) {
+            e.preventDefault();
+            pullElement.style.top = `${pullDistance - 60}px`;
+            
+            if (pullDistance > 60) {
+                pullElement.querySelector('i').style.transform = 'rotate(180deg)';
+                pullElement.querySelector('span').textContent = 'Release to refresh';
+            } else {
+                pullElement.querySelector('i').style.transform = 'rotate(0deg)';
+                pullElement.querySelector('span').textContent = 'Pull to refresh';
+            }
+        }
+    });
+    
+    document.addEventListener('touchend', async (e) => {
+        if (isRefreshing) return;
+        
+        const pullDistance = parseInt(pullElement.style.top) + 60;
+        
+        if (pullDistance > 60) {
+            await refreshData();
+        }
+        
+        pullElement.style.top = '-60px';
+        pullElement.querySelector('i').style.transform = 'rotate(0deg)';
+        pullElement.querySelector('span').textContent = 'Pull to refresh';
+    });
+}
+
+async function refreshData() {
+    if (isRefreshing) return;
+    
+    isRefreshing = true;
+    pullElement.classList.add('refreshing');
+    pullElement.querySelector('span').textContent = 'Refreshing...';
+    pullElement.style.top = '0';
+    
+    try {
+        await loadUserData();
+        await loadOrganization();
+        await loadProjects();
+        if (currentProject) {
+            await loadTasks();
+        }
+        showToast('Data refreshed', 'success');
+    } catch (error) {
+        console.error('Refresh error:', error);
+        showToast('Error refreshing data', 'error');
+    }
+    
+    isRefreshing = false;
+    pullElement.classList.remove('refreshing');
+    pullElement.style.top = '-60px';
+    pullElement.querySelector('span').textContent = 'Pull to refresh';
 }
 
 // ============================================
@@ -1273,7 +1644,7 @@ async function addComment(taskId, content) {
 }
 
 // ============================================
-// Real-time Subscriptions - FIXED FLICKERING
+// Real-time Subscriptions
 // ============================================
 
 function setupRealtimeSubscription() {
@@ -1288,13 +1659,11 @@ function setupRealtimeSubscription() {
         .onSnapshot((snapshot) => {
             console.log('Real-time update: tasks changed');
             
-            // Debounce rapid updates to prevent flickering
             if (taskReloadTimeout) {
                 clearTimeout(taskReloadTimeout);
             }
             
             taskReloadTimeout = setTimeout(() => {
-                // Direct update without skeleton - prevents flickering
                 const tasks = [];
                 snapshot.forEach(doc => {
                     tasks.push({ id: doc.id, ...doc.data() });
@@ -1307,7 +1676,8 @@ function setupRealtimeSubscription() {
                 });
                 
                 allTasks = tasks;
-                applySearchAndFilter(); // Re-renders without skeleton
+                loadAssigneeFilters();
+                applySearchAndFilter();
                 taskReloadTimeout = null;
             }, 100);
             
@@ -1414,7 +1784,6 @@ function setupEventListeners() {
         });
     }
     
-    // Delete Task button - Updated with undo
     const deleteTaskBtn = document.getElementById('delete-task-btn');
     if (deleteTaskBtn) {
         deleteTaskBtn.addEventListener('click', async () => {
@@ -1701,21 +2070,16 @@ function showToast(message, type = 'info') {
 
 /**
  * Show undo toast notification
- * @param {string} message - Message to display
- * @param {function} undoFunction - Function to call when undo is clicked
  */
 function showUndoToast(message, undoFunction) {
-    // Remove existing undo toast
     const existingToast = document.querySelector('.undo-toast');
     if (existingToast) existingToast.remove();
     
-    // Clear existing timeout
     if (undoTimeout) {
         clearTimeout(undoTimeout);
         undoTimeout = null;
     }
     
-    // Create toast
     const toast = document.createElement('div');
     toast.className = 'undo-toast';
     toast.innerHTML = `
@@ -1724,7 +2088,6 @@ function showUndoToast(message, undoFunction) {
     `;
     document.body.appendChild(toast);
     
-    // Handle undo button click
     const undoBtn = toast.querySelector('.undo-btn');
     undoBtn.addEventListener('click', () => {
         undoFunction();
@@ -1733,7 +2096,6 @@ function showUndoToast(message, undoFunction) {
         showToast('Action undone', 'success');
     });
     
-    // Auto-dismiss after UNDO_DURATION
     undoTimeout = setTimeout(() => {
         if (toast && toast.parentNode) {
             toast.remove();
@@ -1748,11 +2110,9 @@ function showUndoToast(message, undoFunction) {
  * Delete a task with undo support
  */
 async function deleteTaskWithUndo(taskId, taskData) {
-    // Store deleted item for potential undo
     deletedItem = { id: taskId, ...taskData };
     deletedItemType = 'task';
     
-    // Delete from database
     try {
         const commentsSnapshot = await db.collection('comments')
             .where('taskId', '==', taskId)
@@ -1768,13 +2128,8 @@ async function deleteTaskWithUndo(taskId, taskData) {
         
         await batch.commit();
         
-        // Show undo toast
         showUndoToast('Task deleted', () => undoDelete());
-        
-        // Close modal if open
         closeCommentModal();
-        
-        // Reload tasks
         await loadTasks();
         
     } catch (error) {
@@ -1789,7 +2144,6 @@ async function deleteTaskWithUndo(taskId, taskData) {
  * Delete a project with undo support
  */
 async function deleteProjectWithUndo(projectId, projectData) {
-    // Store deleted item for potential undo
     deletedItem = { id: projectId, ...projectData };
     deletedItemType = 'project';
     
@@ -1819,15 +2173,11 @@ async function deleteProjectWithUndo(projectId, projectData) {
         
         await batch.commit();
         
-        // Store deleted tasks for potential undo
         if (deletedItem) {
             deletedItem.tasks = deletedTasks;
         }
         
-        // Show undo toast
         showUndoToast(`Project "${projectData.name}" deleted`, () => undoDelete());
-        
-        // Reload projects
         await loadProjects();
         
     } catch (error) {
@@ -1849,7 +2199,6 @@ async function undoDelete() {
     
     try {
         if (deletedItemType === 'task') {
-            // Restore task
             const taskData = {
                 projectId: deletedItem.projectId,
                 title: deletedItem.title,
@@ -1870,7 +2219,6 @@ async function undoDelete() {
             console.log('Task restored');
             
         } else if (deletedItemType === 'project') {
-            // Restore project
             const projectData = {
                 organizationId: deletedItem.organizationId,
                 name: deletedItem.name,
@@ -1884,7 +2232,6 @@ async function undoDelete() {
             const projectRef = await db.collection('projects').add(projectData);
             console.log('Project restored:', projectRef.id);
             
-            // Restore tasks if any
             if (deletedItem.tasks && deletedItem.tasks.length > 0) {
                 for (const task of deletedItem.tasks) {
                     const taskData = {
@@ -1908,11 +2255,9 @@ async function undoDelete() {
             }
         }
         
-        // Clear deleted item
         deletedItem = null;
         deletedItemType = null;
         
-        // Reload data
         if (deletedItemType === 'project') {
             await loadProjects();
         } else {
@@ -1929,35 +2274,18 @@ async function undoDelete() {
 // Keyboard Shortcuts
 // ============================================
 
-/**
- * Setup keyboard shortcuts
- * Shortcuts:
- *   N - New Task
- *   P - New Project
- *   / - Focus Search
- *   S - Focus Filter
- *   Esc - Close modal / Clear search
- *   ? - Show shortcuts help
- *   B - Go to Board view
- *   R - Go to Sprints view
- *   Ctrl/Cmd + Z - Undo Delete
- */
 function setupKeyboardShortcuts() {
     document.addEventListener('keydown', (e) => {
-        // Don't trigger shortcuts when typing in input fields
         const isTyping = e.target.matches('input, textarea, select, [contenteditable]');
         
-        // Help modal - always available
         if (e.key === '?' && !isTyping) {
             e.preventDefault();
             showShortcutsHelp();
             return;
         }
         
-        // Escape - close modals and clear search
         if (e.key === 'Escape') {
             if (isTyping) {
-                // Clear search if typing in search
                 const searchInput = document.getElementById('search-tasks');
                 if (document.activeElement === searchInput && searchInput.value) {
                     searchInput.value = '';
@@ -1967,16 +2295,13 @@ function setupKeyboardShortcuts() {
                     if (clearSearch) clearSearch.style.display = 'none';
                 }
             } else {
-                // Close any open modal
                 closeAllModals();
             }
             return;
         }
         
-        // Skip if typing in input fields for other shortcuts
         if (isTyping) return;
         
-        // N - New Task
         if (e.key === 'n' || e.key === 'N') {
             e.preventDefault();
             if (currentProject) {
@@ -1986,13 +2311,11 @@ function setupKeyboardShortcuts() {
             }
         }
         
-        // P - New Project
         if (e.key === 'p' || e.key === 'P') {
             e.preventDefault();
             openProjectModal();
         }
         
-        // / - Focus Search
         if (e.key === '/') {
             e.preventDefault();
             const searchInput = document.getElementById('search-tasks');
@@ -2002,7 +2325,6 @@ function setupKeyboardShortcuts() {
             }
         }
         
-        // S - Focus Filter button
         if (e.key === 's' || e.key === 'S') {
             e.preventDefault();
             const filterBtn = document.getElementById('filter-btn');
@@ -2011,19 +2333,16 @@ function setupKeyboardShortcuts() {
             }
         }
         
-        // B - Board view
         if (e.key === 'b' || e.key === 'B') {
             e.preventDefault();
             switchToBoardView();
         }
         
-        // R - Sprints view
         if (e.key === 'r' || e.key === 'R') {
             e.preventDefault();
             switchToSprintsView();
         }
         
-        // Ctrl/Cmd + Z - Undo last delete
         if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
             e.preventDefault();
             if (deletedItem) {
@@ -2033,31 +2352,23 @@ function setupKeyboardShortcuts() {
     });
 }
 
-/**
- * Close all open modals
- */
 function closeAllModals() {
     closeTaskModal();
     closeProjectModal();
     closeSprintModal();
     closeCommentModal();
     
-    // Close filter dropdown
     const filterDropdown = document.getElementById('filter-dropdown');
     if (filterDropdown) {
         filterDropdown.classList.remove('show');
     }
 }
 
-/**
- * Switch to Board view
- */
 function switchToBoardView() {
     document.getElementById('board-view').style.display = 'flex';
     document.getElementById('sprints-view').classList.add('hidden');
     document.getElementById('current-view').textContent = 'Board';
     
-    // Update active states
     document.querySelectorAll('.nav-item, .bottom-nav-item').forEach(item => {
         if (item.dataset?.view === 'board') {
             item.classList.add('active');
@@ -2067,16 +2378,12 @@ function switchToBoardView() {
     });
 }
 
-/**
- * Switch to Sprints view
- */
 function switchToSprintsView() {
     document.getElementById('board-view').style.display = 'none';
     document.getElementById('sprints-view').classList.remove('hidden');
     document.getElementById('current-view').textContent = 'Sprints';
     loadSprints();
     
-    // Update active states
     document.querySelectorAll('.nav-item, .bottom-nav-item').forEach(item => {
         if (item.dataset?.view === 'sprints') {
             item.classList.add('active');
@@ -2086,11 +2393,7 @@ function switchToSprintsView() {
     });
 }
 
-/**
- * Show keyboard shortcuts help modal
- */
 function showShortcutsHelp() {
-    // Create help modal
     let helpModal = document.getElementById('shortcuts-help-modal');
     
     if (!helpModal) {
@@ -2105,42 +2408,15 @@ function showShortcutsHelp() {
                 </div>
                 <div class="modal-body">
                     <div class="shortcuts-grid">
-                        <div class="shortcut-item">
-                            <kbd>N</kbd>
-                            <span>New Task</span>
-                        </div>
-                        <div class="shortcut-item">
-                            <kbd>P</kbd>
-                            <span>New Project</span>
-                        </div>
-                        <div class="shortcut-item">
-                            <kbd>/</kbd>
-                            <span>Focus Search</span>
-                        </div>
-                        <div class="shortcut-item">
-                            <kbd>S</kbd>
-                            <span>Focus Filter</span>
-                        </div>
-                        <div class="shortcut-item">
-                            <kbd>B</kbd>
-                            <span>Board View</span>
-                        </div>
-                        <div class="shortcut-item">
-                            <kbd>R</kbd>
-                            <span>Sprints View</span>
-                        </div>
-                        <div class="shortcut-item">
-                            <kbd>Esc</kbd>
-                            <span>Close Modal / Clear Search</span>
-                        </div>
-                        <div class="shortcut-item">
-                            <kbd>Ctrl+Z</kbd> / <kbd>⌘+Z</kbd>
-                            <span>Undo Delete</span>
-                        </div>
-                        <div class="shortcut-item">
-                            <kbd>?</kbd>
-                            <span>Show this help</span>
-                        </div>
+                        <div class="shortcut-item"><kbd>N</kbd><span>New Task</span></div>
+                        <div class="shortcut-item"><kbd>P</kbd><span>New Project</span></div>
+                        <div class="shortcut-item"><kbd>/</kbd><span>Focus Search</span></div>
+                        <div class="shortcut-item"><kbd>S</kbd><span>Focus Filter</span></div>
+                        <div class="shortcut-item"><kbd>B</kbd><span>Board View</span></div>
+                        <div class="shortcut-item"><kbd>R</kbd><span>Sprints View</span></div>
+                        <div class="shortcut-item"><kbd>Esc</kbd><span>Close Modal / Clear Search</span></div>
+                        <div class="shortcut-item"><kbd>Ctrl+Z</kbd> / <kbd>⌘+Z</kbd><span>Undo Delete</span></div>
+                        <div class="shortcut-item"><kbd>?</kbd><span>Show this help</span></div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -2155,9 +2431,6 @@ function showShortcutsHelp() {
     helpModal.style.display = 'flex';
 }
 
-/**
- * Close shortcuts help modal
- */
 function closeShortcutsHelp() {
     const helpModal = document.getElementById('shortcuts-help-modal');
     if (helpModal) {
