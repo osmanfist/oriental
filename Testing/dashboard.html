@@ -19,6 +19,20 @@
                 </div>
             </div>
             
+            <!-- User Info Section -->
+            <div class="user-info">
+                <div class="user-avatar">
+                    <i class="fas fa-user-circle"></i>
+                </div>
+                <div class="user-details">
+                    <span class="user-name" id="user-name">Loading...</span>
+                    <span class="user-email" id="user-email">user@example.com</span>
+                </div>
+                <button class="logout-icon-btn" id="logout-btn" title="Logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+            
             <div class="org-info" id="org-info">
                 <div class="org-name" id="org-name">Loading...</div>
                 <div class="org-role" id="org-role">Organization</div>
@@ -46,13 +60,6 @@
                     <!-- Projects will be loaded here -->
                 </div>
             </div>
-            
-            <div class="sidebar-footer">
-                <button class="logout-btn" id="logout-btn">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Logout</span>
-                </button>
-            </div>
         </aside>
         
         <!-- Main Content -->
@@ -60,12 +67,55 @@
             <div class="dashboard-header">
                 <h1 id="current-view">Board</h1>
                 <div class="header-actions">
+                    <!-- Search Bar -->
+                    <div class="search-container">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="search-tasks" placeholder="Search tasks..." class="search-input" autocomplete="off">
+                        <button class="clear-search" id="clear-search" style="display: none;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Filter Dropdown -->
+                    <div class="filter-container">
+                        <button class="filter-btn" id="filter-btn">
+                            <i class="fas fa-filter"></i> Filter
+                        </button>
+                        <div class="filter-dropdown" id="filter-dropdown">
+                            <div class="filter-section">
+                                <h4>Priority</h4>
+                                <label><input type="checkbox" value="high" class="filter-priority"> High</label>
+                                <label><input type="checkbox" value="medium" class="filter-priority"> Medium</label>
+                                <label><input type="checkbox" value="low" class="filter-priority"> Low</label>
+                            </div>
+                            <div class="filter-section">
+                                <h4>Status</h4>
+                                <label><input type="checkbox" value="todo" class="filter-status"> To Do</label>
+                                <label><input type="checkbox" value="in-progress" class="filter-status"> In Progress</label>
+                                <label><input type="checkbox" value="done" class="filter-status"> Done</label>
+                            </div>
+                            <div class="filter-section">
+                                <h4>Due Date</h4>
+                                <label><input type="checkbox" value="overdue" class="filter-due"> Overdue</label>
+                                <label><input type="checkbox" value="today" class="filter-due"> Due Today</label>
+                                <label><input type="checkbox" value="week" class="filter-due"> This Week</label>
+                            </div>
+                            <div class="filter-actions">
+                                <button class="btn-secondary" id="clear-filters">Clear All</button>
+                                <button class="btn-primary" id="apply-filters">Apply</button>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <button class="create-task-btn" id="create-task-btn" onclick="openTaskModal()">
                         <i class="fas fa-plus"></i>
                         <span>New Task</span>
                     </button>
                 </div>
             </div>
+            
+            <!-- Active Filters Badge Container -->
+            <div class="active-filters" id="active-filters" style="display: none;"></div>
             
             <!-- Board View -->
             <div id="board-view" class="board-view">
@@ -93,17 +143,17 @@
         </main>
     </div>
     
-    <!-- Task Modal -->
+    <!-- Task Modal (Create Task) -->
     <div class="modal" id="task-modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Create Task</h3>
+                <h3>Create New Task</h3>
                 <button class="close-modal" onclick="closeTaskModal()">&times;</button>
             </div>
             <form id="task-form">
                 <div class="modal-body">
                     <div class="form-group">
-                        <label for="task-title">Title</label>
+                        <label for="task-title">Title <span class="required">*</span></label>
                         <input type="text" id="task-title" placeholder="Enter task title" required>
                     </div>
                     <div class="form-group">
@@ -121,14 +171,22 @@
                         </div>
                         <div class="form-group">
                             <label for="task-assignee">Assign to</label>
-                            <select id="task-assignee">
-                                <option value="">Unassigned</option>
-                            </select>
+                            <input type="text" id="task-assignee" placeholder="Assignee name">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="task-due-date">Due Date</label>
+                            <input type="date" id="task-due-date">
+                        </div>
+                        <div class="form-group">
+                            <label for="task-estimate">Estimated Hours</label>
+                            <input type="number" id="task-estimate" min="0" step="0.5" value="0" placeholder="Hours">
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="task-due-date">Due Date</label>
-                        <input type="date" id="task-due-date">
+                        <label for="task-tags">Tags (comma separated)</label>
+                        <input type="text" id="task-tags" placeholder="e.g., frontend, bug, feature">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -149,7 +207,7 @@
             <form id="project-form">
                 <div class="modal-body">
                     <div class="form-group">
-                        <label for="project-name">Project Name</label>
+                        <label for="project-name">Project Name <span class="required">*</span></label>
                         <input type="text" id="project-name" placeholder="Enter project name" required>
                     </div>
                     <div class="form-group">
@@ -175,7 +233,7 @@
             <form id="sprint-form">
                 <div class="modal-body">
                     <div class="form-group">
-                        <label for="sprint-name">Sprint Name</label>
+                        <label for="sprint-name">Sprint Name <span class="required">*</span></label>
                         <input type="text" id="sprint-name" placeholder="e.g., Sprint 1 - Authentication" required>
                     </div>
                     <div class="form-group">
@@ -201,24 +259,78 @@
         </div>
     </div>
     
-    <!-- Comment Modal -->
+    <!-- Comment & Task Detail Modal (Edit Task) -->
     <div class="modal" id="comment-modal">
         <div class="modal-content modal-large">
             <div class="modal-header">
-                <h3 id="comment-task-title">Task Comments</h3>
+                <h3 id="comment-task-title">Task Details</h3>
                 <button class="close-modal" onclick="closeCommentModal()">&times;</button>
             </div>
             <div class="modal-body">
+                <!-- Edit Task Form -->
+                <div class="edit-task-section">
+                    <h4><i class="fas fa-edit"></i> Edit Task</h4>
+                    <input type="hidden" id="edit-task-id">
+                    <div class="form-group">
+                        <label for="edit-task-title">Title <span class="required">*</span></label>
+                        <input type="text" id="edit-task-title" placeholder="Task title">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-task-description">Description</label>
+                        <textarea id="edit-task-description" rows="3" placeholder="Task description"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="edit-task-priority">Priority</label>
+                            <select id="edit-task-priority">
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-task-assignee">Assignee</label>
+                            <input type="text" id="edit-task-assignee" placeholder="Assignee name">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="edit-task-due-date">Due Date</label>
+                            <input type="date" id="edit-task-due-date">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-task-estimate">Estimated Hours</label>
+                            <input type="number" id="edit-task-estimate" min="0" step="0.5" value="0" placeholder="Hours">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-task-tags">Tags (comma separated)</label>
+                        <input type="text" id="edit-task-tags" placeholder="e.g., frontend, bug, feature">
+                    </div>
+                    <div class="edit-task-actions">
+                        <button class="btn-primary" id="save-task-btn">
+                            <i class="fas fa-save"></i> Save Changes
+                        </button>
+                        <button class="btn-danger" id="delete-task-btn">
+                            <i class="fas fa-trash"></i> Delete Task
+                        </button>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <!-- Comments Section -->
+                <h4><i class="fas fa-comments"></i> Comments</h4>
                 <div id="comments-list" class="comments-list">
                     <!-- Comments will be loaded here -->
                 </div>
                 <div class="form-group">
-                    <textarea id="new-comment" rows="3" placeholder="Write a comment..."></textarea>
+                    <textarea id="new-comment" rows="2" placeholder="Write a comment..."></textarea>
                 </div>
+                <button class="btn-primary" id="add-comment-btn">Add Comment</button>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn-secondary" onclick="closeCommentModal()">Close</button>
-                <button type="button" class="btn-primary" id="add-comment-btn">Add Comment</button>
+                <button class="btn-secondary" onclick="closeCommentModal()">Close</button>
             </div>
         </div>
     </div>

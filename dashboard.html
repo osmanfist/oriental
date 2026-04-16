@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Oriental - Dashboard</title>
     <link rel="stylesheet" href="css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -10,13 +10,33 @@
 </head>
 <body>
     <div class="dashboard">
+        <!-- Mobile Header -->
+        <div class="mobile-header">
+            <button class="mobile-menu-btn" id="mobile-menu-btn">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="mobile-logo">
+                <i class="fas fa-mountain-sun"></i>
+                <span>oriental</span>
+            </div>
+            <button class="mobile-add-btn" id="mobile-add-btn" onclick="openTaskModal()">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
+        
+        <!-- Sidebar Overlay -->
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+        
         <!-- Sidebar -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
                     <i class="fas fa-mountain-sun"></i>
                     <h2>oriental</h2>
                 </div>
+                <button class="sidebar-close-btn" id="sidebar-close-btn">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
             
             <!-- User Info Section -->
@@ -79,7 +99,7 @@
                     <!-- Filter Dropdown -->
                     <div class="filter-container">
                         <button class="filter-btn" id="filter-btn">
-                            <i class="fas fa-filter"></i> Filter
+                            <i class="fas fa-filter"></i> <span class="filter-text">Filter</span>
                         </button>
                         <div class="filter-dropdown" id="filter-dropdown">
                             <div class="filter-section">
@@ -107,7 +127,7 @@
                         </div>
                     </div>
                     
-                    <button class="create-task-btn" id="create-task-btn" onclick="openTaskModal()">
+                    <button class="create-task-btn desktop-only" id="create-task-btn" onclick="openTaskModal()">
                         <i class="fas fa-plus"></i>
                         <span>New Task</span>
                     </button>
@@ -141,6 +161,22 @@
                 </div>
             </div>
         </main>
+    </div>
+    
+    <!-- Mobile Bottom Navigation -->
+    <div class="bottom-nav" id="bottom-nav">
+        <button class="bottom-nav-item active" data-view="board">
+            <i class="fas fa-columns"></i>
+            <span>Board</span>
+        </button>
+        <button class="bottom-nav-item" data-view="sprints">
+            <i class="fas fa-calendar-alt"></i>
+            <span>Sprints</span>
+        </button>
+        <button class="bottom-nav-item" id="bottom-add-btn">
+            <i class="fas fa-plus-circle"></i>
+            <span>New Task</span>
+        </button>
     </div>
     
     <!-- Task Modal (Create Task) -->
@@ -343,5 +379,98 @@
     <!-- Application Scripts -->
     <script src="js/firebase-config.js"></script>
     <script src="js/dashboard.js"></script>
+    
+    <!-- Mobile Menu Script -->
+    <script>
+        // Mobile menu functionality
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+        const sidebarCloseBtn = document.getElementById('sidebar-close-btn');
+        
+        function openSidebar() {
+            sidebar.classList.add('open');
+            sidebarOverlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function closeSidebar() {
+            sidebar.classList.remove('open');
+            sidebarOverlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+        
+        if (mobileMenuBtn) {
+            mobileMenuBtn.addEventListener('click', openSidebar);
+        }
+        
+        if (sidebarCloseBtn) {
+            sidebarCloseBtn.addEventListener('click', closeSidebar);
+        }
+        
+        if (sidebarOverlay) {
+            sidebarOverlay.addEventListener('click', closeSidebar);
+        }
+        
+        // Bottom navigation
+        const bottomNavItems = document.querySelectorAll('.bottom-nav-item');
+        const navItems = document.querySelectorAll('.nav-item');
+        
+        function switchView(view) {
+            // Update bottom nav
+            bottomNavItems.forEach(item => {
+                if (item.dataset.view === view) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+            
+            // Update sidebar nav
+            navItems.forEach(item => {
+                if (item.dataset.view === view) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+            
+            // Switch view content
+            if (view === 'board') {
+                document.getElementById('board-view').style.display = 'flex';
+                document.getElementById('sprints-view').classList.add('hidden');
+                document.getElementById('current-view').textContent = 'Board';
+            } else if (view === 'sprints') {
+                document.getElementById('board-view').style.display = 'none';
+                document.getElementById('sprints-view').classList.remove('hidden');
+                document.getElementById('current-view').textContent = 'Sprints';
+                if (typeof loadSprints === 'function') loadSprints();
+            }
+        }
+        
+        bottomNavItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const view = item.dataset.view;
+                if (view) switchView(view);
+            });
+        });
+        
+        // Bottom add button
+        const bottomAddBtn = document.getElementById('bottom-add-btn');
+        if (bottomAddBtn) {
+            bottomAddBtn.addEventListener('click', () => {
+                if (typeof openTaskModal === 'function') openTaskModal();
+            });
+        }
+        
+        // Close sidebar when clicking a nav link (mobile)
+        navItems.forEach(item => {
+            item.addEventListener('click', () => {
+                if (window.innerWidth <= 768) {
+                    setTimeout(closeSidebar, 150);
+                }
+            });
+        });
+    </script>
 </body>
 </html>
