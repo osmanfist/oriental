@@ -1,11 +1,11 @@
 /**
  * Oriental - Dashboard Module
- * Version: 2.7.0
+ * Version: 2.8.0
  * 
  * Main application logic including task management, project handling,
  * real-time updates, drag-and-drop functionality, comments, search, filters,
  * sorting, assignee filtering (real users), mobile drag & drop, pull to refresh,
- * and team invitations.
+ * team invitations, sprints, and dark mode.
  */
 
 // ============================================
@@ -36,6 +36,77 @@ let activeFilters = {
 let taskReloadTimeout = null;
 
 // ============================================
+// Dark Mode Functions
+// ============================================
+
+/**
+ * Initialize dark mode from localStorage
+ */
+function initDarkMode() {
+    // Check localStorage for theme preference
+    const savedTheme = localStorage.getItem('oriental_theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        updateThemeIcons(true);
+    } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+        updateThemeIcons(false);
+    }
+}
+
+/**
+ * Toggle dark/light mode
+ */
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const isDark = currentTheme === 'dark';
+    
+    if (isDark) {
+        document.documentElement.setAttribute('data-theme', 'light');
+        localStorage.setItem('oriental_theme', 'light');
+        updateThemeIcons(false);
+        showToast('Light mode activated', 'info');
+    } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        localStorage.setItem('oriental_theme', 'dark');
+        updateThemeIcons(true);
+        showToast('Dark mode activated', 'info');
+    }
+}
+
+/**
+ * Update theme toggle icons
+ * @param {boolean} isDark - Whether dark mode is active
+ */
+function updateThemeIcons(isDark) {
+    const themeToggles = document.querySelectorAll('.theme-toggle');
+    themeToggles.forEach(toggle => {
+        const icon = toggle.querySelector('i');
+        if (icon) {
+            if (isDark) {
+                icon.className = 'fas fa-sun';
+                toggle.title = 'Switch to Light Mode';
+            } else {
+                icon.className = 'fas fa-moon';
+                toggle.title = 'Switch to Dark Mode';
+            }
+        }
+    });
+}
+
+/**
+ * Setup theme toggle event listeners
+ */
+function setupThemeToggle() {
+    const themeToggles = document.querySelectorAll('.theme-toggle');
+    themeToggles.forEach(toggle => {
+        toggle.addEventListener('click', toggleTheme);
+    });
+}
+
+// ============================================
 // Initialization
 // ============================================
 
@@ -44,6 +115,7 @@ let taskReloadTimeout = null;
  */
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 Dashboard initializing...');
+    initDarkMode();  // Initialize dark mode first
     await checkAuth();
     await loadUserData();
     await loadOrganization();
@@ -55,6 +127,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupKeyboardShortcuts();
     setupSorting();
     setupPullToRefresh();
+    setupThemeToggle();  // Setup theme toggle buttons
     console.log('✅ Dashboard ready!');
 });
 
@@ -2390,3 +2463,4 @@ window.openInviteModal = openInviteModal;
 window.closeInviteModal = closeInviteModal;
 window.closePendingInvitesModal = closePendingInvitesModal;
 window.cancelInvite = cancelInvite;
+window.toggleTheme = toggleTheme;  // Export toggleTheme for global access
