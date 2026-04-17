@@ -83,6 +83,19 @@
                     <!-- Projects will be loaded here -->
                 </div>
             </div>
+            
+            <!-- Invite Section -->
+            <div class="invite-section">
+                <div class="invite-header">
+                    <h3><i class="fas fa-user-plus"></i> Team Members</h3>
+                    <button class="invite-btn" id="invite-btn" onclick="openInviteModal()">
+                        <i class="fas fa-envelope"></i> Invite
+                    </button>
+                </div>
+                <div class="team-members-list" id="team-members-list">
+                    <!-- Team members will be loaded here -->
+                </div>
+            </div>
         </aside>
         
         <!-- Main Content -->
@@ -245,7 +258,6 @@
                             <label for="task-assignee">Assign to</label>
                             <select id="task-assignee">
                                 <option value="">Unassigned</option>
-                                <!-- Options will be populated dynamically from team members -->
                             </select>
                         </div>
                     </div>
@@ -367,7 +379,6 @@
                             <label for="edit-task-assignee">Assignee</label>
                             <select id="edit-task-assignee">
                                 <option value="">Unassigned</option>
-                                <!-- Options will be populated dynamically from team members -->
                             </select>
                         </div>
                     </div>
@@ -409,6 +420,58 @@
             </div>
             <div class="modal-footer">
                 <button class="btn-secondary" onclick="closeCommentModal()">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Invite Modal -->
+    <div class="modal" id="invite-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Invite Team Member</h3>
+                <button class="close-modal" onclick="closeInviteModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="invite-form">
+                    <div class="form-group">
+                        <label for="invite-email">Email Address</label>
+                        <input type="email" id="invite-email" placeholder="colleague@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="invite-role">Role</label>
+                        <select id="invite-role">
+                            <option value="member">Member (can create and edit tasks)</option>
+                            <option value="admin">Admin (can manage team and projects)</option>
+                            <option value="viewer">Viewer (read-only access)</option>
+                        </select>
+                    </div>
+                    <div class="invite-info">
+                        <i class="fas fa-info-circle"></i>
+                        <span>The invited person will receive a link to join your organization.</span>
+                    </div>
+                    <div class="modal-actions" style="display: flex; gap: var(--spacing-md); margin-top: var(--spacing-lg);">
+                        <button type="button" class="btn-secondary" onclick="closeInviteModal()">Cancel</button>
+                        <button type="submit" class="btn-primary">Send Invite</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pending Invites Modal -->
+    <div class="modal" id="pending-invites-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Pending Invites</h3>
+                <button class="close-modal" onclick="closePendingInvitesModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="pending-invites-list" class="pending-invites-list">
+                    <!-- Pending invites will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closePendingInvitesModal()">Close</button>
             </div>
         </div>
     </div>

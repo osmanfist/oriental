@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accept Invite - Oriental</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="auth-page">
+    <div class="auth-container">
+        <div class="auth-logo">
+            <i class="fas fa-mountain-sun"></i>
+            <h1>oriental</h1>
+        </div>
+        
+        <div id="invite-status" class="auth-form active">
+            <h2>Processing Invitation...</h2>
+            <div class="loading-spinner"></div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script>
+        async function processInvite() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            
+            if (!token) {
+                document.getElementById('invite-status').innerHTML = `
+                    <h2>Invalid Invitation</h2>
+                    <p>No invitation token provided.</p>
+                    <a href="login.html" class="btn btn-primary">Go to Login</a>
+                `;
+                return;
+            }
+            
+            try {
+                // Find the invite
+                const invitesSnapshot = await db.collection('invites')
+                    .where('token', '==', token)
+                    .where('status', '==', 'pending')
+                    .limit(1)
+                    .get();
+                
+                if (invitesSnapshot.empty) {
+                    document.getElementById('invite-status').innerHTML = `
+                        <h2>Invalid or Expired Invitation</h2>
+                        <p>This invitation link is invalid or has already been used.</p>
+                        <a href="login.html" class="btn btn-primary">Go to Login</a>
+                    `;
+                    return;
+                }
+                
+                const invite = invitesSnapshot.docs[0];
+                const inviteData = invite.data();
+                
+                // Check expiration
+                if (inviteData.expiresAt && inviteData.expiresAt.toDate() < new Date()) {
+                    document.getElementById('invite-status').innerHTML = `
+                        <h2>Invitation Expired</h2>
+                        <p>This invitation has expired. Please ask for a new one.</p>
+                        <a href="login.html" class="btn btn-primary">Go to Login</a>
+                    `;
+                    return;
+                }
+                
+                // Check if user is logged in
+                firebase.auth().onAuthStateChanged(async (user) => {
+                    if (!user) {
+                        // Store invite token and redirect to login
+                        localStorage.setItem('pending_invite_token', token);
+                        window.location.href = 'login.html';
+                        return;
+                    }
+                    
+                    // User is logged in, add them to organization
+                    const userDoc = await db.collection('users').doc(user.uid).get();
+                    const userOrganizations = userDoc.exists ? userDoc.data().organizations || [] : [];
+                    
+                    if (!userOrganizations.includes(inviteData.organizationId)) {
+                        await db.collection('users').doc(user.uid).update({
+                            organizations: firebase.firestore.FieldValue.arrayUnion(inviteData.organizationId)
+                        });
+                    }
+                    
+                    // Update invite status
+                    await db.collection('invites').doc(invite.id).update({
+                        status: 'accepted',
+                        acceptedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        acceptedBy: user.uid
+                    });
+                    
+                    document.getElementById('invite-status').innerHTML = `
+                        <h2>Welcome to ${inviteData.organizationName}!</h2>
+                        <p>You've been added to the team.</p>
+                        <a href="dashboard.html" class="btn btn-primary">Go to Dashboard</a>
+                    `;
+                });
+                
+            } catch (error) {
+                console.error('Error processing invite:', error);
+                document.getElementById('invite-status').innerHTML = `
+                    <h2>Error Processing Invitation</h2>
+                    <p>Something went wrong. Please try again.</p>
+                    <a href="login.html" class="btn btn-primary">Go to Login</a>
+                `;
+            }
+        }
+        
+        processInvite();
+    </script>
+</body>
+</html>
