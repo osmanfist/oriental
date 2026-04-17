@@ -1,11 +1,11 @@
 /**
  * Oriental - Dashboard Module
- * Version: 2.8.0
+ * Version: 2.9.0
  * 
  * Main application logic including task management, project handling,
  * real-time updates, drag-and-drop functionality, comments, search, filters,
  * sorting, assignee filtering (real users), mobile drag & drop, pull to refresh,
- * team invitations, sprints, and dark mode.
+ * team invitations, sprints, dark mode, activity log, and email notifications.
  */
 
 // ============================================
@@ -34,6 +34,7 @@ let activeFilters = {
     assignees: []
 };
 let taskReloadTimeout = null;
+let isActivityLogOpen = false;
 
 // ============================================
 // Dark Mode Functions
@@ -104,6 +105,256 @@ function setupThemeToggle() {
     themeToggles.forEach(toggle => {
         toggle.addEventListener('click', toggleTheme);
     });
+}
+
+// ============================================
+// Activity Log Functions
+// ============================================
+
+/**
+ * Log an activity to Firestore
+ * @param {string} action - Action type (create_task, update_task, delete_task, assign_task, add_comment, complete_task)
+ * @param {string} entityType - Type of entity (task, project, comment, sprint)
+ * @param {string} entityId - ID of the entity
+ * @param {string} entityName - Name/title of the entity
+ * @param {Object} details - Additional details about the action
+ */
+async function logActivity(action, entityType, entityId, entityName, details = {}) {
+    if (!currentOrganization) return;
+    
+    try {
+        await db.collection('activity_logs').add({
+            organizationId: currentOrganization,
+            userId: currentUser.uid,
+            userName: currentUser.displayName || currentUser.email.split('@')[0],
+            userEmail: currentUser.email,
+            action: action,
+            entityType: entityType,
+            entityId: entityId,
+            entityName: entityName,
+            details: details,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // If activity log is open, refresh it
+        if (isActivityLogOpen) {
+            loadActivityLog();
+        }
+    } catch (error) {
+        console.error('Error logging activity:', error);
+    }
+}
+
+/**
+ * Open activity log panel
+ */
+function openActivityLog() {
+    const panel = document.getElementById('activity-log-container');
+    const overlay = document.getElementById('activity-log-overlay');
+    if (panel) {
+        panel.classList.add('open');
+        isActivityLogOpen = true;
+        if (overlay) overlay.classList.add('active');
+        loadActivityLog();
+    }
+}
+
+/**
+ * Close activity log panel
+ */
+function closeActivityLog() {
+    const panel = document.getElementById('activity-log-container');
+    const overlay = document.getElementById('activity-log-overlay');
+    if (panel) {
+        panel.classList.remove('open');
+        isActivityLogOpen = false;
+        if (overlay) overlay.classList.remove('active');
+    }
+}
+
+/**
+ * Load activity log entries
+ */
+async function loadActivityLog() {
+    if (!currentOrganization) return;
+    
+    try {
+        const activitySnapshot = await db.collection('activity_logs')
+            .where('organizationId', '==', currentOrganization)
+            .orderBy('createdAt', 'desc')
+            .limit(50)
+            .get();
+        
+        const container = document.getElementById('activity-log-list');
+        if (!container) return;
+        
+        if (activitySnapshot.empty) {
+            container.innerHTML = '<div class="empty-state-small">No activity yet</div>';
+            return;
+        }
+        
+        container.innerHTML = '';
+        activitySnapshot.forEach(doc => {
+            const activity = doc.data();
+            const activityElement = createActivityElement(activity);
+            container.appendChild(activityElement);
+        });
+        
+    } catch (error) {
+        console.error('Error loading activity log:', error);
+        const container = document.getElementById('activity-log-list');
+        if (container) {
+            container.innerHTML = '<div class="empty-state-small">Error loading activity</div>';
+        }
+    }
+}
+
+/**
+ * Create activity log element
+ */
+function createActivityElement(activity) {
+    const div = document.createElement('div');
+    div.className = 'activity-item';
+    
+    // Get icon and color based on action
+    let icon = 'fa-info-circle';
+    let iconClass = 'update';
+    
+    if (activity.action.includes('create')) {
+        icon = 'fa-plus';
+        iconClass = 'create';
+    } else if (activity.action.includes('delete')) {
+        icon = 'fa-trash';
+        iconClass = 'delete';
+    } else if (activity.action.includes('assign')) {
+        icon = 'fa-user-check';
+        iconClass = 'assign';
+    } else if (activity.action.includes('comment')) {
+        icon = 'fa-comment';
+        iconClass = 'comment';
+    } else if (activity.action.includes('complete')) {
+        icon = 'fa-check-circle';
+        iconClass = 'create';
+    } else if (activity.action.includes('update') || activity.action.includes('move')) {
+        icon = 'fa-edit';
+        iconClass = 'update';
+    }
+    
+    // Format description
+    let description = '';
+    switch (activity.action) {
+        case 'create_task':
+            description = `Created task "${activity.entityName}"`;
+            break;
+        case 'update_task':
+            description = `Updated task "${activity.entityName}"`;
+            if (activity.details.oldStatus && activity.details.newStatus) {
+                description = `Moved task "${activity.entityName}" from ${activity.details.oldStatus} to ${activity.details.newStatus}`;
+            }
+            break;
+        case 'delete_task':
+            description = `Deleted task "${activity.entityName}"`;
+            break;
+        case 'assign_task':
+            description = `Assigned task "${activity.entityName}" to ${activity.details.assignedTo || 'unassigned'}`;
+            break;
+        case 'add_comment':
+            description = `Commented on task "${activity.entityName}"`;
+            break;
+        case 'complete_task':
+            description = `Completed task "${activity.entityName}"`;
+            break;
+        case 'create_project':
+            description = `Created project "${activity.entityName}"`;
+            break;
+        case 'delete_project':
+            description = `Deleted project "${activity.entityName}"`;
+            break;
+        default:
+            description = activity.action.replace(/_/g, ' ') + ' ' + activity.entityName;
+    }
+    
+    const time = activity.createdAt?.toDate() ? new Date(activity.createdAt.toDate()).toLocaleString() : 'Just now';
+    
+    div.innerHTML = `
+        <div class="activity-icon ${iconClass}">
+            <i class="fas ${icon}"></i>
+        </div>
+        <div class="activity-content">
+            <div class="activity-title">${escapeHtml(activity.userName)}</div>
+            <div class="activity-description">${escapeHtml(description)}</div>
+            <div class="activity-time">${escapeHtml(time)}</div>
+        </div>
+    `;
+    
+    return div;
+}
+
+// ============================================
+// Email Notification Functions
+// ============================================
+
+/**
+ * Send email notification
+ * @param {string} to - Recipient email
+ * @param {string} subject - Email subject
+ * @param {string} template - Template name
+ * @param {Object} data - Template data
+ */
+async function sendEmailNotification(to, subject, template, data) {
+    try {
+        const templateParams = {
+            to_email: to,
+            subject: subject,
+            ...data
+        };
+        
+        await emailjs.send(
+            'service_oriental_0126',
+            template,
+            templateParams
+        );
+        
+        console.log('Email notification sent to:', to);
+        return true;
+    } catch (error) {
+        console.error('Error sending email notification:', error);
+        return false;
+    }
+}
+
+/**
+ * Notify user when task is assigned
+ */
+async function notifyTaskAssignment(taskId, taskTitle, assignedToEmail, assignedToName, assignerName) {
+    await sendEmailNotification(
+        assignedToEmail,
+        `New Task Assigned: ${taskTitle}`,
+        'task_assigned',
+        {
+            to_name: assignedToName,
+            task_title: taskTitle,
+            task_link: `${window.location.origin}/dashboard.html?task=${taskId}`,
+            assigner_name: assignerName
+        }
+    );
+}
+
+/**
+ * Notify user when comment is added to their task
+ */
+async function notifyCommentOnTask(taskTitle, taskId, commentAuthor, taskOwnerEmail, taskOwnerName) {
+    await sendEmailNotification(
+        taskOwnerEmail,
+        `New Comment on Task: ${taskTitle}`,
+        'comment_on_task',
+        {
+            to_name: taskOwnerName,
+            task_title: taskTitle,
+            task_link: `${window.location.origin}/dashboard.html?task=${taskId}`,
+            comment_author: commentAuthor
+        }
+    );
 }
 
 // ============================================
@@ -1411,8 +1662,17 @@ async function handleDrop(e) {
     const taskId = draggedTask.dataset.taskId;
     const oldStatus = draggedTask.dataset.status;
     if (newStatus === oldStatus) return;
+    
+    // Get task title for logging
+    const taskDoc = await db.collection('tasks').doc(taskId).get();
+    const taskTitle = taskDoc.data()?.title || 'Unknown';
+    
     try {
         await db.collection('tasks').doc(taskId).update({ status: newStatus, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        
+        // Log activity
+        await logActivity('update_task', 'task', taskId, taskTitle, { oldStatus: oldStatus, newStatus: newStatus });
+        
         showToast('Task status updated', 'success');
     } catch (error) {
         console.error('Error updating task status:', error);
@@ -1576,7 +1836,20 @@ async function createTask(taskData) {
             createdBy: currentUser.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
-        await db.collection('tasks').add(task);
+        
+        const docRef = await db.collection('tasks').add(task);
+        
+        // Log activity
+        await logActivity('create_task', 'task', docRef.id, taskData.title, { assignedTo: assigneeName });
+        
+        // Send email notification if assigned
+        if (assigneeId && assigneeName) {
+            const assignedUser = teamMembers.find(m => m.id === assigneeId);
+            if (assignedUser && assignedUser.email !== currentUser.email) {
+                await notifyTaskAssignment(docRef.id, taskData.title, assignedUser.email, assignedUser.name, currentUser.displayName || currentUser.email);
+            }
+        }
+        
         showToast('Task created successfully', 'success');
         return true;
     } catch (error) { console.error('Error creating task:', error); showToast('Error creating task: ' + error.message, 'error'); return false; }
@@ -1584,11 +1857,16 @@ async function createTask(taskData) {
 
 async function updateTask(taskId, taskData) {
     try {
+        // Get old task data for comparison
+        const oldTaskDoc = await db.collection('tasks').doc(taskId).get();
+        const oldTask = oldTaskDoc.data();
+        
         let assigneeId = null, assigneeName = taskData.assignedTo || null;
         if (assigneeName && assigneeName !== 'Unassigned' && assigneeName !== '') {
             const matchedMember = teamMembers.find(m => m.name === assigneeName);
             if (matchedMember) assigneeId = matchedMember.id;
         }
+        
         const updateData = {
             title: taskData.title, description: taskData.description || '',
             priority: taskData.priority || 'medium', assignedTo: assigneeName, assignedToId: assigneeId,
@@ -1596,7 +1874,28 @@ async function updateTask(taskId, taskData) {
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
         if (taskData.tags) updateData.tags = taskData.tags.split(',').map(t => t.trim());
+        
         await db.collection('tasks').doc(taskId).update(updateData);
+        
+        // Log activity
+        const details = {};
+        if (oldTask.status !== updateData.status) {
+            details.oldStatus = oldTask.status;
+            details.newStatus = updateData.status;
+        }
+        if (oldTask.assignedTo !== assigneeName) {
+            details.assignedTo = assigneeName;
+            // Send email notification for new assignment
+            if (assigneeId && assigneeName && assigneeName !== oldTask.assignedTo) {
+                const assignedUser = teamMembers.find(m => m.id === assigneeId);
+                if (assignedUser && assignedUser.email !== currentUser.email) {
+                    await notifyTaskAssignment(taskId, taskData.title, assignedUser.email, assignedUser.name, currentUser.displayName || currentUser.email);
+                }
+            }
+        }
+        
+        await logActivity('update_task', 'task', taskId, taskData.title, details);
+        
         showToast('Task updated successfully', 'success');
         return true;
     } catch (error) { console.error('Error updating task:', error); showToast('Error updating task: ' + error.message, 'error'); return false; }
@@ -1617,7 +1916,12 @@ async function createProject(projectData) {
             color: projectData.color || '#16a34a', isArchived: false, createdBy: currentUser.uid,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         };
-        await db.collection('projects').add(project);
+        
+        const docRef = await db.collection('projects').add(project);
+        
+        // Log activity
+        await logActivity('create_project', 'project', docRef.id, projectData.name, {});
+        
         showToast('Project created successfully', 'success');
         await loadProjects();
         return true;
@@ -1674,7 +1978,30 @@ function createCommentElement(comment) {
 async function addComment(taskId, content) {
     if (!content.trim()) return false;
     try {
-        await db.collection('comments').add({ taskId: taskId, userId: currentUser.uid, userName: currentUser.displayName || currentUser.email, content: content.trim(), createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+        // Get task info for notification
+        const taskDoc = await db.collection('tasks').doc(taskId).get();
+        const task = taskDoc.data();
+        
+        await db.collection('comments').add({
+            taskId: taskId,
+            userId: currentUser.uid,
+            userName: currentUser.displayName || currentUser.email,
+            content: content.trim(),
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // Log activity
+        await logActivity('add_comment', 'comment', taskId, task.title, { content: content.substring(0, 50) });
+        
+        // Send email notification to task creator/assignee
+        if (task.createdBy !== currentUser.uid) {
+            const ownerDoc = await db.collection('users').doc(task.createdBy).get();
+            if (ownerDoc.exists) {
+                const owner = ownerDoc.data();
+                await notifyCommentOnTask(task.title, taskId, currentUser.displayName || currentUser.email, owner.email, owner.name);
+            }
+        }
+        
         await loadComments(taskId);
         document.getElementById('new-comment').value = '';
         showToast('Comment added', 'success');
@@ -1799,6 +2126,23 @@ function setupEventListeners() {
             await sendInvite(email, role);
             closeInviteModal();
         });
+    }
+    
+    // Activity log button
+    const activityLogBtn = document.getElementById('activity-log-btn');
+    if (activityLogBtn) {
+        activityLogBtn.addEventListener('click', openActivityLog);
+    }
+    
+    // Close activity log
+    const closeActivityLogBtn = document.getElementById('close-activity-log');
+    if (closeActivityLogBtn) {
+        closeActivityLogBtn.addEventListener('click', closeActivityLog);
+    }
+    
+    const activityLogOverlay = document.getElementById('activity-log-overlay');
+    if (activityLogOverlay) {
+        activityLogOverlay.addEventListener('click', closeActivityLog);
     }
 }
 
@@ -2329,6 +2673,10 @@ async function deleteTaskWithUndo(taskId, taskData) {
         const taskRef = db.collection('tasks').doc(taskId);
         batch.delete(taskRef);
         await batch.commit();
+        
+        // Log activity
+        await logActivity('delete_task', 'task', taskId, taskData.title, {});
+        
         showUndoToast('Task deleted', () => undoDelete());
         closeCommentModal();
         await loadTasks();
@@ -2351,6 +2699,10 @@ async function deleteProjectWithUndo(projectId, projectData) {
         const projectRef = db.collection('projects').doc(projectId);
         batch.delete(projectRef);
         await batch.commit();
+        
+        // Log activity
+        await logActivity('delete_project', 'project', projectId, projectData.name, {});
+        
         if (deletedItem) deletedItem.tasks = deletedTasks;
         showUndoToast(`Project "${projectData.name}" deleted`, () => undoDelete());
         await loadProjects();
@@ -2463,4 +2815,6 @@ window.openInviteModal = openInviteModal;
 window.closeInviteModal = closeInviteModal;
 window.closePendingInvitesModal = closePendingInvitesModal;
 window.cancelInvite = cancelInvite;
-window.toggleTheme = toggleTheme;  // Export toggleTheme for global access
+window.toggleTheme = toggleTheme;
+window.openActivityLog = openActivityLog;
+window.closeActivityLog = closeActivityLog;

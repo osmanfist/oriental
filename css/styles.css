@@ -1,10 +1,10 @@
 /**
  * Oriental - Global Styles
- * Version: 8.0.0
+ * Version: 9.0.0
  * Description: COMPLETELY STATIC - No transitions, no animations, no motion
  * Mobile-friendly with hamburger menu and bottom navigation
  * Added: Sort dropdown, assignee filters, mobile drag & drop, pull to refresh
- * Added: Dark Mode support
+ * Added: Dark Mode support, Activity Log, Email Notifications
  */
 
 /* ============================================
@@ -158,6 +158,153 @@
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
+}
+
+/* ============================================
+   Activity Log Styles
+   ============================================ */
+
+.activity-log-container {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 400px;
+    background: var(--bg-modal);
+    box-shadow: var(--shadow-xl);
+    z-index: 1050;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.activity-log-container.open {
+    transform: translateX(0);
+}
+
+.activity-log-header {
+    padding: var(--spacing-xl);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.activity-log-header h3 {
+    font-size: var(--font-size-xl);
+    color: var(--text-primary);
+}
+
+.close-activity-log {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--text-muted);
+}
+
+.close-activity-log:hover {
+    color: var(--text-secondary);
+}
+
+.activity-log-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--spacing-md);
+}
+
+.activity-item {
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    gap: var(--spacing-md);
+}
+
+.activity-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.activity-icon.create { background: #d1fae5; color: #065f46; }
+.activity-icon.update { background: #dbeafe; color: #1e40af; }
+.activity-icon.delete { background: #fee2e2; color: #991b1b; }
+.activity-icon.assign { background: #fef3c7; color: #92400e; }
+.activity-icon.comment { background: #e0e7ff; color: #3730a3; }
+
+[data-theme="dark"] .activity-icon.create { background: #064e3b; color: #86efac; }
+[data-theme="dark"] .activity-icon.update { background: #1e3a5f; color: #93c5fd; }
+[data-theme="dark"] .activity-icon.delete { background: #7f1d1d; color: #fecaca; }
+[data-theme="dark"] .activity-icon.assign { background: #78350f; color: #fde68a; }
+[data-theme="dark"] .activity-icon.comment { background: #312e81; color: #c7d2fe; }
+
+.activity-content {
+    flex: 1;
+}
+
+.activity-title {
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.activity-description {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.activity-time {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+}
+
+.activity-user {
+    font-weight: 500;
+    color: var(--primary-600);
+}
+
+/* Activity Log Button */
+.activity-log-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    padding: var(--spacing-sm);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+}
+
+.activity-log-btn:hover {
+    background: var(--bg-tertiary);
+    color: var(--primary-600);
+}
+
+/* Activity Log Overlay */
+.activity-log-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1040;
+    display: none;
+}
+
+.activity-log-overlay.active {
+    display: block;
 }
 
 /* ============================================
@@ -2781,7 +2928,9 @@ hr {
     .sort-container,
     .fab-container,
     .pull-to-refresh,
-    .theme-toggle {
+    .theme-toggle,
+    .activity-log-container,
+    .activity-log-btn {
         display: none;
     }
 

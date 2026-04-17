@@ -15,6 +15,20 @@
         <span>Pull to refresh</span>
     </div>
 
+    <!-- Activity Log Panel -->
+    <div class="activity-log-overlay" id="activity-log-overlay"></div>
+    <div class="activity-log-container" id="activity-log-container">
+        <div class="activity-log-header">
+            <h3><i class="fas fa-history"></i> Activity Log</h3>
+            <button class="close-activity-log" id="close-activity-log">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="activity-log-list" id="activity-log-list">
+            <div class="empty-state-small">Loading activity...</div>
+        </div>
+    </div>
+
     <div class="dashboard">
         <!-- Mobile Header -->
         <div class="mobile-header">
@@ -26,6 +40,9 @@
                 <span>oriental</span>
             </div>
             <div class="mobile-header-actions">
+                <button class="activity-log-btn" id="mobile-activity-log-btn" title="Activity Log">
+                    <i class="fas fa-history"></i>
+                </button>
                 <button class="theme-toggle" id="mobile-theme-toggle" title="Toggle Dark/Light Mode">
                     <i class="fas fa-moon"></i>
                 </button>
@@ -43,6 +60,9 @@
                     <h2>oriental</h2>
                 </div>
                 <div class="sidebar-header-actions">
+                    <button class="activity-log-btn" id="activity-log-btn" title="Activity Log">
+                        <i class="fas fa-history"></i>
+                    </button>
                     <button class="theme-toggle" id="theme-toggle" title="Toggle Dark/Light Mode">
                         <i class="fas fa-moon"></i>
                     </button>
