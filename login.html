@@ -119,7 +119,19 @@
     <!-- App scripts — config must come before auth.js -->
     <script src="js/firebase-config.js"></script>
     <script src="js/auth.js"></script>
-
-    <!-- No second initializeApp block — firebase-config.js handles everything -->
+    <script>
+        // Check for pending invite after login
+auth.onAuthStateChanged(async (user) => {
+    if (user) {
+        const pendingToken = localStorage.getItem('pending_invite_token');
+        if (pendingToken) {
+            localStorage.removeItem('pending_invite_token');
+            // Redirect to accept invite with token
+            window.location.href = `accept-invite.html?token=${pendingToken}`;
+        }
+    }
+});
+    </script>
+   
 </body>
 </html>
