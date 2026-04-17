@@ -581,6 +581,7 @@ async function loadUserData() {
         } else {
             console.warn('User document not found for:', currentUser.uid);
             
+            // Update UI with fallback data
             const userNameElement = document.getElementById('user-name');
             if (userNameElement) {
                 userNameElement.textContent = currentUser.displayName || currentUser.email.split('@')[0];
@@ -591,7 +592,21 @@ async function loadUserData() {
                 userEmailElement.textContent = currentUser.email;
             }
             
-            await createMissingUserDocument();
+            // IMPORTANT: Only try to create missing document for Google Sign-in
+            // NOT for email/password signup (which already creates the document)
+            // Check if user came from Google Sign-in
+            const isGoogleUser = currentUser.providerData.some(
+                provider => provider.providerId === 'google.com'
+            );
+            
+            if (isGoogleUser) {
+                await createMissingUserDocument();
+            } else {
+                // For email/password users, show error but don't create document
+                // They should have a document already from signup
+                console.error('User document missing for email/password user. This should not happen.');
+                showToast('Error loading user data. Please refresh the page.', 'error');
+            }
         }
     } catch (error) {
         console.error('Error loading user data:', error);

@@ -252,19 +252,26 @@ if (signupBtn) {
         signupBtn.disabled = true;
         
         try {
+            // 1. Create user in Firebase Auth
             const userCredential = await auth.createUserWithEmailAndPassword(email, password);
             const user = userCredential.user;
             
+            // 2. Update user profile with display name
             await user.updateProfile({ displayName: name });
+            
+            // 3. Create user document, organization, and default project
             await createUserDocument(user, name, orgName);
             
+            // 4. Store user info
             localStorage.setItem('oriental_user', JSON.stringify({
                 uid: user.uid,
                 email: user.email,
                 name: name
             }));
             
+            // 5. Redirect to dashboard
             window.location.href = 'dashboard.html';
+            
         } catch (error) {
             console.error('Signup error:', error);
             showError(getErrorMessage(error.code));
