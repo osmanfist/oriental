@@ -1,6 +1,6 @@
 /**
  * Oriental - Authentication Module
- * Version: 1.2.0
+ * Version: 1.3.0
  */
 
 // ============================================
@@ -16,7 +16,7 @@ const googleLoginBtn = document.getElementById('google-login-btn');
 const googleSignupBtn = document.getElementById('google-signup-btn');
 
 // ============================================
-// UI Toggle Functions
+// UI Toggle
 // ============================================
 
 if (showSignup) {
@@ -58,88 +58,25 @@ function showError(message) {
 }
 
 function getErrorMessage(code) {
-    const errorMessages = {
-        'auth/invalid-email': 'Invalid email address format',
-        'auth/user-disabled': 'This account has been disabled',
-        'auth/user-not-found': 'No account found with this email',
+    const errors = {
+        'auth/invalid-email': 'Invalid email address',
+        'auth/user-disabled': 'Account disabled',
+        'auth/user-not-found': 'No account found',
         'auth/wrong-password': 'Incorrect password',
-        'auth/email-already-in-use': 'An account already exists with this email',
-        'auth/weak-password': 'Password should be at least 6 characters',
-        'auth/operation-not-allowed': 'Email/password accounts are not enabled',
-        'auth/network-request-failed': 'Network error. Please check your connection',
-        'auth/popup-closed-by-user': 'Sign in popup was closed',
-        'auth/popup-blocked': 'Popup was blocked by browser',
-        'auth/unauthorized-domain': 'Domain not authorized for OAuth operations',
-        'auth/too-many-requests': 'Too many failed attempts. Please try again later',
-        'default': 'An error occurred. Please try again.'
+        'auth/email-already-in-use': 'Email already in use',
+        'auth/weak-password': 'Password must be at least 6 characters',
+        'auth/network-request-failed': 'Network error',
+        'default': 'An error occurred'
     };
-    return errorMessages[code] || errorMessages.default;
+    return errors[code] || errors.default;
 }
 
 function generateSlug(text) {
     return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
-/**
- * Create user document in Firestore after signup
- */
-async function createUserDocument(user, name, orgName) {
-    try {
-        console.log('Creating user document for:', user.uid);
-        console.log('Organization name:', orgName);
-        
-        // Create organization
-        const orgRef = await db.collection('organizations').add({
-            name: orgName,
-            slug: generateSlug(orgName),
-            createdBy: user.uid,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            members: [user.uid],
-            settings: {
-                defaultView: 'board',
-                theme: 'light'
-            }
-        });
-        
-        const orgId = orgRef.id;
-        console.log('Organization created:', orgId);
-        
-        // Create user document
-        await db.collection('users').doc(user.uid).set({
-            name: name,
-            email: user.email,
-            currentOrganization: orgId,
-            organizations: [orgId],
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            preferences: {
-                notifications: true,
-                emailDigest: 'daily'
-            }
-        });
-        console.log('User document created');
-        
-        // Create default project
-        await db.collection('projects').add({
-            name: 'Getting Started',
-            description: 'Welcome to Oriental! This is your first project.',
-            organizationId: orgId,
-            createdBy: user.uid,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            isArchived: false,
-            color: '#16a34a'
-        });
-        console.log('Default project created');
-        
-        return orgId;
-        
-    } catch (error) {
-        console.error('Error creating user document:', error);
-        throw error;
-    }
-}
-
 // ============================================
-// Email/Password Signup (FIXED)
+// Email/Password Signup - FIXED
 // ============================================
 
 if (signupBtn) {
@@ -150,8 +87,6 @@ if (signupBtn) {
         const email = document.getElementById('signup-email').value.trim();
         const password = document.getElementById('signup-password').value;
         const orgName = document.getElementById('organization-name').value.trim();
-        
-        console.log('Signup attempt for:', email);
         
         if (!name || !email || !password || !orgName) {
             showError('Please fill in all fields');
@@ -171,29 +106,58 @@ if (signupBtn) {
             // 1. Create user in Firebase Auth
             const userCredential = await auth.createUserWithEmailAndPassword(email, password);
             const user = userCredential.user;
-            console.log('User created in Auth:', user.uid);
+            console.log('✅ User created in Auth:', user.uid);
             
-            // 2. Update user profile with display name
+            // 2. Update profile
             await user.updateProfile({ displayName: name });
-            console.log('Profile updated');
+            console.log('✅ Profile updated');
             
-            // 3. Create user document, organization, and default project
-            await createUserDocument(user, name, orgName);
-            console.log('User document created successfully');
+            // 3. Create organization
+            const orgRef = await db.collection('organizations').add({
+                name: orgName,
+                slug: generateSlug(orgName),
+                createdBy: user.uid,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                members: [user.uid],
+                settings: { defaultView: 'board', theme: 'light' }
+            });
+            console.log('✅ Organization created:', orgRef.id);
             
-            // 4. Store user info
+            // 4. Create user document
+            await db.collection('users').doc(user.uid).set({
+                name: name,
+                email: email,
+                currentOrganization: orgRef.id,
+                organizations: [orgRef.id],
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                preferences: { notifications: true, emailDigest: 'daily' }
+            });
+            console.log('✅ User document created');
+            
+            // 5. Create default project
+            await db.collection('projects').add({
+                name: 'Getting Started',
+                description: 'Welcome to Oriental! Your first project.',
+                organizationId: orgRef.id,
+                createdBy: user.uid,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                isArchived: false,
+                color: '#16a34a'
+            });
+            console.log('✅ Default project created');
+            
+            // 6. Store in localStorage
             localStorage.setItem('oriental_user', JSON.stringify({
                 uid: user.uid,
                 email: user.email,
                 name: name
             }));
             
-            // 5. Redirect to dashboard
-            console.log('Redirecting to dashboard...');
+            console.log('🎉 Signup complete! Redirecting...');
             window.location.href = 'dashboard.html';
             
         } catch (error) {
-            console.error('Signup error:', error);
+            console.error('❌ Signup error:', error);
             showError(getErrorMessage(error.code));
             signupBtn.innerHTML = originalText;
             signupBtn.disabled = false;
@@ -243,8 +207,6 @@ if (loginBtn) {
 // ============================================
 
 const handleGoogleAuth = async () => {
-    console.log('Starting Google authentication...');
-    
     const btns = [googleLoginBtn, googleSignupBtn];
     btns.forEach(btn => {
         if (btn) {
@@ -260,7 +222,7 @@ const handleGoogleAuth = async () => {
         const result = await auth.signInWithPopup(provider);
         const user = result.user;
         
-        console.log('Google sign-in successful:', user.uid);
+        console.log('Google sign-in:', user.uid);
         
         let displayName = user.displayName;
         if (!displayName && user.email) {
@@ -268,14 +230,43 @@ const handleGoogleAuth = async () => {
             await user.updateProfile({ displayName: displayName });
         }
         
+        // Check if user document exists
         const userDoc = await db.collection('users').doc(user.uid).get();
         
         if (!userDoc.exists) {
-            console.log('New Google user, creating organization...');
-            const orgName = prompt('Welcome to Oriental! Please enter your organization name:', 'My Team');
+            const orgName = prompt('Welcome! Enter your organization name:', 'My Team');
             
             if (orgName && orgName.trim()) {
-                await createUserDocument(user, displayName, orgName.trim());
+                // Create organization
+                const orgRef = await db.collection('organizations').add({
+                    name: orgName,
+                    slug: generateSlug(orgName),
+                    createdBy: user.uid,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    members: [user.uid],
+                    settings: { defaultView: 'board', theme: 'light' }
+                });
+                
+                // Create user document
+                await db.collection('users').doc(user.uid).set({
+                    name: displayName,
+                    email: user.email,
+                    currentOrganization: orgRef.id,
+                    organizations: [orgRef.id],
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    preferences: { notifications: true, emailDigest: 'daily' }
+                });
+                
+                // Create default project
+                await db.collection('projects').add({
+                    name: 'Getting Started',
+                    description: 'Welcome to Oriental!',
+                    organizationId: orgRef.id,
+                    createdBy: user.uid,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    isArchived: false,
+                    color: '#16a34a'
+                });
             } else {
                 await auth.signOut();
                 btns.forEach(btn => {
@@ -297,19 +288,14 @@ const handleGoogleAuth = async () => {
         window.location.href = 'dashboard.html';
         
     } catch (error) {
-        console.error('Google auth error:', error);
+        console.error('Google error:', error);
         btns.forEach(btn => {
             if (btn) {
                 btn.innerHTML = '<i class="fab fa-google"></i> Google';
                 btn.disabled = false;
             }
         });
-        
-        if (error.code === 'auth/popup-blocked') {
-            showError('Popup was blocked. Please allow popups for this site.');
-        } else {
-            showError(getErrorMessage(error.code));
-        }
+        showError(getErrorMessage(error.code));
     }
 };
 
@@ -317,22 +303,11 @@ if (googleLoginBtn) googleLoginBtn.addEventListener('click', handleGoogleAuth);
 if (googleSignupBtn) googleSignupBtn.addEventListener('click', handleGoogleAuth);
 
 // ============================================
-// Session Management
+// Auto-redirect if already logged in
 // ============================================
 
 auth.onAuthStateChanged((user) => {
     if (user && window.location.pathname.includes('login.html')) {
-        console.log('User already logged in, redirecting to dashboard...');
         window.location.href = 'dashboard.html';
     }
 });
-
-// ============================================
-// Debug Exports
-// ============================================
-if (typeof window !== 'undefined') {
-    window.debugAuth = {
-        currentUser: () => auth.currentUser,
-        isLoggedIn: () => !!auth.currentUser
-    };
-}

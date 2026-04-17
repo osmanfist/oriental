@@ -1,6 +1,6 @@
 /**
  * Oriental - Dashboard Module
- * Version: 2.6.0
+ * Version: 2.7.0
  * 
  * Main application logic including task management, project handling,
  * real-time updates, drag-and-drop functionality, comments, search, filters,
@@ -415,8 +415,8 @@ async function sendInvite(email, role) {
         
         // Send email via EmailJS
         const result = await emailjs.send(
-            'service_oriental_0126',      // Service ID
-            'oriental_invite',       // Your template ID
+            'service_oriental_0126',
+            'oriental_invite',
             templateParams
         );
         
@@ -432,7 +432,6 @@ async function sendInvite(email, role) {
     } catch (error) {
         console.error('Error sending invite:', error);
         
-        // Handle specific errors
         if (error.text) {
             showToast('Failed to send email. Check EmailJS configuration.', 'error');
         } else {
@@ -442,7 +441,6 @@ async function sendInvite(email, role) {
         return false;
         
     } finally {
-        // Reset button
         if (submitBtn) {
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
@@ -542,11 +540,11 @@ async function cancelInvite(inviteId) {
 }
 
 // ============================================
-// Data Loading Functions
+// Data Loading Functions - FIXED
 // ============================================
 
 /**
- * Load user data from Firestore
+ * Load user data from Firestore - FIXED VERSION
  */
 async function loadUserData() {
     try {
@@ -579,11 +577,9 @@ async function loadUserData() {
             }
             
         } else {
-            console.error('CRITICAL: User document not found for:', currentUser.uid);
-            console.log('User email:', currentUser.email);
-            console.log('User displayName:', currentUser.displayName);
+            console.warn('User document not found, attempting to create...');
             
-            // Update UI with fallback
+            // Update UI with fallback data
             const userNameElement = document.getElementById('user-name');
             if (userNameElement) {
                 userNameElement.textContent = currentUser.displayName || currentUser.email.split('@')[0];
@@ -594,24 +590,8 @@ async function loadUserData() {
                 userEmailElement.textContent = currentUser.email;
             }
             
-            // Show error and offer to fix
-            showToast('Account setup incomplete. Please contact support.', 'error');
-            
-            // Try to fix - only for Google users
-            const isGoogleUser = currentUser.providerData && currentUser.providerData.some(
-                provider => provider.providerId === 'google.com'
-            );
-            
-            if (isGoogleUser) {
-                const fix = confirm('Your account needs setup. Click OK to complete setup.');
-                if (fix) {
-                    const orgName = prompt('Enter your organization name:', 'My Team');
-                    if (orgName) {
-                        await createUserDocument(currentUser, currentUser.displayName || currentUser.email.split('@')[0], orgName);
-                        location.reload();
-                    }
-                }
-            }
+            // Try to create missing user document
+            await createMissingUserDocument();
         }
     } catch (error) {
         console.error('Error loading user data:', error);
@@ -620,12 +600,13 @@ async function loadUserData() {
 }
 
 /**
- * Create missing user document
+ * Create missing user document (for users without one)
  */
 async function createMissingUserDocument() {
     try {
-        console.log('Creating missing user document...');
+        console.log('Creating missing user document for:', currentUser.uid);
         
+        // Check if user already has any organizations
         const orgsSnapshot = await db.collection('organizations')
             .where('members', 'array-contains', currentUser.uid)
             .get();
@@ -636,12 +617,16 @@ async function createMissingUserDocument() {
             orgId = orgsSnapshot.docs[0].id;
             console.log('Found existing organization:', orgId);
         } else {
+            // Create new organization
             const orgName = prompt('Welcome! Please enter your organization name:', 'My Team');
-            if (!orgName) return;
+            if (!orgName) {
+                console.log('No organization name provided');
+                return;
+            }
             
             const orgRef = await db.collection('organizations').add({
                 name: orgName,
-                slug: orgName.toLowerCase().replace(/ /g, '-'),
+                slug: generateSlug(orgName),
                 createdBy: currentUser.uid,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 members: [currentUser.uid],
@@ -650,6 +635,7 @@ async function createMissingUserDocument() {
             orgId = orgRef.id;
             console.log('Organization created:', orgId);
             
+            // Create default project
             await db.collection('projects').add({
                 name: 'Getting Started',
                 description: 'Welcome to Oriental! This is your first project.',
@@ -659,8 +645,10 @@ async function createMissingUserDocument() {
                 isArchived: false,
                 color: '#16a34a'
             });
+            console.log('Default project created');
         }
         
+        // Create user document
         await db.collection('users').doc(currentUser.uid).set({
             name: currentUser.displayName || currentUser.email.split('@')[0],
             email: currentUser.email,
@@ -683,8 +671,16 @@ async function createMissingUserDocument() {
         
     } catch (error) {
         console.error('Error creating user document:', error);
-        showToast('Error setting up your account', 'error');
+        showToast('Error setting up your account: ' + error.message, 'error');
     }
+}
+
+/**
+ * Generate slug from text
+ */
+function generateSlug(text) {
+    if (!text) return 'my-team';
+    return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
 /**
@@ -714,7 +710,10 @@ async function loadOrganization() {
  * Load all projects for current organization
  */
 async function loadProjects() {
-    if (!currentOrganization) return;
+    if (!currentOrganization) {
+        console.log('No currentOrganization, skipping loadProjects');
+        return;
+    }
     
     showProjectSkeleton();
     
