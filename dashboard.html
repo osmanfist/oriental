@@ -191,22 +191,81 @@
                 <!-- Columns will be loaded here -->
             </div>
             
-            <!-- Sprints View (hidden by default) -->
+            <!-- Sprints View -->
             <div id="sprints-view" class="sprints-view hidden">
+                <!-- Current Sprint Section -->
                 <div class="sprint-header">
                     <div class="sprint-info">
                         <div>
-                            <h3>Active Sprint</h3>
-                            <p id="active-sprint-info">No active sprint</p>
+                            <h3 id="active-sprint-name">Active Sprint</h3>
+                            <p id="active-sprint-goal">No active sprint</p>
+                            <div class="sprint-dates" id="sprint-dates"></div>
                         </div>
-                        <button class="create-sprint-btn" id="create-sprint-btn" onclick="openSprintModal()">
-                            <i class="fas fa-plus"></i>
-                            <span>Start Sprint</span>
-                        </button>
+                        <div class="sprint-actions">
+                            <button class="create-sprint-btn" id="create-sprint-btn" onclick="openSprintModal()">
+                                <i class="fas fa-plus"></i>
+                                <span>Start Sprint</span>
+                            </button>
+                            <button class="complete-sprint-btn" id="complete-sprint-btn" style="display: none;" onclick="completeSprint()">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Complete Sprint</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="sprint-progress">
+                        <div class="progress-label">
+                            <span>Sprint Progress</span>
+                            <span id="sprint-progress-percent">0%</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" id="sprint-progress-fill" style="width: 0%;"></div>
+                        </div>
+                        <div class="progress-stats">
+                            <span id="sprint-completed-tasks">0</span> / <span id="sprint-total-tasks">0</span> tasks completed
+                        </div>
                     </div>
                 </div>
-                <div id="sprint-tasks" class="board-view">
-                    <!-- Sprint tasks will be loaded here -->
+                
+                <!-- Sprint Tasks Board -->
+                <div class="sprint-board">
+                    <div class="sprint-columns">
+                        <div class="sprint-column">
+                            <div class="sprint-column-header">
+                                <i class="fas fa-list"></i> Planned
+                                <span class="sprint-column-count" id="planned-count">0</span>
+                            </div>
+                            <div class="sprint-tasks-list" id="planned-tasks"></div>
+                        </div>
+                        <div class="sprint-column">
+                            <div class="sprint-column-header">
+                                <i class="fas fa-spinner"></i> In Progress
+                                <span class="sprint-column-count" id="progress-count">0</span>
+                            </div>
+                            <div class="sprint-tasks-list" id="progress-tasks"></div>
+                        </div>
+                        <div class="sprint-column">
+                            <div class="sprint-column-header">
+                                <i class="fas fa-check-circle"></i> Completed
+                                <span class="sprint-column-count" id="completed-count">0</span>
+                            </div>
+                            <div class="sprint-tasks-list" id="completed-tasks"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Add Task to Sprint Button -->
+                <div class="add-to-sprint-container">
+                    <button class="add-to-sprint-btn" id="add-to-sprint-btn" onclick="openAddToSprintModal()">
+                        <i class="fas fa-plus"></i> Add Tasks to Sprint
+                    </button>
+                </div>
+                
+                <!-- Past Sprints Section -->
+                <div class="past-sprints-section">
+                    <h3><i class="fas fa-history"></i> Past Sprints</h3>
+                    <div id="past-sprints-list" class="past-sprints-list">
+                        <!-- Past sprints will be loaded here -->
+                    </div>
                 </div>
             </div>
         </main>
@@ -310,7 +369,7 @@
         </div>
     </div>
     
-    <!-- Sprint Modal -->
+    <!-- Sprint Modal (Only ONE - REMOVED DUPLICATE) -->
     <div class="modal" id="sprint-modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -324,8 +383,8 @@
                         <input type="text" id="sprint-name" placeholder="e.g., Sprint 1 - Authentication" required>
                     </div>
                     <div class="form-group">
-                        <label for="sprint-goal">Goal</label>
-                        <textarea id="sprint-goal" rows="2" placeholder="What do you want to accomplish?"></textarea>
+                        <label for="sprint-goal">Sprint Goal</label>
+                        <textarea id="sprint-goal" rows="2" placeholder="What do you want to accomplish in this sprint?"></textarea>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
@@ -343,6 +402,25 @@
                     <button type="submit" class="btn-primary">Start Sprint</button>
                 </div>
             </form>
+        </div>
+    </div>
+    
+    <!-- Add Tasks to Sprint Modal -->
+    <div class="modal" id="add-to-sprint-modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3>Add Tasks to Sprint</h3>
+                <button class="close-modal" onclick="closeAddToSprintModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="available-tasks-list" id="available-tasks-list">
+                    <!-- Available tasks will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeAddToSprintModal()">Cancel</button>
+                <button class="btn-primary" id="add-selected-tasks-btn">Add Selected Tasks</button>
+            </div>
         </div>
     </div>
     
@@ -475,8 +553,9 @@
             </div>
         </div>
     </div>
+    
     <!-- EmailJS Script -->
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     
     <!-- Firebase Scripts -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -486,5 +565,27 @@
     <!-- Application Scripts -->
     <script src="js/firebase-config.js"></script>
     <script src="js/dashboard.js"></script>
+    
+    <!-- Add missing closeAddToSprintModal function -->
+    <script>
+        function closeAddToSprintModal() {
+            const modal = document.getElementById('add-to-sprint-modal');
+            if (modal) {
+                modal.style.display = 'none';
+                modal.classList.remove('active');
+            }
+        }
+        
+        // Make sure the add selected tasks button is connected
+        document.addEventListener('DOMContentLoaded', function() {
+            const addSelectedBtn = document.getElementById('add-selected-tasks-btn');
+            if (addSelectedBtn && typeof addSelectedTasksToSprint === 'function') {
+                // Remove any existing listeners to avoid duplicates
+                const newBtn = addSelectedBtn.cloneNode(true);
+                addSelectedBtn.parentNode.replaceChild(newBtn, addSelectedBtn);
+                newBtn.addEventListener('click', addSelectedTasksToSprint);
+            }
+        });
+    </script>
 </body>
 </html>

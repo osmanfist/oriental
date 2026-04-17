@@ -1767,14 +1767,468 @@ function closeSprintModal() { const modal = document.getElementById('sprint-moda
 function closeCommentModal() { const modal = document.getElementById('comment-modal'); if (modal) { modal.style.display = 'none'; modal.classList.remove('active'); } const textarea = document.getElementById('new-comment'); if (textarea) textarea.value = ''; }
 function openTaskModal() { if (!currentProject) { showToast('Please select a project first', 'warning'); return; } const modal = document.getElementById('task-modal'); if (modal) { modal.style.display = 'flex'; modal.classList.add('active'); } }
 function openProjectModal() { const modal = document.getElementById('project-modal'); if (modal) { modal.style.display = 'flex'; modal.classList.add('active'); } }
-function openSprintModal() { if (!currentProject) { showToast('Please select a project first', 'warning'); return; } const modal = document.getElementById('sprint-modal'); if (modal) { modal.style.display = 'flex'; modal.classList.add('active'); } }
-
+function openSprintModal() {
+    if (!currentProject) {
+        showToast('Please select a project first', 'warning');
+        return;
+    }
+    
+    // Check if there's already an active sprint
+    if (currentSprint) {
+        showToast('There is already an active sprint. Complete it before starting a new one.', 'warning');
+        return;
+    }
+    
+    const modal = document.getElementById('sprint-modal');
+    if (modal) {
+        // Set default dates (2-week sprint)
+        const today = new Date();
+        const twoWeeksLater = new Date();
+        twoWeeksLater.setDate(today.getDate() + 14);
+        
+        document.getElementById('sprint-start-date').value = today.toISOString().split('T')[0];
+        document.getElementById('sprint-end-date').value = twoWeeksLater.toISOString().split('T')[0];
+        
+        modal.style.display = 'flex';
+        modal.classList.add('active');
+    }
+}
+/// ============================================
+// Sprint Functions - COMPLETE
 // ============================================
-// Sprint Functions
-// ============================================
 
-async function loadSprints() { const sprintContainer = document.getElementById('sprint-tasks'); if (sprintContainer) sprintContainer.innerHTML = '<div class="empty-state"><p><i class="fas fa-calendar-alt"></i><br>Sprint feature coming soon!</p></div>'; }
+let currentSprint = null;
+let availableTasks = [];
 
+/**
+ * Load active sprint for current project
+ */
+async function loadSprints() {
+    if (!currentProject) return;
+    
+    try {
+        // Get active sprint
+        const activeSprintSnapshot = await db.collection('sprints')
+            .where('projectId', '==', currentProject.id)
+            .where('status', '==', 'active')
+            .limit(1)
+            .get();
+        
+        if (!activeSprintSnapshot.empty) {
+            currentSprint = { id: activeSprintSnapshot.docs[0].id, ...activeSprintSnapshot.docs[0].data() };
+            displayActiveSprint(currentSprint);
+            loadSprintTasks(currentSprint);
+        } else {
+            displayNoActiveSprint();
+        }
+        
+        // Load past sprints
+        await loadPastSprints();
+        
+    } catch (error) {
+        console.error('Error loading sprints:', error);
+        showToast('Error loading sprints', 'error');
+    }
+}
+
+/**
+ * Display active sprint information
+ */
+function displayActiveSprint(sprint) {
+    const sprintNameEl = document.getElementById('active-sprint-name');
+    const sprintGoalEl = document.getElementById('active-sprint-goal');
+    const sprintDatesEl = document.getElementById('sprint-dates');
+    const createBtn = document.getElementById('create-sprint-btn');
+    const completeBtn = document.getElementById('complete-sprint-btn');
+    
+    if (sprintNameEl) sprintNameEl.textContent = sprint.name;
+    if (sprintGoalEl) sprintGoalEl.textContent = sprint.goal || 'No goal set';
+    
+    if (sprintDatesEl && sprint.startDate && sprint.endDate) {
+        const start = new Date(sprint.startDate).toLocaleDateString();
+        const end = new Date(sprint.endDate).toLocaleDateString();
+        sprintDatesEl.innerHTML = `<i class="fas fa-calendar-alt"></i> ${start} - ${end}`;
+    }
+    
+    if (createBtn) createBtn.style.display = 'none';
+    if (completeBtn) completeBtn.style.display = 'flex';
+}
+
+/**
+ * Display no active sprint state
+ */
+function displayNoActiveSprint() {
+    const sprintNameEl = document.getElementById('active-sprint-name');
+    const sprintGoalEl = document.getElementById('active-sprint-goal');
+    const sprintDatesEl = document.getElementById('sprint-dates');
+    const createBtn = document.getElementById('create-sprint-btn');
+    const completeBtn = document.getElementById('complete-sprint-btn');
+    const sprintTasksContainer = document.getElementById('sprint-tasks');
+    
+    if (sprintNameEl) sprintNameEl.textContent = 'No Active Sprint';
+    if (sprintGoalEl) sprintGoalEl.textContent = 'Start a sprint to begin tracking progress';
+    if (sprintDatesEl) sprintDatesEl.innerHTML = '';
+    if (createBtn) createBtn.style.display = 'flex';
+    if (completeBtn) completeBtn.style.display = 'none';
+    
+    // Clear sprint columns
+    document.getElementById('planned-tasks').innerHTML = '<div class="empty-state-small">No active sprint</div>';
+    document.getElementById('progress-tasks').innerHTML = '';
+    document.getElementById('completed-tasks').innerHTML = '';
+    
+    document.getElementById('planned-count').textContent = '0';
+    document.getElementById('progress-count').textContent = '0';
+    document.getElementById('completed-count').textContent = '0';
+    document.getElementById('sprint-progress-percent').textContent = '0%';
+    document.getElementById('sprint-progress-fill').style.width = '0%';
+    document.getElementById('sprint-completed-tasks').textContent = '0';
+    document.getElementById('sprint-total-tasks').textContent = '0';
+}
+
+/**
+ * Load and display sprint tasks
+ */
+async function loadSprintTasks(sprint) {
+    if (!sprint || !sprint.tasks || sprint.tasks.length === 0) {
+        showEmptySprintColumns();
+        updateSprintProgress(0, 0);
+        return;
+    }
+    
+    try {
+        const tasksData = [];
+        for (const taskId of sprint.tasks) {
+            const taskDoc = await db.collection('tasks').doc(taskId).get();
+            if (taskDoc.exists) {
+                tasksData.push({ id: taskDoc.id, ...taskDoc.data() });
+            }
+        }
+        
+        // Organize by status
+        const planned = tasksData.filter(t => t.status === 'todo');
+        const inProgress = tasksData.filter(t => t.status === 'in-progress');
+        const completed = tasksData.filter(t => t.status === 'done');
+        
+        renderSprintColumns(planned, inProgress, completed);
+        updateSprintProgress(completed.length, tasksData.length);
+        
+    } catch (error) {
+        console.error('Error loading sprint tasks:', error);
+    }
+}
+
+/**
+ * Render sprint columns
+ */
+function renderSprintColumns(planned, inProgress, completed) {
+    const plannedContainer = document.getElementById('planned-tasks');
+    const progressContainer = document.getElementById('progress-tasks');
+    const completedContainer = document.getElementById('completed-tasks');
+    
+    if (plannedContainer) {
+        plannedContainer.innerHTML = planned.map(task => createSprintTaskCard(task)).join('');
+    }
+    if (progressContainer) {
+        progressContainer.innerHTML = inProgress.map(task => createSprintTaskCard(task)).join('');
+    }
+    if (completedContainer) {
+        completedContainer.innerHTML = completed.map(task => createSprintTaskCard(task)).join('');
+    }
+    
+    document.getElementById('planned-count').textContent = planned.length;
+    document.getElementById('progress-count').textContent = inProgress.length;
+    document.getElementById('completed-count').textContent = completed.length;
+}
+
+/**
+ * Create sprint task card
+ */
+function createSprintTaskCard(task) {
+    const priorityClass = task.priority === 'high' ? 'priority-high' : (task.priority === 'medium' ? 'priority-medium' : 'priority-low');
+    return `
+        <div class="sprint-task-card" onclick="openTaskDetail('${task.id}')">
+            <div class="sprint-task-title">${escapeHtml(task.title)}</div>
+            <div class="sprint-task-status">
+                <span class="priority ${priorityClass}">${task.priority || 'medium'}</span>
+                <span><i class="fas fa-user"></i> ${task.assignedTo || 'Unassigned'}</span>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Show empty sprint columns
+ */
+function showEmptySprintColumns() {
+    document.getElementById('planned-tasks').innerHTML = '<div class="empty-state-small">No tasks in sprint</div>';
+    document.getElementById('progress-tasks').innerHTML = '';
+    document.getElementById('completed-tasks').innerHTML = '';
+    document.getElementById('planned-count').textContent = '0';
+    document.getElementById('progress-count').textContent = '0';
+    document.getElementById('completed-count').textContent = '0';
+}
+
+/**
+ * Update sprint progress indicators
+ */
+function updateSprintProgress(completed, total) {
+    const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+    document.getElementById('sprint-progress-percent').textContent = `${percent}%`;
+    document.getElementById('sprint-progress-fill').style.width = `${percent}%`;
+    document.getElementById('sprint-completed-tasks').textContent = completed;
+    document.getElementById('sprint-total-tasks').textContent = total;
+}
+
+/**
+ * Load past sprints
+ */
+async function loadPastSprints() {
+    if (!currentProject) return;
+    
+    try {
+        const pastSprintsSnapshot = await db.collection('sprints')
+            .where('projectId', '==', currentProject.id)
+            .where('status', '==', 'completed')
+            .orderBy('endDate', 'desc')
+            .limit(10)
+            .get();
+        
+        const container = document.getElementById('past-sprints-list');
+        if (!container) return;
+        
+        if (pastSprintsSnapshot.empty) {
+            container.innerHTML = '<div class="empty-state-small">No past sprints</div>';
+            return;
+        }
+        
+        container.innerHTML = '';
+        pastSprintsSnapshot.forEach(doc => {
+            const sprint = doc.data();
+            const sprintDiv = document.createElement('div');
+            sprintDiv.className = 'past-sprint-item';
+            sprintDiv.onclick = () => viewPastSprint(doc.id, sprint);
+            
+            const startDate = sprint.startDate ? new Date(sprint.startDate).toLocaleDateString() : 'Unknown';
+            const endDate = sprint.endDate ? new Date(sprint.endDate).toLocaleDateString() : 'Unknown';
+            const taskCount = sprint.tasks ? sprint.tasks.length : 0;
+            
+            sprintDiv.innerHTML = `
+                <div class="past-sprint-name">${escapeHtml(sprint.name)}</div>
+                <div class="past-sprint-dates"><i class="fas fa-calendar-alt"></i> ${startDate} - ${endDate}</div>
+                <div class="past-sprint-stats"><i class="fas fa-tasks"></i> ${taskCount} tasks</div>
+            `;
+            container.appendChild(sprintDiv);
+        });
+        
+    } catch (error) {
+        console.error('Error loading past sprints:', error);
+    }
+}
+
+/**
+ * View past sprint details
+ */
+async function viewPastSprint(sprintId, sprint) {
+    // Show modal with sprint details
+    showToast(`Sprint "${sprint.name}" completed`, 'info');
+    // Could open a modal with detailed view
+}
+
+/**
+ * Create a new sprint
+ */
+async function createSprint(sprintData) {
+    if (!currentProject) {
+        showToast('Please select a project first', 'warning');
+        return false;
+    }
+    
+    try {
+        const sprint = {
+            organizationId: currentOrganization,
+            projectId: currentProject.id,
+            name: sprintData.name,
+            goal: sprintData.goal || '',
+            startDate: sprintData.startDate || null,
+            endDate: sprintData.endDate || null,
+            status: 'active',
+            tasks: [],
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        
+        await db.collection('sprints').add(sprint);
+        showToast('Sprint started successfully', 'success');
+        await loadSprints();
+        return true;
+        
+    } catch (error) {
+        console.error('Error creating sprint:', error);
+        showToast('Error creating sprint: ' + error.message, 'error');
+        return false;
+    }
+}
+
+/**
+ * Complete current sprint
+ */
+async function completeSprint() {
+    if (!currentSprint) {
+        showToast('No active sprint', 'warning');
+        return;
+    }
+    
+    const confirmed = await showConfirmDialog(
+        'Complete Sprint',
+        `Complete "${currentSprint.name}"? This will mark the sprint as completed.`,
+        'warning'
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+        await db.collection('sprints').doc(currentSprint.id).update({
+            status: 'completed',
+            completedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        showToast('Sprint completed successfully', 'success');
+        currentSprint = null;
+        await loadSprints();
+        
+    } catch (error) {
+        console.error('Error completing sprint:', error);
+        showToast('Error completing sprint', 'error');
+    }
+}
+
+/**
+ * Open add tasks to sprint modal
+ */
+async function openAddToSprintModal() {
+    if (!currentSprint) {
+        showToast('No active sprint. Start a sprint first.', 'warning');
+        return;
+    }
+    
+    await loadAvailableTasks();
+    const modal = document.getElementById('add-to-sprint-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.add('active');
+    }
+}
+
+/**
+ * Close add to sprint modal
+ */
+function closeAddToSprintModal() {
+    const modal = document.getElementById('add-to-sprint-modal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('active');
+    }
+}
+
+/**
+ * Load available tasks (not in sprint)
+ */
+async function loadAvailableTasks() {
+    if (!currentProject || !currentSprint) return;
+    
+    try {
+        const allTasksSnapshot = await db.collection('tasks')
+            .where('projectId', '==', currentProject.id)
+            .get();
+        
+        const sprintTaskIds = currentSprint.tasks || [];
+        availableTasks = [];
+        
+        allTasksSnapshot.forEach(doc => {
+            if (!sprintTaskIds.includes(doc.id)) {
+                availableTasks.push({ id: doc.id, ...doc.data() });
+            }
+        });
+        
+        const container = document.getElementById('available-tasks-list');
+        if (!container) return;
+        
+        if (availableTasks.length === 0) {
+            container.innerHTML = '<div class="empty-state-small">No available tasks to add</div>';
+            return;
+        }
+        
+        container.innerHTML = availableTasks.map(task => `
+            <div class="available-task-item">
+                <input type="checkbox" value="${task.id}" id="task-${task.id}">
+                <label for="task-${task.id}" class="available-task-title">${escapeHtml(task.title)}</label>
+                <span class="available-task-priority priority-${task.priority || 'medium'}">${task.priority || 'medium'}</span>
+            </div>
+        `).join('');
+        
+    } catch (error) {
+        console.error('Error loading available tasks:', error);
+    }
+}
+
+/**
+ * Add selected tasks to sprint
+ */
+async function addSelectedTasksToSprint() {
+    const selectedCheckboxes = document.querySelectorAll('#available-tasks-list input[type="checkbox"]:checked');
+    const selectedTaskIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+    
+    if (selectedTaskIds.length === 0) {
+        showToast('Please select at least one task', 'warning');
+        return;
+    }
+    
+    const currentTasks = currentSprint.tasks || [];
+    const updatedTasks = [...currentTasks, ...selectedTaskIds];
+    
+    try {
+        await db.collection('sprints').doc(currentSprint.id).update({
+            tasks: updatedTasks
+        });
+        
+        currentSprint.tasks = updatedTasks;
+        showToast(`${selectedTaskIds.length} task(s) added to sprint`, 'success');
+        closeAddToSprintModal();
+        await loadSprintTasks(currentSprint);
+        
+    } catch (error) {
+        console.error('Error adding tasks to sprint:', error);
+        showToast('Error adding tasks to sprint', 'error');
+    }
+}
+
+// Add event listener for add selected tasks button
+document.addEventListener('DOMContentLoaded', () => {
+    const addSelectedBtn = document.getElementById('add-selected-tasks-btn');
+    if (addSelectedBtn) {
+        addSelectedBtn.addEventListener('click', addSelectedTasksToSprint);
+    }
+});
+
+// Update sprint form submission
+const sprintForm = document.getElementById('sprint-form');
+if (sprintForm) {
+    sprintForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const sprintData = {
+            name: document.getElementById('sprint-name').value,
+            goal: document.getElementById('sprint-goal').value,
+            startDate: document.getElementById('sprint-start-date').value,
+            endDate: document.getElementById('sprint-end-date').value
+        };
+        
+        const success = await createSprint(sprintData);
+        if (success) {
+            closeSprintModal();
+            sprintForm.reset();
+        }
+    });
+}
 // ============================================
 // Undo Delete Functions
 // ============================================
