@@ -331,6 +331,9 @@ async function loadTeamMembersDisplay() {
 // Invite Functions
 // ============================================
 
+// Initialize EmailJS
+emailjs.init('8gIppIfexFw6yYhyo');
+
 /**
  * Open invite modal
  */
@@ -356,7 +359,7 @@ function closeInviteModal() {
 }
 
 /**
- * Send invitation
+ * Send invitation via EmailJS
  */
 async function sendInvite(email, role) {
     if (!currentOrganization) {
@@ -364,15 +367,30 @@ async function sendInvite(email, role) {
         return false;
     }
     
+    // Get organization name
+    const orgName = document.getElementById('org-name').textContent;
+    
+    // Show loading state
+    const submitBtn = document.querySelector('#invite-form button[type="submit"]');
+    const originalText = submitBtn?.innerHTML;
+    if (submitBtn) {
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+        submitBtn.disabled = true;
+    }
+    
     try {
+        // Generate unique token
         const token = Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+        
+        // Calculate expiration (7 days)
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + 7);
         
+        // Create invite in Firestore
         await db.collection('invites').add({
             email: email.toLowerCase(),
             organizationId: currentOrganization,
-            organizationName: document.getElementById('org-name').textContent,
+            organizationName: orgName,
             role: role,
             invitedBy: currentUser.uid,
             invitedByEmail: currentUser.email,
@@ -382,18 +400,53 @@ async function sendInvite(email, role) {
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
+        // Generate invite link
         const inviteLink = `${window.location.origin}/accept-invite.html?token=${token}`;
-        await navigator.clipboard.writeText(inviteLink);
         
-        showToast(`Invite link copied to clipboard! Share it with ${email}`, 'success');
+        // Prepare email template parameters
+        const templateParams = {
+            to_email: email,
+            inviter_name: currentUser.displayName || currentUser.email.split('@')[0],
+            organization_name: orgName,
+            role: role === 'admin' ? 'Admin' : (role === 'member' ? 'Member' : 'Viewer'),
+            invite_link: inviteLink,
+            expires_in: '7 days'
+        };
+        
+        // Send email via EmailJS
+        const result = await emailjs.send(
+            'service_oriental_0126',      // Service ID
+            'oriental_invite',       // Your template ID
+            templateParams
+        );
+        
+        console.log('Email sent:', result);
+        
+        showToast(`Invitation sent to ${email}!`, 'success');
+        
+        // Refresh pending invites list
         loadPendingInvites();
         
         return true;
         
     } catch (error) {
         console.error('Error sending invite:', error);
-        showToast('Error sending invite: ' + error.message, 'error');
+        
+        // Handle specific errors
+        if (error.text) {
+            showToast('Failed to send email. Check EmailJS configuration.', 'error');
+        } else {
+            showToast('Error sending invite: ' + error.message, 'error');
+        }
+        
         return false;
+        
+    } finally {
+        // Reset button
+        if (submitBtn) {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }
     }
 }
 
