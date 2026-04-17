@@ -4,9 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Oriental - Dashboard</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#16a34a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Oriental">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://www.gstatic.com">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    
     <link rel="stylesheet" href="css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-XXXXXXXXXX'); // Replace with your GA4 measurement ID
+    </script>
 </head>
 <body>
     <!-- Pull to Refresh -->
@@ -27,6 +51,11 @@
         <div class="activity-log-list" id="activity-log-list">
             <div class="empty-state-small">Loading activity...</div>
         </div>
+    </div>
+
+    <!-- Offline Indicator -->
+    <div class="offline-indicator" id="offline-indicator" style="display: none;">
+        <i class="fas fa-wifi"></i> You're offline. Changes will sync when you're back online.
     </div>
 
     <div class="dashboard">
@@ -596,8 +625,14 @@
     <script src="js/firebase-config.js"></script>
     <script src="js/dashboard.js"></script>
     
-    <!-- Add missing closeAddToSprintModal function -->
+    <!-- Register Service Worker for PWA -->
     <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(reg => console.log('Service Worker registered:', reg))
+                .catch(err => console.error('Service Worker registration failed:', err));
+        }
+        
         function closeAddToSprintModal() {
             const modal = document.getElementById('add-to-sprint-modal');
             if (modal) {
@@ -610,7 +645,6 @@
         document.addEventListener('DOMContentLoaded', function() {
             const addSelectedBtn = document.getElementById('add-selected-tasks-btn');
             if (addSelectedBtn && typeof addSelectedTasksToSprint === 'function') {
-                // Remove any existing listeners to avoid duplicates
                 const newBtn = addSelectedBtn.cloneNode(true);
                 addSelectedBtn.parentNode.replaceChild(newBtn, addSelectedBtn);
                 newBtn.addEventListener('click', addSelectedTasksToSprint);

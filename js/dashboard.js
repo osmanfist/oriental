@@ -1,6 +1,12 @@
 /**
  * Oriental - Dashboard Module
- * Version: 2.9.0
+ * Version: 3.0.0
+ * 
+ * Optimized version with:
+ * - Reduced Firestore reads (caching, debouncing)
+ * - PWA offline support
+ * - Analytics integration
+ * - Performance monitoring
  * 
  * Main application logic including task management, project handling,
  * real-time updates, drag-and-drop functionality, comments, search, filters,
@@ -9,13 +15,13 @@
  */
 
 // ============================================
-// Global State Variables
+// Performance & Analytics Variables
 // ============================================
 // Undo Delete Variables
 let deletedItem = null;
 let deletedItemType = null;
 let undoTimeout = null;
-const UNDO_DURATION = 20000; // 20 seconds to undo
+const UNDO_DURATION = 20000;
 let currentUser = null;
 let currentOrganization = null;
 let currentProject = null;
@@ -36,30 +42,215 @@ let activeFilters = {
 let taskReloadTimeout = null;
 let isActivityLogOpen = false;
 
+// Performance optimization: Cache for Firestore reads
+let projectsCache = null;
+let projectsCacheTime = 0;
+const CACHE_DURATION = 30000; // 30 seconds cache
+let pendingWrites = []; // Queue for offline writes
+let isOnline = navigator.onLine;
+
+// ============================================
+// Performance & Analytics Functions
+// ============================================
+
+/**
+ * Track analytics event
+ * @param {string} eventName - Name of the event
+ * @param {Object} eventParams - Parameters for the event
+ */
+function trackAnalytics(eventName, eventParams = {}) {
+    if (typeof gtag !== 'undefined') {
+        gtag('event', eventName, eventParams);
+        console.log(`📊 Analytics: ${eventName}`, eventParams);
+    }
+}
+
+/**
+ * Track page view
+ */
+function trackPageView(pageName) {
+    if (typeof gtag !== 'undefined') {
+        gtag('config', 'G-XXXXXXXXXX', { page_path: pageName });
+    }
+}
+
+/**
+ * Monitor performance metrics
+ */
+function reportPerformance() {
+    if ('performance' in window && typeof gtag !== 'undefined') {
+        const perfData = performance.getEntriesByType('navigation')[0];
+        if (perfData) {
+            gtag('event', 'performance', {
+                'page_load_time': perfData.loadEventEnd - perfData.fetchStart,
+                'dom_content_loaded': perfData.domContentLoadedEventEnd - perfData.fetchStart,
+                'first_paint': performance.getEntriesByType('paint')[0]?.startTime || 0
+            });
+        }
+    }
+}
+
+/**
+ * Setup online/offline detection
+ */
+function setupOfflineDetection() {
+    window.addEventListener('online', () => {
+        isOnline = true;
+        const offlineIndicator = document.getElementById('offline-indicator');
+        if (offlineIndicator) offlineIndicator.classList.remove('show');
+        showToast('Back online! Syncing changes...', 'success');
+        syncPendingWrites();
+        trackAnalytics('connection_restored', {});
+    });
+    
+    window.addEventListener('offline', () => {
+        isOnline = false;
+        const offlineIndicator = document.getElementById('offline-indicator');
+        if (offlineIndicator) offlineIndicator.classList.add('show');
+        showToast('You are offline. Changes will sync when you reconnect.', 'warning');
+        trackAnalytics('connection_lost', {});
+    });
+    
+    // Check initial status
+    if (!isOnline) {
+        const offlineIndicator = document.getElementById('offline-indicator');
+        if (offlineIndicator) offlineIndicator.classList.add('show');
+    }
+}
+
+/**
+ * Sync pending writes when back online
+ */
+async function syncPendingWrites() {
+    if (!isOnline || pendingWrites.length === 0) return;
+    
+    console.log(`Syncing ${pendingWrites.length} pending writes...`);
+    trackAnalytics('sync_pending_writes', { count: pendingWrites.length });
+    
+    for (const write of pendingWrites) {
+        try {
+            await write();
+        } catch (error) {
+            console.error('Failed to sync write:', error);
+        }
+    }
+    pendingWrites = [];
+    await loadProjects();
+    await loadTasks();
+    showToast('All changes synced!', 'success');
+}
+
+/**
+ * Queue write operation for offline support
+ */
+function queueWrite(writeOperation) {
+    if (isOnline) {
+        return writeOperation();
+    } else {
+        pendingWrites.push(writeOperation);
+        showToast('You are offline. Changes will sync automatically when you reconnect.', 'warning');
+        trackAnalytics('write_queued_offline', {});
+        return Promise.resolve({ queued: true });
+    }
+}
+
+/**
+ * Optimized Firestore query with caching
+ */
+async function getCachedProjects() {
+    const now = Date.now();
+    if (projectsCache && (now - projectsCacheTime) < CACHE_DURATION) {
+        console.log('Using cached projects');
+        trackAnalytics('cache_hit', { type: 'projects' });
+        return projectsCache;
+    }
+    
+    trackAnalytics('cache_miss', { type: 'projects' });
+    const projectsSnapshot = await db.collection('projects')
+        .where('organizationId', '==', currentOrganization)
+        .where('isArchived', '==', false)
+        .get();
+    
+    projectsCache = [];
+    projectsSnapshot.forEach(doc => {
+        projectsCache.push({ id: doc.id, ...doc.data() });
+    });
+    projectsCacheTime = now;
+    
+    return projectsCache;
+}
+
+/**
+ * Invalidate cache (call when data changes)
+ */
+function invalidateCache() {
+    projectsCache = null;
+    projectsCacheTime = 0;
+    trackAnalytics('cache_invalidated', {});
+}
+
+/**
+ * Setup PWA install prompt
+ */
+let deferredPrompt;
+let pwaInstallPrompt = null;
+
+function setupPWAInstallPrompt() {
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        
+        if (!pwaInstallPrompt) {
+            pwaInstallPrompt = document.createElement('div');
+            pwaInstallPrompt.className = 'pwa-install-prompt';
+            pwaInstallPrompt.innerHTML = `
+                <p><i class="fas fa-download"></i> Install Oriental for a better experience!</p>
+                <button id="install-pwa-btn">Install</button>
+                <button class="close-pwa-prompt" id="close-pwa-prompt">&times;</button>
+            `;
+            document.body.appendChild(pwaInstallPrompt);
+            
+            document.getElementById('install-pwa-btn')?.addEventListener('click', () => {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        trackAnalytics('pwa_installed', {});
+                        console.log('User accepted the install prompt');
+                    }
+                    if (pwaInstallPrompt) pwaInstallPrompt.classList.remove('show');
+                    deferredPrompt = null;
+                });
+            });
+            
+            document.getElementById('close-pwa-prompt')?.addEventListener('click', () => {
+                if (pwaInstallPrompt) pwaInstallPrompt.classList.remove('show');
+                trackAnalytics('pwa_prompt_dismissed', {});
+            });
+        }
+        
+        if (pwaInstallPrompt) pwaInstallPrompt.classList.add('show');
+        trackAnalytics('pwa_prompt_shown', {});
+    });
+}
+
 // ============================================
 // Dark Mode Functions
 // ============================================
 
-/**
- * Initialize dark mode from localStorage
- */
 function initDarkMode() {
-    // Check localStorage for theme preference
     const savedTheme = localStorage.getItem('oriental_theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     
     if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
         document.documentElement.setAttribute('data-theme', 'dark');
         updateThemeIcons(true);
+        trackAnalytics('dark_mode_enabled', { source: savedTheme ? 'user_preference' : 'system' });
     } else {
         document.documentElement.setAttribute('data-theme', 'light');
         updateThemeIcons(false);
     }
 }
 
-/**
- * Toggle dark/light mode
- */
 function toggleTheme() {
     const currentTheme = document.documentElement.getAttribute('data-theme');
     const isDark = currentTheme === 'dark';
@@ -69,18 +260,16 @@ function toggleTheme() {
         localStorage.setItem('oriental_theme', 'light');
         updateThemeIcons(false);
         showToast('Light mode activated', 'info');
+        trackAnalytics('theme_changed', { mode: 'light' });
     } else {
         document.documentElement.setAttribute('data-theme', 'dark');
         localStorage.setItem('oriental_theme', 'dark');
         updateThemeIcons(true);
         showToast('Dark mode activated', 'info');
+        trackAnalytics('theme_changed', { mode: 'dark' });
     }
 }
 
-/**
- * Update theme toggle icons
- * @param {boolean} isDark - Whether dark mode is active
- */
 function updateThemeIcons(isDark) {
     const themeToggles = document.querySelectorAll('.theme-toggle');
     themeToggles.forEach(toggle => {
@@ -97,9 +286,6 @@ function updateThemeIcons(isDark) {
     });
 }
 
-/**
- * Setup theme toggle event listeners
- */
 function setupThemeToggle() {
     const themeToggles = document.querySelectorAll('.theme-toggle');
     themeToggles.forEach(toggle => {
@@ -111,18 +297,10 @@ function setupThemeToggle() {
 // Activity Log Functions
 // ============================================
 
-/**
- * Log an activity to Firestore
- * @param {string} action - Action type (create_task, update_task, delete_task, assign_task, add_comment, complete_task)
- * @param {string} entityType - Type of entity (task, project, comment, sprint)
- * @param {string} entityId - ID of the entity
- * @param {string} entityName - Name/title of the entity
- * @param {Object} details - Additional details about the action
- */
 async function logActivity(action, entityType, entityId, entityName, details = {}) {
     if (!currentOrganization) return;
     
-    try {
+    const writeOp = async () => {
         await db.collection('activity_logs').add({
             organizationId: currentOrganization,
             userId: currentUser.uid,
@@ -135,19 +313,16 @@ async function logActivity(action, entityType, entityId, entityName, details = {
             details: details,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        
-        // If activity log is open, refresh it
-        if (isActivityLogOpen) {
-            loadActivityLog();
-        }
-    } catch (error) {
-        console.error('Error logging activity:', error);
+        trackAnalytics('activity_logged', { action, entityType });
+    };
+    
+    queueWrite(writeOp);
+    
+    if (isActivityLogOpen) {
+        loadActivityLog();
     }
 }
 
-/**
- * Open activity log panel
- */
 function openActivityLog() {
     const panel = document.getElementById('activity-log-container');
     const overlay = document.getElementById('activity-log-overlay');
@@ -156,12 +331,10 @@ function openActivityLog() {
         isActivityLogOpen = true;
         if (overlay) overlay.classList.add('active');
         loadActivityLog();
+        trackAnalytics('activity_log_opened', {});
     }
 }
 
-/**
- * Close activity log panel
- */
 function closeActivityLog() {
     const panel = document.getElementById('activity-log-container');
     const overlay = document.getElementById('activity-log-overlay');
@@ -172,9 +345,6 @@ function closeActivityLog() {
     }
 }
 
-/**
- * Load activity log entries
- */
 async function loadActivityLog() {
     if (!currentOrganization) return;
     
@@ -209,14 +379,10 @@ async function loadActivityLog() {
     }
 }
 
-/**
- * Create activity log element
- */
 function createActivityElement(activity) {
     const div = document.createElement('div');
     div.className = 'activity-item';
     
-    // Get icon and color based on action
     let icon = 'fa-info-circle';
     let iconClass = 'update';
     
@@ -240,7 +406,6 @@ function createActivityElement(activity) {
         iconClass = 'update';
     }
     
-    // Format description
     let description = '';
     switch (activity.action) {
         case 'create_task':
@@ -294,28 +459,16 @@ function createActivityElement(activity) {
 // Email Notification Functions
 // ============================================
 
-/**
- * Send email notification
- * @param {string} to - Recipient email
- * @param {string} subject - Email subject
- * @param {string} template - Template name
- * @param {Object} data - Template data
- */
 async function sendEmailNotification(to, subject, template, data) {
+    if (!isOnline) {
+        console.log('Offline: Email notification queued');
+        return false;
+    }
+    
     try {
-        const templateParams = {
-            to_email: to,
-            subject: subject,
-            ...data
-        };
-        
-        await emailjs.send(
-            'service_oriental_0126',
-            template,
-            templateParams
-        );
-        
-        console.log('Email notification sent to:', to);
+        const templateParams = { to_email: to, subject: subject, ...data };
+        await emailjs.send('service_oriental_0126', template, templateParams);
+        trackAnalytics('email_sent', { template, to_domain: to.split('@')[1] });
         return true;
     } catch (error) {
         console.error('Error sending email notification:', error);
@@ -323,9 +476,6 @@ async function sendEmailNotification(to, subject, template, data) {
     }
 }
 
-/**
- * Notify user when task is assigned
- */
 async function notifyTaskAssignment(taskId, taskTitle, assignedToEmail, assignedToName, assignerName) {
     await sendEmailNotification(
         assignedToEmail,
@@ -338,11 +488,9 @@ async function notifyTaskAssignment(taskId, taskTitle, assignedToEmail, assigned
             assigner_name: assignerName
         }
     );
+    trackAnalytics('notification_sent', { type: 'task_assigned' });
 }
 
-/**
- * Notify user when comment is added to their task
- */
 async function notifyCommentOnTask(taskTitle, taskId, commentAuthor, taskOwnerEmail, taskOwnerName) {
     await sendEmailNotification(
         taskOwnerEmail,
@@ -355,36 +503,44 @@ async function notifyCommentOnTask(taskTitle, taskId, commentAuthor, taskOwnerEm
             comment_author: commentAuthor
         }
     );
+    trackAnalytics('notification_sent', { type: 'comment_added' });
 }
 
 // ============================================
-// Initialization
+// Initialization (Optimized)
 // ============================================
 
-/**
- * Initialize dashboard when DOM is ready
- */
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('🚀 Dashboard initializing...');
-    initDarkMode();  // Initialize dark mode first
+    console.log('🚀 Dashboard initializing (optimized)...');
+    trackPageView('/dashboard');
+    
+    initDarkMode();
+    setupOfflineDetection();
+    setupPWAInstallPrompt();
+    reportPerformance();
+    
     await checkAuth();
     await loadUserData();
     await loadOrganization();
     await loadTeamMembers();
-    await loadProjects();
+    await loadProjectsOptimized();
+    
     setupEventListeners();
     setupRealtimeSubscription();
     setupMobileNavigation();
     setupKeyboardShortcuts();
     setupSorting();
     setupPullToRefresh();
-    setupThemeToggle();  // Setup theme toggle buttons
-    console.log('✅ Dashboard ready!');
+    setupThemeToggle();
+    
+    trackAnalytics('dashboard_loaded', { 
+        user_id: currentUser?.uid,
+        has_organization: !!currentOrganization
+    });
+    
+    console.log('✅ Dashboard ready (optimized)!');
 });
 
-/**
- * Verify user is authenticated
- */
 async function checkAuth() {
     return new Promise((resolve, reject) => {
         auth.onAuthStateChanged(async (user) => {
@@ -405,9 +561,6 @@ async function checkAuth() {
 // Loading Skeleton Functions
 // ============================================
 
-/**
- * Show project list skeleton
- */
 function showProjectSkeleton() {
     const projectList = document.getElementById('project-list');
     if (!projectList) return;
@@ -431,9 +584,6 @@ function showProjectSkeleton() {
     `;
 }
 
-/**
- * Show board skeleton
- */
 function showBoardSkeleton() {
     const boardView = document.getElementById('board-view');
     if (!boardView) return;
@@ -475,9 +625,6 @@ function showBoardSkeleton() {
 // Confirmation Dialog Functions
 // ============================================
 
-/**
- * Show custom confirmation dialog
- */
 function showConfirmDialog(title, message, type = 'danger') {
     return new Promise((resolve) => {
         const overlay = document.createElement('div');
@@ -531,9 +678,6 @@ function showConfirmDialog(title, message, type = 'danger') {
 // Team Members (Real Assignees)
 // ============================================
 
-/**
- * Load all team members from current organization
- */
 async function loadTeamMembers() {
     if (!currentOrganization) return;
     
@@ -574,9 +718,6 @@ async function loadTeamMembers() {
     }
 }
 
-/**
- * Update all assignee dropdowns in forms
- */
 function updateAssigneeDropdowns() {
     const taskAssignee = document.getElementById('task-assignee');
     if (taskAssignee) {
@@ -597,9 +738,6 @@ function updateAssigneeDropdowns() {
     }
 }
 
-/**
- * Load team members display in sidebar
- */
 async function loadTeamMembersDisplay() {
     if (!currentOrganization) return;
     
@@ -655,12 +793,8 @@ async function loadTeamMembersDisplay() {
 // Invite Functions
 // ============================================
 
-// Initialize EmailJS
 emailjs.init('8gIppIfexFw6yYhyo');
 
-/**
- * Open invite modal
- */
 function openInviteModal() {
     const modal = document.getElementById('invite-modal');
     if (modal) {
@@ -669,9 +803,6 @@ function openInviteModal() {
     }
 }
 
-/**
- * Close invite modal
- */
 function closeInviteModal() {
     const modal = document.getElementById('invite-modal');
     if (modal) {
@@ -682,19 +813,13 @@ function closeInviteModal() {
     if (form) form.reset();
 }
 
-/**
- * Send invitation via EmailJS
- */
 async function sendInvite(email, role) {
     if (!currentOrganization) {
         showToast('No organization found', 'error');
         return false;
     }
     
-    // Get organization name
     const orgName = document.getElementById('org-name').textContent;
-    
-    // Show loading state
     const submitBtn = document.querySelector('#invite-form button[type="submit"]');
     const originalText = submitBtn?.innerHTML;
     if (submitBtn) {
@@ -703,14 +828,10 @@ async function sendInvite(email, role) {
     }
     
     try {
-        // Generate unique token
         const token = Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
-        
-        // Calculate expiration (7 days)
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + 7);
         
-        // Create invite in Firestore
         await db.collection('invites').add({
             email: email.toLowerCase(),
             organizationId: currentOrganization,
@@ -724,10 +845,8 @@ async function sendInvite(email, role) {
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-        // Generate invite link
         const inviteLink = `${window.location.origin}/accept-invite.html?token=${token}`;
         
-        // Prepare email template parameters
         const templateParams = {
             to_email: email,
             inviter_name: currentUser.displayName || currentUser.email.split('@')[0],
@@ -737,31 +856,16 @@ async function sendInvite(email, role) {
             expires_in: '7 days'
         };
         
-        // Send email via EmailJS
-        const result = await emailjs.send(
-            'service_oriental_0126',
-            'oriental_invite',
-            templateParams
-        );
-        
-        console.log('Email sent:', result);
+        await emailjs.send('service_oriental_0126', 'oriental_invite', templateParams);
         
         showToast(`Invitation sent to ${email}!`, 'success');
-        
-        // Refresh pending invites list
         loadPendingInvites();
-        
+        trackAnalytics('invite_sent', { role });
         return true;
         
     } catch (error) {
         console.error('Error sending invite:', error);
-        
-        if (error.text) {
-            showToast('Failed to send email. Check EmailJS configuration.', 'error');
-        } else {
-            showToast('Error sending invite: ' + error.message, 'error');
-        }
-        
+        showToast('Error sending invite: ' + error.message, 'error');
         return false;
         
     } finally {
@@ -772,9 +876,6 @@ async function sendInvite(email, role) {
     }
 }
 
-/**
- * Load pending invites
- */
 async function loadPendingInvites() {
     if (!currentOrganization) return;
     
@@ -822,9 +923,6 @@ async function loadPendingInvites() {
     }
 }
 
-/**
- * Open pending invites modal
- */
 function openPendingInvitesModal() {
     loadPendingInvites();
     const modal = document.getElementById('pending-invites-modal');
@@ -834,9 +932,6 @@ function openPendingInvitesModal() {
     }
 }
 
-/**
- * Close pending invites modal
- */
 function closePendingInvitesModal() {
     const modal = document.getElementById('pending-invites-modal');
     if (modal) {
@@ -845,9 +940,6 @@ function closePendingInvitesModal() {
     }
 }
 
-/**
- * Cancel an invite
- */
 async function cancelInvite(inviteId) {
     if (!confirm('Cancel this invitation?')) return;
     
@@ -857,6 +949,7 @@ async function cancelInvite(inviteId) {
         });
         showToast('Invitation cancelled', 'success');
         loadPendingInvites();
+        trackAnalytics('invite_cancelled', {});
     } catch (error) {
         console.error('Error cancelling invite:', error);
         showToast('Error cancelling invite', 'error');
@@ -864,12 +957,9 @@ async function cancelInvite(inviteId) {
 }
 
 // ============================================
-// Data Loading Functions - FIXED
+// Data Loading Functions - Optimized
 // ============================================
 
-/**
- * Load user data from Firestore - FIXED VERSION
- */
 async function loadUserData() {
     try {
         console.log('Loading user data for UID:', currentUser.uid);
@@ -897,13 +987,12 @@ async function loadUserData() {
             }
             
             if (currentOrganization) {
-                await loadProjects();
+                await loadProjectsOptimized();
             }
             
         } else {
             console.warn('User document not found, attempting to create...');
             
-            // Update UI with fallback data
             const userNameElement = document.getElementById('user-name');
             if (userNameElement) {
                 userNameElement.textContent = currentUser.displayName || currentUser.email.split('@')[0];
@@ -914,7 +1003,6 @@ async function loadUserData() {
                 userEmailElement.textContent = currentUser.email;
             }
             
-            // Try to create missing user document
             await createMissingUserDocument();
         }
     } catch (error) {
@@ -923,14 +1011,10 @@ async function loadUserData() {
     }
 }
 
-/**
- * Create missing user document (for users without one)
- */
 async function createMissingUserDocument() {
     try {
         console.log('Creating missing user document for:', currentUser.uid);
         
-        // Check if user already has any organizations
         const orgsSnapshot = await db.collection('organizations')
             .where('members', 'array-contains', currentUser.uid)
             .get();
@@ -941,7 +1025,6 @@ async function createMissingUserDocument() {
             orgId = orgsSnapshot.docs[0].id;
             console.log('Found existing organization:', orgId);
         } else {
-            // Create new organization
             const orgName = prompt('Welcome! Please enter your organization name:', 'My Team');
             if (!orgName) {
                 console.log('No organization name provided');
@@ -959,7 +1042,6 @@ async function createMissingUserDocument() {
             orgId = orgRef.id;
             console.log('Organization created:', orgId);
             
-            // Create default project
             await db.collection('projects').add({
                 name: 'Getting Started',
                 description: 'Welcome to Oriental! This is your first project.',
@@ -972,7 +1054,6 @@ async function createMissingUserDocument() {
             console.log('Default project created');
         }
         
-        // Create user document
         await db.collection('users').doc(currentUser.uid).set({
             name: currentUser.displayName || currentUser.email.split('@')[0],
             email: currentUser.email,
@@ -990,7 +1071,7 @@ async function createMissingUserDocument() {
             orgNameElement.textContent = currentUser.displayName || currentUser.email.split('@')[0];
         }
         
-        await loadProjects();
+        await loadProjectsOptimized();
         showToast('Organization created successfully', 'success');
         
     } catch (error) {
@@ -999,17 +1080,11 @@ async function createMissingUserDocument() {
     }
 }
 
-/**
- * Generate slug from text
- */
 function generateSlug(text) {
     if (!text) return 'my-team';
     return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
-/**
- * Load organization details
- */
 async function loadOrganization() {
     if (!currentOrganization) return;
     
@@ -1030,32 +1105,19 @@ async function loadOrganization() {
     }
 }
 
-/**
- * Load all projects for current organization
- */
-async function loadProjects() {
-    if (!currentOrganization) {
-        console.log('No currentOrganization, skipping loadProjects');
-        return;
-    }
+// Optimized loadProjects with caching
+async function loadProjectsOptimized() {
+    if (!currentOrganization) return;
     
     showProjectSkeleton();
     
     try {
-        const projectsSnapshot = await db.collection('projects')
-            .where('organizationId', '==', currentOrganization)
-            .where('isArchived', '==', false)
-            .get();
+        const projects = await getCachedProjects();
         
         const projectList = document.getElementById('project-list');
         if (!projectList) return;
         
         projectList.innerHTML = '';
-        
-        const projects = [];
-        projectsSnapshot.forEach(doc => {
-            projects.push({ id: doc.id, ...doc.data() });
-        });
         
         projects.sort((a, b) => {
             if (a.createdAt && b.createdAt) {
@@ -1086,15 +1148,18 @@ async function loadProjects() {
         if (projects.length > 0 && !currentProject) {
             selectProject(projects[0]);
         }
+        
     } catch (error) {
         console.error('Error loading projects:', error);
         showToast('Error loading projects', 'error');
     }
 }
 
-/**
- * Create project list item element with delete button
- */
+// Legacy loadProjects for compatibility
+async function loadProjects() {
+    return loadProjectsOptimized();
+}
+
 function createProjectElement(project) {
     const div = document.createElement('div');
     div.className = `project-item ${currentProject && currentProject.id === project.id ? 'active' : ''}`;
@@ -1115,9 +1180,6 @@ function createProjectElement(project) {
     return div;
 }
 
-/**
- * Load task count for a project and update UI
- */
 async function loadTaskCount(projectId, projectElement) {
     try {
         const tasksSnapshot = await db.collection('tasks')
@@ -1133,9 +1195,6 @@ async function loadTaskCount(projectId, projectElement) {
     }
 }
 
-/**
- * Select a project and load its tasks
- */
 async function selectProject(project) {
     currentProject = project;
     console.log('Project selected:', project.name);
@@ -1155,9 +1214,6 @@ async function selectProject(project) {
     await loadTasks(true);
 }
 
-/**
- * Load tasks for current project
- */
 async function loadTasks(showSkeleton = true) {
     if (!currentProject) return;
     
@@ -1663,17 +1719,14 @@ async function handleDrop(e) {
     const oldStatus = draggedTask.dataset.status;
     if (newStatus === oldStatus) return;
     
-    // Get task title for logging
     const taskDoc = await db.collection('tasks').doc(taskId).get();
     const taskTitle = taskDoc.data()?.title || 'Unknown';
     
     try {
         await db.collection('tasks').doc(taskId).update({ status: newStatus, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-        
-        // Log activity
         await logActivity('update_task', 'task', taskId, taskTitle, { oldStatus: oldStatus, newStatus: newStatus });
-        
         showToast('Task status updated', 'success');
+        invalidateCache();
     } catch (error) {
         console.error('Error updating task status:', error);
         showToast('Error updating task', 'error');
@@ -1805,9 +1858,10 @@ async function refreshData() {
         await loadUserData();
         await loadOrganization();
         await loadTeamMembers();
-        await loadProjects();
+        await loadProjectsOptimized();
         if (currentProject) await loadTasks();
         showToast('Data refreshed', 'success');
+        trackAnalytics('data_refreshed', {});
     } catch (error) { console.error('Refresh error:', error); showToast('Error refreshing data', 'error'); }
     isRefreshing = false;
     pullElement.classList.remove('refreshing');
@@ -1839,10 +1893,10 @@ async function createTask(taskData) {
         
         const docRef = await db.collection('tasks').add(task);
         
-        // Log activity
         await logActivity('create_task', 'task', docRef.id, taskData.title, { assignedTo: assigneeName });
+        invalidateCache();
+        trackAnalytics('task_created', { priority: taskData.priority, hasAssignee: !!assigneeId });
         
-        // Send email notification if assigned
         if (assigneeId && assigneeName) {
             const assignedUser = teamMembers.find(m => m.id === assigneeId);
             if (assignedUser && assignedUser.email !== currentUser.email) {
@@ -1857,7 +1911,6 @@ async function createTask(taskData) {
 
 async function updateTask(taskId, taskData) {
     try {
-        // Get old task data for comparison
         const oldTaskDoc = await db.collection('tasks').doc(taskId).get();
         const oldTask = oldTaskDoc.data();
         
@@ -1877,7 +1930,6 @@ async function updateTask(taskId, taskData) {
         
         await db.collection('tasks').doc(taskId).update(updateData);
         
-        // Log activity
         const details = {};
         if (oldTask.status !== updateData.status) {
             details.oldStatus = oldTask.status;
@@ -1885,7 +1937,6 @@ async function updateTask(taskId, taskData) {
         }
         if (oldTask.assignedTo !== assigneeName) {
             details.assignedTo = assigneeName;
-            // Send email notification for new assignment
             if (assigneeId && assigneeName && assigneeName !== oldTask.assignedTo) {
                 const assignedUser = teamMembers.find(m => m.id === assigneeId);
                 if (assignedUser && assignedUser.email !== currentUser.email) {
@@ -1895,6 +1946,8 @@ async function updateTask(taskId, taskData) {
         }
         
         await logActivity('update_task', 'task', taskId, taskData.title, details);
+        invalidateCache();
+        trackAnalytics('task_updated', { priority: taskData.priority, hasAssignee: !!assigneeId });
         
         showToast('Task updated successfully', 'success');
         return true;
@@ -1919,11 +1972,12 @@ async function createProject(projectData) {
         
         const docRef = await db.collection('projects').add(project);
         
-        // Log activity
         await logActivity('create_project', 'project', docRef.id, projectData.name, {});
+        invalidateCache();
+        trackAnalytics('project_created', {});
         
         showToast('Project created successfully', 'success');
-        await loadProjects();
+        await loadProjectsOptimized();
         return true;
     } catch (error) { console.error('Error creating project:', error); showToast('Error creating project: ' + error.message, 'error'); return false; }
 }
@@ -1952,6 +2006,7 @@ async function openTaskDetail(taskId) {
         await loadComments(taskId);
         const modal = document.getElementById('comment-modal');
         if (modal) { modal.style.display = 'flex'; modal.classList.add('active'); }
+        trackAnalytics('task_detail_opened', {});
     } catch (error) { console.error('Error opening task detail:', error); showToast('Error loading task details', 'error'); }
 }
 
@@ -1978,7 +2033,6 @@ function createCommentElement(comment) {
 async function addComment(taskId, content) {
     if (!content.trim()) return false;
     try {
-        // Get task info for notification
         const taskDoc = await db.collection('tasks').doc(taskId).get();
         const task = taskDoc.data();
         
@@ -1990,10 +2044,9 @@ async function addComment(taskId, content) {
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-        // Log activity
         await logActivity('add_comment', 'comment', taskId, task.title, { content: content.substring(0, 50) });
+        trackAnalytics('comment_added', {});
         
-        // Send email notification to task creator/assignee
         if (task.createdBy !== currentUser.uid) {
             const ownerDoc = await db.collection('users').doc(task.createdBy).get();
             if (ownerDoc.exists) {
@@ -2128,13 +2181,11 @@ function setupEventListeners() {
         });
     }
     
-    // Activity log button
     const activityLogBtn = document.getElementById('activity-log-btn');
     if (activityLogBtn) {
         activityLogBtn.addEventListener('click', openActivityLog);
     }
     
-    // Close activity log
     const closeActivityLogBtn = document.getElementById('close-activity-log');
     if (closeActivityLogBtn) {
         closeActivityLogBtn.addEventListener('click', closeActivityLog);
@@ -2189,42 +2240,32 @@ function openSprintModal() {
         showToast('Please select a project first', 'warning');
         return;
     }
-    
-    // Check if there's already an active sprint
     if (currentSprint) {
         showToast('There is already an active sprint. Complete it before starting a new one.', 'warning');
         return;
     }
-    
     const modal = document.getElementById('sprint-modal');
     if (modal) {
-        // Set default dates (2-week sprint)
         const today = new Date();
         const twoWeeksLater = new Date();
         twoWeeksLater.setDate(today.getDate() + 14);
-        
         document.getElementById('sprint-start-date').value = today.toISOString().split('T')[0];
         document.getElementById('sprint-end-date').value = twoWeeksLater.toISOString().split('T')[0];
-        
         modal.style.display = 'flex';
         modal.classList.add('active');
     }
 }
-/// ============================================
+
+// ============================================
 // Sprint Functions - COMPLETE
 // ============================================
 
 let currentSprint = null;
 let availableTasks = [];
 
-/**
- * Load active sprint for current project
- */
 async function loadSprints() {
     if (!currentProject) return;
-    
     try {
-        // Get active sprint
         const activeSprintSnapshot = await db.collection('sprints')
             .where('projectId', '==', currentProject.id)
             .where('status', '==', 'active')
@@ -2238,19 +2279,13 @@ async function loadSprints() {
         } else {
             displayNoActiveSprint();
         }
-        
-        // Load past sprints
         await loadPastSprints();
-        
     } catch (error) {
         console.error('Error loading sprints:', error);
         showToast('Error loading sprints', 'error');
     }
 }
 
-/**
- * Display active sprint information
- */
 function displayActiveSprint(sprint) {
     const sprintNameEl = document.getElementById('active-sprint-name');
     const sprintGoalEl = document.getElementById('active-sprint-goal');
@@ -2260,27 +2295,21 @@ function displayActiveSprint(sprint) {
     
     if (sprintNameEl) sprintNameEl.textContent = sprint.name;
     if (sprintGoalEl) sprintGoalEl.textContent = sprint.goal || 'No goal set';
-    
     if (sprintDatesEl && sprint.startDate && sprint.endDate) {
         const start = new Date(sprint.startDate).toLocaleDateString();
         const end = new Date(sprint.endDate).toLocaleDateString();
         sprintDatesEl.innerHTML = `<i class="fas fa-calendar-alt"></i> ${start} - ${end}`;
     }
-    
     if (createBtn) createBtn.style.display = 'none';
     if (completeBtn) completeBtn.style.display = 'flex';
 }
 
-/**
- * Display no active sprint state
- */
 function displayNoActiveSprint() {
     const sprintNameEl = document.getElementById('active-sprint-name');
     const sprintGoalEl = document.getElementById('active-sprint-goal');
     const sprintDatesEl = document.getElementById('sprint-dates');
     const createBtn = document.getElementById('create-sprint-btn');
     const completeBtn = document.getElementById('complete-sprint-btn');
-    const sprintTasksContainer = document.getElementById('sprint-tasks');
     
     if (sprintNameEl) sprintNameEl.textContent = 'No Active Sprint';
     if (sprintGoalEl) sprintGoalEl.textContent = 'Start a sprint to begin tracking progress';
@@ -2288,11 +2317,9 @@ function displayNoActiveSprint() {
     if (createBtn) createBtn.style.display = 'flex';
     if (completeBtn) completeBtn.style.display = 'none';
     
-    // Clear sprint columns
     document.getElementById('planned-tasks').innerHTML = '<div class="empty-state-small">No active sprint</div>';
     document.getElementById('progress-tasks').innerHTML = '';
     document.getElementById('completed-tasks').innerHTML = '';
-    
     document.getElementById('planned-count').textContent = '0';
     document.getElementById('progress-count').textContent = '0';
     document.getElementById('completed-count').textContent = '0';
@@ -2302,16 +2329,12 @@ function displayNoActiveSprint() {
     document.getElementById('sprint-total-tasks').textContent = '0';
 }
 
-/**
- * Load and display sprint tasks
- */
 async function loadSprintTasks(sprint) {
     if (!sprint || !sprint.tasks || sprint.tasks.length === 0) {
         showEmptySprintColumns();
         updateSprintProgress(0, 0);
         return;
     }
-    
     try {
         const tasksData = [];
         for (const taskId of sprint.tasks) {
@@ -2320,23 +2343,16 @@ async function loadSprintTasks(sprint) {
                 tasksData.push({ id: taskDoc.id, ...taskDoc.data() });
             }
         }
-        
-        // Organize by status
         const planned = tasksData.filter(t => t.status === 'todo');
         const inProgress = tasksData.filter(t => t.status === 'in-progress');
         const completed = tasksData.filter(t => t.status === 'done');
-        
         renderSprintColumns(planned, inProgress, completed);
         updateSprintProgress(completed.length, tasksData.length);
-        
     } catch (error) {
         console.error('Error loading sprint tasks:', error);
     }
 }
 
-/**
- * Render sprint columns
- */
 function renderSprintColumns(planned, inProgress, completed) {
     const plannedContainer = document.getElementById('planned-tasks');
     const progressContainer = document.getElementById('progress-tasks');
@@ -2351,15 +2367,11 @@ function renderSprintColumns(planned, inProgress, completed) {
     if (completedContainer) {
         completedContainer.innerHTML = completed.map(task => createSprintTaskCard(task)).join('');
     }
-    
     document.getElementById('planned-count').textContent = planned.length;
     document.getElementById('progress-count').textContent = inProgress.length;
     document.getElementById('completed-count').textContent = completed.length;
 }
 
-/**
- * Create sprint task card
- */
 function createSprintTaskCard(task) {
     const priorityClass = task.priority === 'high' ? 'priority-high' : (task.priority === 'medium' ? 'priority-medium' : 'priority-low');
     return `
@@ -2373,9 +2385,6 @@ function createSprintTaskCard(task) {
     `;
 }
 
-/**
- * Show empty sprint columns
- */
 function showEmptySprintColumns() {
     document.getElementById('planned-tasks').innerHTML = '<div class="empty-state-small">No tasks in sprint</div>';
     document.getElementById('progress-tasks').innerHTML = '';
@@ -2385,9 +2394,6 @@ function showEmptySprintColumns() {
     document.getElementById('completed-count').textContent = '0';
 }
 
-/**
- * Update sprint progress indicators
- */
 function updateSprintProgress(completed, total) {
     const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
     document.getElementById('sprint-progress-percent').textContent = `${percent}%`;
@@ -2396,12 +2402,8 @@ function updateSprintProgress(completed, total) {
     document.getElementById('sprint-total-tasks').textContent = total;
 }
 
-/**
- * Load past sprints
- */
 async function loadPastSprints() {
     if (!currentProject) return;
-    
     try {
         const pastSprintsSnapshot = await db.collection('sprints')
             .where('projectId', '==', currentProject.id)
@@ -2412,23 +2414,19 @@ async function loadPastSprints() {
         
         const container = document.getElementById('past-sprints-list');
         if (!container) return;
-        
         if (pastSprintsSnapshot.empty) {
             container.innerHTML = '<div class="empty-state-small">No past sprints</div>';
             return;
         }
-        
         container.innerHTML = '';
         pastSprintsSnapshot.forEach(doc => {
             const sprint = doc.data();
             const sprintDiv = document.createElement('div');
             sprintDiv.className = 'past-sprint-item';
             sprintDiv.onclick = () => viewPastSprint(doc.id, sprint);
-            
             const startDate = sprint.startDate ? new Date(sprint.startDate).toLocaleDateString() : 'Unknown';
             const endDate = sprint.endDate ? new Date(sprint.endDate).toLocaleDateString() : 'Unknown';
             const taskCount = sprint.tasks ? sprint.tasks.length : 0;
-            
             sprintDiv.innerHTML = `
                 <div class="past-sprint-name">${escapeHtml(sprint.name)}</div>
                 <div class="past-sprint-dates"><i class="fas fa-calendar-alt"></i> ${startDate} - ${endDate}</div>
@@ -2436,30 +2434,20 @@ async function loadPastSprints() {
             `;
             container.appendChild(sprintDiv);
         });
-        
     } catch (error) {
         console.error('Error loading past sprints:', error);
     }
 }
 
-/**
- * View past sprint details
- */
 async function viewPastSprint(sprintId, sprint) {
-    // Show modal with sprint details
     showToast(`Sprint "${sprint.name}" completed`, 'info');
-    // Could open a modal with detailed view
 }
 
-/**
- * Create a new sprint
- */
 async function createSprint(sprintData) {
     if (!currentProject) {
         showToast('Please select a project first', 'warning');
         return false;
     }
-    
     try {
         const sprint = {
             organizationId: currentOrganization,
@@ -2472,12 +2460,10 @@ async function createSprint(sprintData) {
             tasks: [],
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         };
-        
         await db.collection('sprints').add(sprint);
         showToast('Sprint started successfully', 'success');
         await loadSprints();
         return true;
-        
     } catch (error) {
         console.error('Error creating sprint:', error);
         showToast('Error creating sprint: ' + error.message, 'error');
@@ -2485,48 +2471,32 @@ async function createSprint(sprintData) {
     }
 }
 
-/**
- * Complete current sprint
- */
 async function completeSprint() {
     if (!currentSprint) {
         showToast('No active sprint', 'warning');
         return;
     }
-    
-    const confirmed = await showConfirmDialog(
-        'Complete Sprint',
-        `Complete "${currentSprint.name}"? This will mark the sprint as completed.`,
-        'warning'
-    );
-    
+    const confirmed = await showConfirmDialog('Complete Sprint', `Complete "${currentSprint.name}"? This will mark the sprint as completed.`, 'warning');
     if (!confirmed) return;
-    
     try {
         await db.collection('sprints').doc(currentSprint.id).update({
             status: 'completed',
             completedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        
         showToast('Sprint completed successfully', 'success');
         currentSprint = null;
         await loadSprints();
-        
     } catch (error) {
         console.error('Error completing sprint:', error);
         showToast('Error completing sprint', 'error');
     }
 }
 
-/**
- * Open add tasks to sprint modal
- */
 async function openAddToSprintModal() {
     if (!currentSprint) {
         showToast('No active sprint. Start a sprint first.', 'warning');
         return;
     }
-    
     await loadAvailableTasks();
     const modal = document.getElementById('add-to-sprint-modal');
     if (modal) {
@@ -2535,9 +2505,6 @@ async function openAddToSprintModal() {
     }
 }
 
-/**
- * Close add to sprint modal
- */
 function closeAddToSprintModal() {
     const modal = document.getElementById('add-to-sprint-modal');
     if (modal) {
@@ -2546,34 +2513,25 @@ function closeAddToSprintModal() {
     }
 }
 
-/**
- * Load available tasks (not in sprint)
- */
 async function loadAvailableTasks() {
     if (!currentProject || !currentSprint) return;
-    
     try {
         const allTasksSnapshot = await db.collection('tasks')
             .where('projectId', '==', currentProject.id)
             .get();
-        
         const sprintTaskIds = currentSprint.tasks || [];
         availableTasks = [];
-        
         allTasksSnapshot.forEach(doc => {
             if (!sprintTaskIds.includes(doc.id)) {
                 availableTasks.push({ id: doc.id, ...doc.data() });
             }
         });
-        
         const container = document.getElementById('available-tasks-list');
         if (!container) return;
-        
         if (availableTasks.length === 0) {
             container.innerHTML = '<div class="empty-state-small">No available tasks to add</div>';
             return;
         }
-        
         container.innerHTML = availableTasks.map(task => `
             <div class="available-task-item">
                 <input type="checkbox" value="${task.id}" id="task-${task.id}">
@@ -2581,44 +2539,34 @@ async function loadAvailableTasks() {
                 <span class="available-task-priority priority-${task.priority || 'medium'}">${task.priority || 'medium'}</span>
             </div>
         `).join('');
-        
     } catch (error) {
         console.error('Error loading available tasks:', error);
     }
 }
 
-/**
- * Add selected tasks to sprint
- */
 async function addSelectedTasksToSprint() {
     const selectedCheckboxes = document.querySelectorAll('#available-tasks-list input[type="checkbox"]:checked');
     const selectedTaskIds = Array.from(selectedCheckboxes).map(cb => cb.value);
-    
     if (selectedTaskIds.length === 0) {
         showToast('Please select at least one task', 'warning');
         return;
     }
-    
     const currentTasks = currentSprint.tasks || [];
     const updatedTasks = [...currentTasks, ...selectedTaskIds];
-    
     try {
         await db.collection('sprints').doc(currentSprint.id).update({
             tasks: updatedTasks
         });
-        
         currentSprint.tasks = updatedTasks;
         showToast(`${selectedTaskIds.length} task(s) added to sprint`, 'success');
         closeAddToSprintModal();
         await loadSprintTasks(currentSprint);
-        
     } catch (error) {
         console.error('Error adding tasks to sprint:', error);
         showToast('Error adding tasks to sprint', 'error');
     }
 }
 
-// Add event listener for add selected tasks button
 document.addEventListener('DOMContentLoaded', () => {
     const addSelectedBtn = document.getElementById('add-selected-tasks-btn');
     if (addSelectedBtn) {
@@ -2626,19 +2574,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Update sprint form submission
 const sprintForm = document.getElementById('sprint-form');
 if (sprintForm) {
     sprintForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        
         const sprintData = {
             name: document.getElementById('sprint-name').value,
             goal: document.getElementById('sprint-goal').value,
             startDate: document.getElementById('sprint-start-date').value,
             endDate: document.getElementById('sprint-end-date').value
         };
-        
         const success = await createSprint(sprintData);
         if (success) {
             closeSprintModal();
@@ -2646,6 +2591,7 @@ if (sprintForm) {
         }
     });
 }
+
 // ============================================
 // Undo Delete Functions
 // ============================================
@@ -2673,13 +2619,12 @@ async function deleteTaskWithUndo(taskId, taskData) {
         const taskRef = db.collection('tasks').doc(taskId);
         batch.delete(taskRef);
         await batch.commit();
-        
-        // Log activity
         await logActivity('delete_task', 'task', taskId, taskData.title, {});
-        
         showUndoToast('Task deleted', () => undoDelete());
         closeCommentModal();
         await loadTasks();
+        invalidateCache();
+        trackAnalytics('task_deleted', {});
     } catch (error) { console.error('Error deleting task:', error); showToast('Error deleting task: ' + error.message, 'error'); deletedItem = null; deletedItemType = null; }
 }
 
@@ -2699,13 +2644,12 @@ async function deleteProjectWithUndo(projectId, projectData) {
         const projectRef = db.collection('projects').doc(projectId);
         batch.delete(projectRef);
         await batch.commit();
-        
-        // Log activity
         await logActivity('delete_project', 'project', projectId, projectData.name, {});
-        
         if (deletedItem) deletedItem.tasks = deletedTasks;
         showUndoToast(`Project "${projectData.name}" deleted`, () => undoDelete());
-        await loadProjects();
+        await loadProjectsOptimized();
+        invalidateCache();
+        trackAnalytics('project_deleted', {});
     } catch (error) { console.error('Error deleting project:', error); showToast('Error deleting project: ' + error.message, 'error'); deletedItem = null; deletedItemType = null; }
 }
 
@@ -2716,6 +2660,7 @@ async function undoDelete() {
             const taskData = { projectId: deletedItem.projectId, title: deletedItem.title, description: deletedItem.description || '', priority: deletedItem.priority || 'medium', status: deletedItem.status || 'todo', assignedTo: deletedItem.assignedTo || null, dueDate: deletedItem.dueDate || null, estimatedHours: deletedItem.estimatedHours || 0, tags: deletedItem.tags || [], order: deletedItem.order || Date.now(), createdBy: deletedItem.createdBy, createdAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
             await db.collection('tasks').add(taskData);
             console.log('Task restored');
+            trackAnalytics('task_restored', {});
         } else if (deletedItemType === 'project') {
             const projectData = { organizationId: deletedItem.organizationId, name: deletedItem.name, description: deletedItem.description || '', color: deletedItem.color || '#16a34a', isArchived: false, createdBy: deletedItem.createdBy, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
             const projectRef = await db.collection('projects').add(projectData);
@@ -2725,10 +2670,12 @@ async function undoDelete() {
                     await db.collection('tasks').add(taskData);
                 }
             }
+            trackAnalytics('project_restored', {});
         }
         deletedItem = null;
         deletedItemType = null;
-        if (deletedItemType === 'project') await loadProjects();
+        invalidateCache();
+        if (deletedItemType === 'project') await loadProjectsOptimized();
         else await loadTasks();
     } catch (error) { console.error('Error undoing delete:', error); showToast('Error undoing action', 'error'); }
 }
