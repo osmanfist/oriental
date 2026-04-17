@@ -579,9 +579,11 @@ async function loadUserData() {
             }
             
         } else {
-            console.warn('User document not found for:', currentUser.uid);
+            console.error('CRITICAL: User document not found for:', currentUser.uid);
+            console.log('User email:', currentUser.email);
+            console.log('User displayName:', currentUser.displayName);
             
-            // Update UI with fallback data
+            // Update UI with fallback
             const userNameElement = document.getElementById('user-name');
             if (userNameElement) {
                 userNameElement.textContent = currentUser.displayName || currentUser.email.split('@')[0];
@@ -592,20 +594,23 @@ async function loadUserData() {
                 userEmailElement.textContent = currentUser.email;
             }
             
-            // IMPORTANT: Only try to create missing document for Google Sign-in
-            // NOT for email/password signup (which already creates the document)
-            // Check if user came from Google Sign-in
-            const isGoogleUser = currentUser.providerData.some(
+            // Show error and offer to fix
+            showToast('Account setup incomplete. Please contact support.', 'error');
+            
+            // Try to fix - only for Google users
+            const isGoogleUser = currentUser.providerData && currentUser.providerData.some(
                 provider => provider.providerId === 'google.com'
             );
             
             if (isGoogleUser) {
-                await createMissingUserDocument();
-            } else {
-                // For email/password users, show error but don't create document
-                // They should have a document already from signup
-                console.error('User document missing for email/password user. This should not happen.');
-                showToast('Error loading user data. Please refresh the page.', 'error');
+                const fix = confirm('Your account needs setup. Click OK to complete setup.');
+                if (fix) {
+                    const orgName = prompt('Enter your organization name:', 'My Team');
+                    if (orgName) {
+                        await createUserDocument(currentUser, currentUser.displayName || currentUser.email.split('@')[0], orgName);
+                        location.reload();
+                    }
+                }
             }
         }
     } catch (error) {
