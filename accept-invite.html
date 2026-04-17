@@ -16,8 +16,8 @@
         </div>
         
         <div id="invite-status" class="auth-form active">
-            <h2>Processing Invitation...</h2>
             <div class="loading-spinner"></div>
+            <p style="text-align: center; margin-top: 20px;">Processing your invitation...</p>
         </div>
     </div>
 
@@ -26,92 +26,173 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="js/firebase-config.js"></script>
     <script>
+        console.log('Firebase initialized');
+        
         async function processInvite() {
             const urlParams = new URLSearchParams(window.location.search);
             const token = urlParams.get('token');
+            
+            console.log('Processing invite with token:', token);
             
             if (!token) {
                 document.getElementById('invite-status').innerHTML = `
                     <h2>Invalid Invitation</h2>
                     <p>No invitation token provided.</p>
-                    <a href="login.html" class="btn btn-primary">Go to Login</a>
+                    <a href="login.html" class="btn btn-primary" style="margin-top: 20px;">Go to Login</a>
                 `;
                 return;
             }
             
             try {
+                // Wait for auth to be ready
+                await new Promise((resolve) => {
+                    const unsubscribe = auth.onAuthStateChanged((user) => {
+                        console.log('Auth state changed:', user ? user.email : 'No user');
+                        unsubscribe();
+                        resolve(user);
+                    });
+                });
+                
                 // Find the invite
+                console.log('Looking for invite with token:', token);
                 const invitesSnapshot = await db.collection('invites')
                     .where('token', '==', token)
                     .where('status', '==', 'pending')
                     .limit(1)
                     .get();
                 
+                console.log('Invites found:', invitesSnapshot.size);
+                
                 if (invitesSnapshot.empty) {
                     document.getElementById('invite-status').innerHTML = `
                         <h2>Invalid or Expired Invitation</h2>
                         <p>This invitation link is invalid or has already been used.</p>
-                        <a href="login.html" class="btn btn-primary">Go to Login</a>
+                        <a href="login.html" class="btn btn-primary" style="margin-top: 20px;">Go to Login</a>
                     `;
                     return;
                 }
                 
-                const invite = invitesSnapshot.docs[0];
-                const inviteData = invite.data();
+                const inviteDoc = invitesSnapshot.docs[0];
+                const inviteData = inviteDoc.data();
+                
+                console.log('Invite found:', inviteData);
                 
                 // Check expiration
                 if (inviteData.expiresAt && inviteData.expiresAt.toDate() < new Date()) {
                     document.getElementById('invite-status').innerHTML = `
                         <h2>Invitation Expired</h2>
                         <p>This invitation has expired. Please ask for a new one.</p>
-                        <a href="login.html" class="btn btn-primary">Go to Login</a>
+                        <a href="login.html" class="btn btn-primary" style="margin-top: 20px;">Go to Login</a>
                     `;
                     return;
                 }
                 
                 // Check if user is logged in
-                firebase.auth().onAuthStateChanged(async (user) => {
-                    if (!user) {
-                        // Store invite token and redirect to login
-                        localStorage.setItem('pending_invite_token', token);
-                        window.location.href = 'login.html';
-                        return;
+                const currentUser = auth.currentUser;
+                
+                if (!currentUser) {
+                    // Store invite token and redirect to login
+                    localStorage.setItem('pending_invite_token', token);
+                    console.log('No user logged in, redirecting to login');
+                    window.location.href = 'login.html';
+                    return;
+                }
+                
+                console.log('User logged in:', currentUser.email);
+                
+                // Check if user document exists
+                const userDocRef = db.collection('users').doc(currentUser.uid);
+                const userDoc = await userDocRef.get();
+                
+                console.log('User document exists:', userDoc.exists);
+                
+                let currentOrgs = [];
+                let needsUpdate = false;
+                
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    currentOrgs = userData.organizations || [];
+                    console.log('Current organizations:', currentOrgs);
+                    
+                    // Check if already in organization
+                    if (!currentOrgs.includes(inviteData.organizationId)) {
+                        currentOrgs.push(inviteData.organizationId);
+                        needsUpdate = true;
                     }
+                } else {
+                    // Create new user document
+                    currentOrgs = [inviteData.organizationId];
+                    needsUpdate = true;
+                }
+                
+                if (needsUpdate) {
+                    console.log('Updating user document...');
                     
-                    // User is logged in, add them to organization
-                    const userDoc = await db.collection('users').doc(user.uid).get();
-                    const userOrganizations = userDoc.exists ? userDoc.data().organizations || [] : [];
-                    
-                    if (!userOrganizations.includes(inviteData.organizationId)) {
-                        await db.collection('users').doc(user.uid).update({
-                            organizations: firebase.firestore.FieldValue.arrayUnion(inviteData.organizationId)
+                    if (userDoc.exists) {
+                        // Update existing document
+                        await userDocRef.update({
+                            organizations: currentOrgs,
+                            currentOrganization: inviteData.organizationId
+                        });
+                    } else {
+                        // Create new document
+                        await userDocRef.set({
+                            name: currentUser.displayName || currentUser.email.split('@')[0],
+                            email: currentUser.email,
+                            organizations: currentOrgs,
+                            currentOrganization: inviteData.organizationId,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            preferences: {
+                                notifications: true,
+                                emailDigest: 'daily'
+                            }
                         });
                     }
-                    
-                    // Update invite status
-                    await db.collection('invites').doc(invite.id).update({
-                        status: 'accepted',
-                        acceptedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                        acceptedBy: user.uid
-                    });
-                    
-                    document.getElementById('invite-status').innerHTML = `
-                        <h2>Welcome to ${inviteData.organizationName}!</h2>
-                        <p>You've been added to the team.</p>
-                        <a href="dashboard.html" class="btn btn-primary">Go to Dashboard</a>
-                    `;
+                    console.log('User document updated/created');
+                } else {
+                    console.log('User already in organization');
+                }
+                
+                // Update invite status
+                await db.collection('invites').doc(inviteDoc.id).update({
+                    status: 'accepted',
+                    acceptedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    acceptedBy: currentUser.uid
                 });
+                
+                console.log('Invite marked as accepted');
+                
+                // Update organization members if needed
+                const orgRef = db.collection('organizations').doc(inviteData.organizationId);
+                const orgDoc = await orgRef.get();
+                if (orgDoc.exists) {
+                    const orgMembers = orgDoc.data().members || [];
+                    if (!orgMembers.includes(currentUser.uid)) {
+                        await orgRef.update({
+                            members: firebase.firestore.FieldValue.arrayUnion(currentUser.uid)
+                        });
+                        console.log('Added user to organization members');
+                    }
+                }
+                
+                document.getElementById('invite-status').innerHTML = `
+                    <h2>Welcome to ${inviteData.organizationName || 'Oriental'}! 🎉</h2>
+                    <p>You've been added to the team as <strong>${inviteData.role || 'member'}</strong>.</p>
+                    <a href="dashboard.html" class="btn btn-primary" style="margin-top: 20px;">Go to Dashboard</a>
+                `;
                 
             } catch (error) {
                 console.error('Error processing invite:', error);
                 document.getElementById('invite-status').innerHTML = `
                     <h2>Error Processing Invitation</h2>
-                    <p>Something went wrong. Please try again.</p>
-                    <a href="login.html" class="btn btn-primary">Go to Login</a>
+                    <p>${error.message || 'Something went wrong. Please try again.'}</p>
+                    <button onclick="location.reload()" class="btn btn-primary" style="margin-top: 20px;">Try Again</button>
+                    <a href="login.html" class="btn btn-secondary" style="margin-top: 10px;">Go to Login</a>
                 `;
             }
         }
         
+        // Run the process
         processInvite();
     </script>
 </body>
