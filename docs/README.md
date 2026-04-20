@@ -286,6 +286,13 @@ Distributed under the MIT License. See LICENSE for more information.
 
     Email: your-email@example.com
 
+[![GitHub stars](https://img.shields.io/github/stars/osmanfist/oriental)](https://github.com/osmanfist/oriental/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/osmanfist/oriental)](https://github.com/osmanfist/oriental/network)
+[![GitHub issues](https://img.shields.io/github/issues/osmanfist/oriental)](https://github.com/osmanfist/oriental/issues)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/osmanfist/oriental)](https://github.com/osmanfist/oriental/pulls)
+[![GitHub last commit](https://img.shields.io/github/last-commit/osmanfist/oriental)](https://github.com/osmanfist/oriental/commits/main)
+
+
 ⭐ Show your support
 
 Give a ⭐️ if this project helped you!

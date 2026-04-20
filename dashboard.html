@@ -121,15 +121,19 @@
             </div>
             
             <nav class="nav-menu">
-                <a href="#" class="nav-item active" data-view="board">
-                    <i class="fas fa-columns"></i>
-                    <span>Board</span>
-                </a>
-                <a href="#" class="nav-item" data-view="sprints">
-                    <i class="fas fa-calendar-alt"></i>
-                    <span>Sprints</span>
-                </a>
-            </nav>
+    <a href="#" class="nav-item active" data-view="board">
+        <i class="fas fa-columns"></i>
+        <span>Board</span>
+    </a>
+    <a href="#" class="nav-item" data-view="sprints">
+        <i class="fas fa-calendar-alt"></i>
+        <span>Sprints</span>
+    </a>
+    <a href="#" class="nav-item" data-view="reports">
+        <i class="fas fa-chart-line"></i>
+        <span>Reports</span>
+    </a>
+</nav>
             
             <div class="projects-section">
                 <div class="projects-header">
@@ -327,24 +331,180 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Reports & Analytics View -->
+<div id="reports-view" class="reports-view hidden">
+    <div class="reports-header">
+        <h2>Reports & Analytics</h2>
+        <div class="reports-actions">
+            <button class="btn-secondary" id="export-csv-btn">
+                <i class="fas fa-file-csv"></i> Export CSV
+            </button>
+            <button class="btn-secondary" id="export-pdf-btn">
+                <i class="fas fa-file-pdf"></i> Export PDF
+            </button>
+            <div class="date-range-selector">
+                <select id="report-date-range">
+                    <option value="week">Last 7 Days</option>
+                    <option value="month" selected>Last 30 Days</option>
+                    <option value="quarter">Last 90 Days</option>
+                    <option value="year">Last Year</option>
+                    <option value="all">All Time</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Overview Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-tasks"></i></div>
+            <div class="stat-info">
+                <span class="stat-value" id="total-tasks-stat">0</span>
+                <span class="stat-label">Total Tasks</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+            <div class="stat-info">
+                <span class="stat-value" id="completed-tasks-stat">0</span>
+                <span class="stat-label">Completed Tasks</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+            <div class="stat-info">
+                <span class="stat-value" id="completion-rate-stat">0%</span>
+                <span class="stat-label">Completion Rate</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-users"></i></div>
+            <div class="stat-info">
+                <span class="stat-value" id="active-members-stat">0</span>
+                <span class="stat-label">Active Members</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-clock"></i></div>
+            <div class="stat-info">
+                <span class="stat-value" id="avg-completion-stat">0</span>
+                <span class="stat-label">Avg Days to Complete</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-rocket"></i></div>
+            <div class="stat-info">
+                <span class="stat-value" id="active-sprints-stat">0</span>
+                <span class="stat-label">Active Sprints</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Grid -->
+    <div class="charts-grid">
+        <!-- Task Completion Trend -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3><i class="fas fa-chart-line"></i> Task Completion Trend</h3>
+                <button class="chart-action" onclick="exportChart('completion-trend')">
+                    <i class="fas fa-download"></i>
+                </button>
+            </div>
+            <div class="chart-container">
+                <canvas id="completion-trend-chart" width="400" height="200"></canvas>
+            </div>
+        </div>
+
+        <!-- Priority Distribution -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3><i class="fas fa-chart-pie"></i> Priority Distribution</h3>
+                <button class="chart-action" onclick="exportChart('priority-distribution')">
+                    <i class="fas fa-download"></i>
+                </button>
+            </div>
+            <div class="chart-container">
+                <canvas id="priority-chart" width="400" height="200"></canvas>
+            </div>
+        </div>
+
+        <!-- Team Performance -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3><i class="fas fa-trophy"></i> Team Performance</h3>
+                <button class="chart-action" onclick="exportChart('team-performance')">
+                    <i class="fas fa-download"></i>
+                </button>
+            </div>
+            <div class="chart-container">
+                <canvas id="team-chart" width="400" height="200"></canvas>
+            </div>
+        </div>
+
+        <!-- Sprint Burndown -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3><i class="fas fa-burn"></i> Sprint Burndown</h3>
+                <button class="chart-action" onclick="exportChart('sprint-burndown')">
+                    <i class="fas fa-download"></i>
+                </button>
+            </div>
+            <div class="chart-container">
+                <canvas id="burndown-chart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Health Table -->
+    <div class="health-section">
+        <div class="health-header">
+            <h3><i class="fas fa-heartbeat"></i> Project Health</h3>
+            <button class="btn-secondary" id="refresh-reports-btn">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+        <div class="table-container">
+            <table class="health-table" id="health-table">
+                <thead>
+                    <tr>
+                        <th>Project Name</th>
+                        <th>Total Tasks</th>
+                        <th>Completed</th>
+                        <th>In Progress</th>
+                        <th>Completion</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="health-table-body">
+                    <tr><td colspan="6" class="loading-cell">Loading data...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
         </main>
     </div>
     
     <!-- Mobile Bottom Navigation -->
     <div class="bottom-nav" id="bottom-nav">
-        <button class="bottom-nav-item active" data-view="board">
-            <i class="fas fa-columns"></i>
-            <span>Board</span>
-        </button>
-        <button class="bottom-nav-item" data-view="sprints">
-            <i class="fas fa-calendar-alt"></i>
-            <span>Sprints</span>
-        </button>
-        <button class="bottom-nav-item" id="bottom-add-btn">
-            <i class="fas fa-plus-circle"></i>
-            <span>New Task</span>
-        </button>
-    </div>
+    <button class="bottom-nav-item active" data-view="board">
+        <i class="fas fa-columns"></i>
+        <span>Board</span>
+    </button>
+    <button class="bottom-nav-item" data-view="sprints">
+        <i class="fas fa-calendar-alt"></i>
+        <span>Sprints</span>
+    </button>
+    <button class="bottom-nav-item" data-view="reports">
+        <i class="fas fa-chart-line"></i>
+        <span>Reports</span>
+    </button>
+    <button class="bottom-nav-item" id="bottom-add-btn">
+        <i class="fas fa-plus-circle"></i>
+        <span>New Task</span>
+    </button>
+</div>
     
     <!-- Task Modal (Create Task) -->
     <div class="modal" id="task-modal">
@@ -651,5 +811,7 @@
             }
         });
     </script>
+    <!-- Chart.js for Reports -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </body>
 </html>

@@ -1,8 +1,9 @@
 /**
  * Oriental - Dashboard Module
- * Version: 3.0.0
+ * Version: 4.0.0
  * 
- * Optimized version with:
+ * COMPLETE version with:
+ * - Full Reports & Analytics functionality
  * - Reduced Firestore reads (caching, debouncing)
  * - PWA offline support
  * - Analytics integration
@@ -48,6 +49,9 @@ let projectsCacheTime = 0;
 const CACHE_DURATION = 30000; // 30 seconds cache
 let pendingWrites = []; // Queue for offline writes
 let isOnline = navigator.onLine;
+
+// Reports Charts Cache
+let reportsCharts = {};
 
 // ============================================
 // Performance & Analytics Functions
@@ -526,12 +530,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadProjectsOptimized();
     
     setupEventListeners();
+    setupReportsEventListeners();
     setupRealtimeSubscription();
     setupMobileNavigation();
     setupKeyboardShortcuts();
     setupSorting();
     setupPullToRefresh();
     setupThemeToggle();
+    
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+        if (unsubscribeTasks) unsubscribeTasks();
+        if (taskReloadTimeout) clearTimeout(taskReloadTimeout);
+        if (undoTimeout) clearTimeout(undoTimeout);
+        // Destroy charts to prevent memory leaks
+        Object.values(reportsCharts).forEach(chart => {
+            if (chart && typeof chart.destroy === 'function') {
+                chart.destroy();
+            }
+        });
+    });
     
     trackAnalytics('dashboard_loaded', { 
         user_id: currentUser?.uid,
@@ -619,6 +637,16 @@ function showBoardSkeleton() {
             </div>
         </div>
     `;
+}
+
+function showReportsSkeleton() {
+    // Show loading state in charts
+    const statValues = ['total-tasks-stat', 'completed-tasks-stat', 'completion-rate-stat', 
+                        'active-members-stat', 'avg-completion-stat', 'active-sprints-stat'];
+    statValues.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '...';
+    });
 }
 
 // ============================================
@@ -2094,8 +2122,27 @@ function setupEventListeners() {
             const view = item.dataset.view;
             document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
             item.classList.add('active');
-            if (view === 'board') { document.getElementById('board-view').style.display = 'flex'; document.getElementById('sprints-view').classList.remove('active'); currentView = 'board'; }
-            else if (view === 'sprints') { document.getElementById('board-view').style.display = 'none'; document.getElementById('sprints-view').classList.add('active'); currentView = 'sprints'; loadSprints(); }
+            if (view === 'board') { 
+                document.getElementById('board-view').style.display = 'flex'; 
+                document.getElementById('sprints-view').classList.add('hidden');
+                document.getElementById('reports-view').classList.add('hidden');
+                document.getElementById('current-view').textContent = 'Board';
+                currentView = 'board';
+            } else if (view === 'sprints') { 
+                document.getElementById('board-view').style.display = 'none'; 
+                document.getElementById('sprints-view').classList.remove('hidden');
+                document.getElementById('reports-view').classList.add('hidden');
+                document.getElementById('current-view').textContent = 'Sprints';
+                currentView = 'sprints';
+                loadSprints(); 
+            } else if (view === 'reports') {
+                document.getElementById('board-view').style.display = 'none';
+                document.getElementById('sprints-view').classList.add('hidden');
+                document.getElementById('reports-view').classList.remove('hidden');
+                document.getElementById('current-view').textContent = 'Reports';
+                currentView = 'reports';
+                loadReportsData();
+            }
         });
     });
     
@@ -2186,6 +2233,11 @@ function setupEventListeners() {
         activityLogBtn.addEventListener('click', openActivityLog);
     }
     
+    const mobileActivityLogBtn = document.getElementById('mobile-activity-log-btn');
+    if (mobileActivityLogBtn) {
+        mobileActivityLogBtn.addEventListener('click', openActivityLog);
+    }
+    
     const closeActivityLogBtn = document.getElementById('close-activity-log');
     if (closeActivityLogBtn) {
         closeActivityLogBtn.addEventListener('click', closeActivityLog);
@@ -2196,6 +2248,648 @@ function setupEventListeners() {
         activityLogOverlay.addEventListener('click', closeActivityLog);
     }
 }
+
+// ============================================
+// Reports Event Listeners
+// ============================================
+
+function setupReportsEventListeners() {
+    const exportCSV = document.getElementById('export-csv-btn');
+    const exportPDF = document.getElementById('export-pdf-btn');
+    const dateRange = document.getElementById('report-date-range');
+    const refreshBtn = document.getElementById('refresh-reports-btn');
+    
+    if (exportCSV) exportCSV.addEventListener('click', exportToCSV);
+    if (exportPDF) exportPDF.addEventListener('click', exportToPDF);
+    if (dateRange) dateRange.addEventListener('change', loadReportsData);
+    if (refreshBtn) refreshBtn.addEventListener('click', () => {
+        loadReportsData();
+        showToast('Reports refreshed', 'success');
+    });
+}
+
+// ============================================
+// Reports & Analytics Functions
+// ============================================
+
+async function loadReportsData() {
+    if (!currentOrganization) return;
+    
+    showReportsSkeleton();
+    
+    try {
+        const dateRange = document.getElementById('report-date-range')?.value || 'month';
+        const dateFilter = getDateFilter(dateRange);
+        
+        // Fetch all tasks for the organization
+        let tasks = [];
+        
+        if (currentProject) {
+            const tasksSnapshot = await db.collection('tasks')
+                .where('projectId', '==', currentProject.id)
+                .get();
+            tasksSnapshot.forEach(doc => tasks.push({ id: doc.id, ...doc.data() }));
+        } else {
+            // Get all projects first
+            const projectsSnapshot = await db.collection('projects')
+                .where('organizationId', '==', currentOrganization)
+                .get();
+            
+            const projectIds = [];
+            projectsSnapshot.forEach(doc => projectIds.push(doc.id));
+            
+            // Fetch tasks for all projects (batched)
+            for (const projectId of projectIds) {
+                const tasksSnapshot = await db.collection('tasks')
+                    .where('projectId', '==', projectId)
+                    .get();
+                tasksSnapshot.forEach(doc => tasks.push({ id: doc.id, ...doc.data() }));
+            }
+        }
+        
+        // Filter by date range
+        const filteredTasks = tasks.filter(task => {
+            if (!task.createdAt) return true;
+            const created = task.createdAt.toDate();
+            return created >= dateFilter.start && created <= dateFilter.end;
+        });
+        
+        // Update stats cards
+        updateStatsCards(filteredTasks, dateFilter);
+        
+        // Render charts
+        renderCompletionTrendChart(filteredTasks, dateFilter);
+        renderPriorityDistributionChart(filteredTasks);
+        renderTeamPerformanceChart(filteredTasks);
+        renderBurndownChart(filteredTasks);
+        
+        // Populate health table
+        await populateHealthTable(filteredTasks);
+        
+        trackAnalytics('reports_loaded', { taskCount: filteredTasks.length, dateRange });
+        
+    } catch (error) {
+        console.error('Error loading reports:', error);
+        showToast('Error loading reports data', 'error');
+    }
+}
+
+function getDateFilter(range) {
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    
+    switch(range) {
+        case 'week': start.setDate(end.getDate() - 7); break;
+        case 'month': start.setMonth(end.getMonth() - 1); break;
+        case 'quarter': start.setMonth(end.getMonth() - 3); break;
+        case 'year': start.setFullYear(end.getFullYear() - 1); break;
+        case 'all': start.setFullYear(2020, 0, 1); break;
+        default: start.setMonth(end.getMonth() - 1);
+    }
+    
+    return { start, end };
+}
+
+function updateStatsCards(tasks, dateFilter) {
+    const total = tasks.length;
+    const completed = tasks.filter(t => t.status === 'done').length;
+    const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+    
+    // Get unique active members
+    const activeMembers = new Set();
+    tasks.forEach(t => {
+        if (t.createdBy) activeMembers.add(t.createdBy);
+        if (t.assignedToId) activeMembers.add(t.assignedToId);
+    });
+    
+    // Calculate average completion time
+    let totalDays = 0;
+    let completedWithDates = 0;
+    tasks.filter(t => t.status === 'done' && t.createdAt && t.updatedAt).forEach(t => {
+        const created = t.createdAt.toDate();
+        const completed = t.updatedAt.toDate();
+        const days = (completed - created) / (1000 * 60 * 60 * 24);
+        if (days >= 0) {
+            totalDays += days;
+            completedWithDates++;
+        }
+    });
+    const avgDays = completedWithDates > 0 ? Math.round(totalDays / completedWithDates * 10) / 10 : 0;
+    
+    document.getElementById('total-tasks-stat').textContent = total;
+    document.getElementById('completed-tasks-stat').textContent = completed;
+    document.getElementById('completion-rate-stat').textContent = `${completionRate}%`;
+    document.getElementById('active-members-stat').textContent = activeMembers.size;
+    document.getElementById('avg-completion-stat').textContent = avgDays;
+    
+    // Active sprints count
+    let sprintsQuery = currentProject 
+        ? db.collection('sprints').where('projectId', '==', currentProject.id)
+        : db.collection('sprints').where('organizationId', '==', currentOrganization);
+    
+    sprintsQuery.where('status', '==', 'active').get().then(snapshot => {
+        document.getElementById('active-sprints-stat').textContent = snapshot.size;
+    });
+}
+
+function renderCompletionTrendChart(tasks, dateFilter) {
+    const ctx = document.getElementById('completion-trend-chart')?.getContext('2d');
+    if (!ctx) return;
+    
+    if (reportsCharts.completionTrend) {
+        reportsCharts.completionTrend.destroy();
+    }
+    
+    const grouped = groupTasksByPeriod(tasks, dateFilter);
+    
+    reportsCharts.completionTrend = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: grouped.labels,
+            datasets: [{
+                label: 'Tasks Created',
+                data: grouped.created,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                tension: 0.3,
+                fill: true
+            }, {
+                label: 'Tasks Completed',
+                data: grouped.completed,
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                tension: 0.3,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: { mode: 'index', intersect: false }
+            },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
+        }
+    });
+}
+
+function renderPriorityDistributionChart(tasks) {
+    const ctx = document.getElementById('priority-chart')?.getContext('2d');
+    if (!ctx) return;
+    
+    if (reportsCharts.priority) {
+        reportsCharts.priority.destroy();
+    }
+    
+    const priorities = { high: 0, medium: 0, low: 0 };
+    tasks.forEach(t => { if (t.priority) priorities[t.priority]++; });
+    
+    reportsCharts.priority = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['High', 'Medium', 'Low'],
+            datasets: [{
+                data: [priorities.high, priorities.medium, priorities.low],
+                backgroundColor: ['#ef4444', '#f59e0b', '#10b981'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: { 
+                    callbacks: {
+                        label: (context) => {
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const value = context.raw;
+                            const percent = total > 0 ? Math.round((value / total) * 100) : 0;
+                            return `${context.label}: ${value} (${percent}%)`;
+                        }
+                    }
+                }
+            },
+            cutout: '60%'
+        }
+    });
+}
+
+function renderTeamPerformanceChart(tasks) {
+    const ctx = document.getElementById('team-chart')?.getContext('2d');
+    if (!ctx) return;
+    
+    if (reportsCharts.team) {
+        reportsCharts.team.destroy();
+    }
+    
+    const assigneeStats = {};
+    tasks.forEach(t => {
+        const assignee = t.assignedTo || 'Unassigned';
+        if (!assigneeStats[assignee]) {
+            assigneeStats[assignee] = { total: 0, completed: 0 };
+        }
+        assigneeStats[assignee].total++;
+        if (t.status === 'done') assigneeStats[assignee].completed++;
+    });
+    
+    const sorted = Object.entries(assigneeStats)
+        .sort((a, b) => b[1].total - a[1].total)
+        .slice(0, 8);
+    
+    reportsCharts.team = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: sorted.map(([name]) => name.length > 12 ? name.substring(0, 12) + '...' : name),
+            datasets: [{
+                label: 'Total Tasks',
+                data: sorted.map(([, stats]) => stats.total),
+                backgroundColor: '#3b82f6',
+                borderRadius: 4
+            }, {
+                label: 'Completed',
+                data: sorted.map(([, stats]) => stats.completed),
+                backgroundColor: '#10b981',
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' }
+            },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
+        }
+    });
+}
+
+function renderBurndownChart(tasks) {
+    const ctx = document.getElementById('burndown-chart')?.getContext('2d');
+    if (!ctx) return;
+    
+    if (reportsCharts.burndown) {
+        reportsCharts.burndown.destroy();
+    }
+    
+    // If no active sprint, show empty state
+    if (!currentSprint) {
+        reportsCharts.burndown = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['No Active Sprint'],
+                datasets: [{
+                    label: 'Start a sprint to see burndown',
+                    data: [0],
+                    borderColor: '#9ca3af'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'No active sprint. Start a sprint to track burndown.',
+                        color: '#6b7280'
+                    }
+                }
+            }
+        });
+        return;
+    }
+    
+    // Get sprint tasks
+    const sprintTasks = tasks.filter(t => currentSprint.tasks?.includes(t.id));
+    const totalTasks = sprintTasks.length;
+    
+    if (totalTasks === 0) {
+        reportsCharts.burndown = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['No tasks in sprint'],
+                datasets: [{ label: 'Add tasks to sprint', data: [0], borderColor: '#9ca3af' }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+        return;
+    }
+    
+    // Calculate burndown
+    const startDate = currentSprint.startDate ? new Date(currentSprint.startDate) : new Date();
+    const endDate = currentSprint.endDate ? new Date(currentSprint.endDate) : new Date(startDate.getTime() + 14 * 24 * 60 * 60 * 1000);
+    const today = new Date();
+    
+    const totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+    const daysElapsed = Math.min(Math.ceil((today - startDate) / (1000 * 60 * 60 * 24)), totalDays);
+    
+    const labels = [];
+    const idealData = [];
+    const actualData = [];
+    
+    const idealPerDay = totalTasks / totalDays;
+    
+    for (let i = 0; i <= totalDays; i++) {
+        const date = new Date(startDate);
+        date.setDate(startDate.getDate() + i);
+        labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+        idealData.push(Math.max(0, Math.round(totalTasks - (idealPerDay * i))));
+    }
+    
+    // Calculate actual completed per day
+    const completedByDay = {};
+    sprintTasks.filter(t => t.status === 'done' && t.updatedAt).forEach(t => {
+        const completedDate = t.updatedAt.toDate();
+        const dayDiff = Math.floor((completedDate - startDate) / (1000 * 60 * 60 * 24));
+        if (dayDiff >= 0 && dayDiff <= totalDays) {
+            completedByDay[dayDiff] = (completedByDay[dayDiff] || 0) + 1;
+        }
+    });
+    
+    let cumulativeCompleted = 0;
+    for (let i = 0; i <= daysElapsed; i++) {
+        cumulativeCompleted += completedByDay[i] || 0;
+        actualData.push(totalTasks - cumulativeCompleted);
+    }
+    
+    // Fill remaining days with last known value
+    while (actualData.length <= totalDays) {
+        actualData.push(actualData[actualData.length - 1]);
+    }
+    
+    reportsCharts.burndown = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Ideal Burndown',
+                data: idealData,
+                borderColor: '#9ca3af',
+                borderDash: [5, 5],
+                borderWidth: 2,
+                pointRadius: 0,
+                fill: false
+            }, {
+                label: 'Actual Burndown',
+                data: actualData,
+                borderColor: '#ef4444',
+                borderWidth: 2,
+                pointBackgroundColor: '#ef4444',
+                pointRadius: 3,
+                fill: false,
+                tension: 0.2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: { mode: 'index', intersect: false }
+            },
+            scales: {
+                y: { 
+                    beginAtZero: true, 
+                    max: totalTasks,
+                    title: { display: true, text: 'Remaining Tasks' }
+                },
+                x: { title: { display: true, text: 'Date' } }
+            }
+        }
+    });
+}
+
+async function populateHealthTable(tasks) {
+    const tbody = document.getElementById('health-table-body');
+    if (!tbody) return;
+    
+    const projectStats = {};
+    
+    // Get all projects
+    const projectsSnapshot = await db.collection('projects')
+        .where('organizationId', '==', currentOrganization)
+        .where('isArchived', '==', false)
+        .get();
+    
+    projectsSnapshot.forEach(doc => {
+        projectStats[doc.id] = {
+            name: doc.data().name,
+            total: 0,
+            completed: 0,
+            inProgress: 0
+        };
+    });
+    
+    // Count tasks per project
+    tasks.forEach(task => {
+        if (task.projectId && projectStats[task.projectId]) {
+            projectStats[task.projectId].total++;
+            if (task.status === 'done') projectStats[task.projectId].completed++;
+            if (task.status === 'in-progress') projectStats[task.projectId].inProgress++;
+        }
+    });
+    
+    tbody.innerHTML = '';
+    
+    const statsArray = Object.entries(projectStats).map(([id, stats]) => ({
+        id,
+        ...stats,
+        completionRate: stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0
+    }));
+    
+    statsArray.sort((a, b) => b.total - a.total);
+    
+    if (statsArray.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">No projects found</td></tr>';
+        return;
+    }
+    
+    statsArray.forEach(stats => {
+        let status = 'healthy';
+        if (stats.completionRate < 30) status = 'critical';
+        else if (stats.completionRate < 60) status = 'warning';
+        
+        const statusLabels = { healthy: 'Healthy', warning: 'At Risk', critical: 'Critical' };
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td><strong>${escapeHtml(stats.name)}</strong></td>
+            <td>${stats.total}</td>
+            <td>${stats.completed}</td>
+            <td>${stats.inProgress}</td>
+            <td>
+                <div class="progress-bar-cell">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${stats.completionRate}%"></div>
+                    </div>
+                    <span>${stats.completionRate}%</span>
+                </div>
+            </td>
+            <td><span class="status-badge status-${status}">${statusLabels[status]}</span></td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function groupTasksByPeriod(tasks, dateFilter) {
+    const labels = [];
+    const created = [];
+    const completed = [];
+    
+    const diffDays = Math.ceil((dateFilter.end - dateFilter.start) / (1000 * 60 * 60 * 24));
+    
+    let groupByDay = diffDays <= 14;
+    let groupByWeek = diffDays > 14 && diffDays <= 60;
+    
+    const periodMap = new Map();
+    
+    const getPeriodKey = (date) => {
+        if (groupByDay) {
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        } else if (groupByWeek) {
+            const weekStart = new Date(date);
+            weekStart.setDate(date.getDate() - date.getDay());
+            return `Week of ${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+        } else {
+            return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        }
+    };
+    
+    tasks.forEach(task => {
+        if (task.createdAt) {
+            const createdDate = task.createdAt.toDate();
+            if (createdDate >= dateFilter.start && createdDate <= dateFilter.end) {
+                const key = getPeriodKey(createdDate);
+                if (!periodMap.has(key)) {
+                    periodMap.set(key, { created: 0, completed: 0 });
+                }
+                periodMap.get(key).created++;
+            }
+        }
+        
+        if (task.status === 'done' && task.updatedAt) {
+            const completedDate = task.updatedAt.toDate();
+            if (completedDate >= dateFilter.start && completedDate <= dateFilter.end) {
+                const key = getPeriodKey(completedDate);
+                if (!periodMap.has(key)) {
+                    periodMap.set(key, { created: 0, completed: 0 });
+                }
+                periodMap.get(key).completed++;
+            }
+        }
+    });
+    
+    // Sort periods chronologically
+    const sortedPeriods = Array.from(periodMap.entries()).sort((a, b) => {
+        return new Date(a[0]) - new Date(b[0]);
+    });
+    
+    sortedPeriods.forEach(([label, data]) => {
+        labels.push(label);
+        created.push(data.created);
+        completed.push(data.completed);
+    });
+    
+    return { labels, created, completed };
+}
+
+async function exportToCSV() {
+    if (!currentOrganization) {
+        showToast('No data to export', 'warning');
+        return;
+    }
+    
+    showToast('Preparing CSV export...', 'info');
+    
+    try {
+        let tasks = [];
+        
+        if (currentProject) {
+            const snapshot = await db.collection('tasks').where('projectId', '==', currentProject.id).get();
+            snapshot.forEach(doc => tasks.push({ id: doc.id, ...doc.data() }));
+        } else {
+            const projectsSnapshot = await db.collection('projects')
+                .where('organizationId', '==', currentOrganization)
+                .get();
+            
+            for (const projectDoc of projectsSnapshot.docs) {
+                const snapshot = await db.collection('tasks').where('projectId', '==', projectDoc.id).get();
+                snapshot.forEach(doc => tasks.push({ 
+                    id: doc.id, 
+                    ...doc.data(),
+                    projectName: projectDoc.data().name 
+                }));
+            }
+        }
+        
+        // Create CSV content
+        const headers = ['Title', 'Description', 'Status', 'Priority', 'Assignee', 'Due Date', 'Estimated Hours', 'Tags', 'Project', 'Created'];
+        const rows = tasks.map(task => [
+            task.title || '',
+            (task.description || '').replace(/,/g, ';'),
+            task.status || 'todo',
+            task.priority || 'medium',
+            task.assignedTo || 'Unassigned',
+            task.dueDate || '',
+            task.estimatedHours || 0,
+            (task.tags || []).join(';'),
+            task.projectName || currentProject?.name || '',
+            task.createdAt ? new Date(task.createdAt.toDate()).toLocaleDateString() : ''
+        ]);
+        
+        let csvContent = headers.join(',') + '\n';
+        rows.forEach(row => {
+            csvContent += row.map(cell => `"${cell}"`).join(',') + '\n';
+        });
+        
+        // Download file
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `oriental_export_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showToast('CSV exported successfully', 'success');
+        trackAnalytics('csv_exported', { taskCount: tasks.length });
+        
+    } catch (error) {
+        console.error('Error exporting CSV:', error);
+        showToast('Error exporting CSV', 'error');
+    }
+}
+
+function exportToPDF() {
+    showToast('Opening print dialog for PDF export...', 'info');
+    trackAnalytics('pdf_export_initiated', {});
+    window.print();
+}
+
+function exportChart(chartId) {
+    const canvas = document.getElementById(`${chartId}-chart`);
+    if (!canvas) return;
+    
+    const link = document.createElement('a');
+    link.download = `${chartId}-${new Date().toISOString().split('T')[0]}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    
+    trackAnalytics('chart_exported', { chart: chartId });
+}
+window.exportChart = exportChart;
 
 // ============================================
 // Mobile Navigation
@@ -2216,8 +2910,39 @@ function setupMobileNavigation() {
     bottomNavItems.forEach(item => {
         item.addEventListener('click', () => {
             const view = item.dataset.view;
-            if (view === 'board') { document.getElementById('board-view').style.display = 'flex'; document.getElementById('sprints-view').classList.add('hidden'); document.getElementById('current-view').textContent = 'Board'; bottomNavItems.forEach(nav => nav.classList.remove('active')); item.classList.add('active'); navItems.forEach(nav => nav.classList.remove('active')); document.querySelector('.nav-item[data-view="board"]')?.classList.add('active'); }
-            else if (view === 'sprints') { document.getElementById('board-view').style.display = 'none'; document.getElementById('sprints-view').classList.remove('hidden'); document.getElementById('current-view').textContent = 'Sprints'; loadSprints(); bottomNavItems.forEach(nav => nav.classList.remove('active')); item.classList.add('active'); navItems.forEach(nav => nav.classList.remove('active')); document.querySelector('.nav-item[data-view="sprints"]')?.classList.add('active'); }
+            if (view === 'board') { 
+                document.getElementById('board-view').style.display = 'flex'; 
+                document.getElementById('sprints-view').classList.add('hidden');
+                document.getElementById('reports-view').classList.add('hidden');
+                document.getElementById('current-view').textContent = 'Board'; 
+                bottomNavItems.forEach(nav => nav.classList.remove('active')); 
+                item.classList.add('active'); 
+                navItems.forEach(nav => nav.classList.remove('active')); 
+                document.querySelector('.nav-item[data-view="board"]')?.classList.add('active'); 
+                currentView = 'board';
+            } else if (view === 'sprints') { 
+                document.getElementById('board-view').style.display = 'none'; 
+                document.getElementById('sprints-view').classList.remove('hidden');
+                document.getElementById('reports-view').classList.add('hidden');
+                document.getElementById('current-view').textContent = 'Sprints'; 
+                loadSprints(); 
+                bottomNavItems.forEach(nav => nav.classList.remove('active')); 
+                item.classList.add('active'); 
+                navItems.forEach(nav => nav.classList.remove('active')); 
+                document.querySelector('.nav-item[data-view="sprints"]')?.classList.add('active'); 
+                currentView = 'sprints';
+            } else if (view === 'reports') {
+                document.getElementById('board-view').style.display = 'none';
+                document.getElementById('sprints-view').classList.add('hidden');
+                document.getElementById('reports-view').classList.remove('hidden');
+                document.getElementById('current-view').textContent = 'Reports';
+                loadReportsData();
+                bottomNavItems.forEach(nav => nav.classList.remove('active'));
+                item.classList.add('active');
+                navItems.forEach(nav => nav.classList.remove('active'));
+                document.querySelector('.nav-item[data-view="reports"]')?.classList.add('active');
+                currentView = 'reports';
+            }
         });
     });
     const bottomAddBtn = document.getElementById('bottom-add-btn');
@@ -2233,28 +2958,8 @@ function closeTaskModal() { const modal = document.getElementById('task-modal');
 function closeProjectModal() { const modal = document.getElementById('project-modal'); if (modal) { modal.style.display = 'none'; modal.classList.remove('active'); } const form = document.getElementById('project-form'); if (form) form.reset(); }
 function closeSprintModal() { const modal = document.getElementById('sprint-modal'); if (modal) { modal.style.display = 'none'; modal.classList.remove('active'); } const form = document.getElementById('sprint-form'); if (form) form.reset(); }
 function closeCommentModal() { const modal = document.getElementById('comment-modal'); if (modal) { modal.style.display = 'none'; modal.classList.remove('active'); } const textarea = document.getElementById('new-comment'); if (textarea) textarea.value = ''; }
-function openTaskModal() { if (!currentProject) { showToast('Please select a project first', 'warning'); return; } const modal = document.getElementById('task-modal'); if (modal) { modal.style.display = 'flex'; modal.classList.add('active'); } }
+function openTaskModal() { if (!currentProject) { showToast('Please select a project first', 'warning'); return; } const modal = document.getElementById('task-modal'); if (modal) { modal.style.display = 'flex'; modal.classList.add('active'); updateAssigneeDropdowns(); } }
 function openProjectModal() { const modal = document.getElementById('project-modal'); if (modal) { modal.style.display = 'flex'; modal.classList.add('active'); } }
-function openSprintModal() {
-    if (!currentProject) {
-        showToast('Please select a project first', 'warning');
-        return;
-    }
-    if (currentSprint) {
-        showToast('There is already an active sprint. Complete it before starting a new one.', 'warning');
-        return;
-    }
-    const modal = document.getElementById('sprint-modal');
-    if (modal) {
-        const today = new Date();
-        const twoWeeksLater = new Date();
-        twoWeeksLater.setDate(today.getDate() + 14);
-        document.getElementById('sprint-start-date').value = today.toISOString().split('T')[0];
-        document.getElementById('sprint-end-date').value = twoWeeksLater.toISOString().split('T')[0];
-        modal.style.display = 'flex';
-        modal.classList.add('active');
-    }
-}
 
 // ============================================
 // Sprint Functions - COMPLETE
@@ -2492,6 +3197,27 @@ async function completeSprint() {
     }
 }
 
+function openSprintModal() {
+    if (!currentProject) {
+        showToast('Please select a project first', 'warning');
+        return;
+    }
+    if (currentSprint) {
+        showToast('There is already an active sprint. Complete it before starting a new one.', 'warning');
+        return;
+    }
+    const modal = document.getElementById('sprint-modal');
+    if (modal) {
+        const today = new Date();
+        const twoWeeksLater = new Date();
+        twoWeeksLater.setDate(today.getDate() + 14);
+        document.getElementById('sprint-start-date').value = today.toISOString().split('T')[0];
+        document.getElementById('sprint-end-date').value = twoWeeksLater.toISOString().split('T')[0];
+        modal.style.display = 'flex';
+        modal.classList.add('active');
+    }
+}
+
 async function openAddToSprintModal() {
     if (!currentSprint) {
         showToast('No active sprint. Start a sprint first.', 'warning');
@@ -2567,30 +3293,31 @@ async function addSelectedTasksToSprint() {
     }
 }
 
+// Sprint form listener
 document.addEventListener('DOMContentLoaded', () => {
+    const sprintForm = document.getElementById('sprint-form');
+    if (sprintForm) {
+        sprintForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const sprintData = {
+                name: document.getElementById('sprint-name').value,
+                goal: document.getElementById('sprint-goal').value,
+                startDate: document.getElementById('sprint-start-date').value,
+                endDate: document.getElementById('sprint-end-date').value
+            };
+            const success = await createSprint(sprintData);
+            if (success) {
+                closeSprintModal();
+                sprintForm.reset();
+            }
+        });
+    }
+    
     const addSelectedBtn = document.getElementById('add-selected-tasks-btn');
     if (addSelectedBtn) {
         addSelectedBtn.addEventListener('click', addSelectedTasksToSprint);
     }
 });
-
-const sprintForm = document.getElementById('sprint-form');
-if (sprintForm) {
-    sprintForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const sprintData = {
-            name: document.getElementById('sprint-name').value,
-            goal: document.getElementById('sprint-goal').value,
-            startDate: document.getElementById('sprint-start-date').value,
-            endDate: document.getElementById('sprint-end-date').value
-        };
-        const success = await createSprint(sprintData);
-        if (success) {
-            closeSprintModal();
-            sprintForm.reset();
-        }
-    });
-}
 
 // ============================================
 // Undo Delete Functions
@@ -2707,8 +3434,8 @@ function setupKeyboardShortcuts() {
 }
 
 function closeAllModals() { closeTaskModal(); closeProjectModal(); closeSprintModal(); closeCommentModal(); const filterDropdown = document.getElementById('filter-dropdown'); if (filterDropdown) filterDropdown.classList.remove('show'); }
-function switchToBoardView() { document.getElementById('board-view').style.display = 'flex'; document.getElementById('sprints-view').classList.add('hidden'); document.getElementById('current-view').textContent = 'Board'; document.querySelectorAll('.nav-item, .bottom-nav-item').forEach(item => { if (item.dataset?.view === 'board') item.classList.add('active'); else item.classList.remove('active'); }); }
-function switchToSprintsView() { document.getElementById('board-view').style.display = 'none'; document.getElementById('sprints-view').classList.remove('hidden'); document.getElementById('current-view').textContent = 'Sprints'; loadSprints(); document.querySelectorAll('.nav-item, .bottom-nav-item').forEach(item => { if (item.dataset?.view === 'sprints') item.classList.add('active'); else item.classList.remove('active'); }); }
+function switchToBoardView() { document.getElementById('board-view').style.display = 'flex'; document.getElementById('sprints-view').classList.add('hidden'); document.getElementById('reports-view').classList.add('hidden'); document.getElementById('current-view').textContent = 'Board'; document.querySelectorAll('.nav-item, .bottom-nav-item').forEach(item => { if (item.dataset?.view === 'board') item.classList.add('active'); else item.classList.remove('active'); }); }
+function switchToSprintsView() { document.getElementById('board-view').style.display = 'none'; document.getElementById('sprints-view').classList.remove('hidden'); document.getElementById('reports-view').classList.add('hidden'); document.getElementById('current-view').textContent = 'Sprints'; loadSprints(); document.querySelectorAll('.nav-item, .bottom-nav-item').forEach(item => { if (item.dataset?.view === 'sprints') item.classList.add('active'); else item.classList.remove('active'); }); }
 
 function showShortcutsHelp() {
     let helpModal = document.getElementById('shortcuts-help-modal');
@@ -2765,3 +3492,7 @@ window.cancelInvite = cancelInvite;
 window.toggleTheme = toggleTheme;
 window.openActivityLog = openActivityLog;
 window.closeActivityLog = closeActivityLog;
+window.completeSprint = completeSprint;
+window.openAddToSprintModal = openAddToSprintModal;
+window.closeAddToSprintModal = closeAddToSprintModal;
+window.exportChart = exportChart;
