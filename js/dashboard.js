@@ -537,6 +537,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupSorting();
     setupPullToRefresh();
     setupThemeToggle();
+    setupSettingsEventListeners();
     
     // Cleanup on page unload
     window.addEventListener('beforeunload', () => {
@@ -2142,7 +2143,15 @@ function setupEventListeners() {
                 document.getElementById('current-view').textContent = 'Reports';
                 currentView = 'reports';
                 loadReportsData();
-            }
+            } else if (view === 'settings') {
+    document.getElementById('board-view').style.display = 'none';
+    document.getElementById('sprints-view').classList.add('hidden');
+    document.getElementById('reports-view').classList.add('hidden');
+    document.getElementById('settings-view').classList.remove('hidden');
+    document.getElementById('current-view').textContent = 'Settings';
+    currentView = 'settings';
+    loadSettingsView();
+}
         });
     });
     
@@ -2942,7 +2951,19 @@ function setupMobileNavigation() {
                 navItems.forEach(nav => nav.classList.remove('active'));
                 document.querySelector('.nav-item[data-view="reports"]')?.classList.add('active');
                 currentView = 'reports';
-            }
+            } else if (view === 'settings') {
+    document.getElementById('board-view').style.display = 'none';
+    document.getElementById('sprints-view').classList.add('hidden');
+    document.getElementById('reports-view').classList.add('hidden');
+    document.getElementById('settings-view').classList.remove('hidden');
+    document.getElementById('current-view').textContent = 'Settings';
+    loadSettingsView();
+    bottomNavItems.forEach(nav => nav.classList.remove('active'));
+    item.classList.add('active');
+    navItems.forEach(nav => nav.classList.remove('active'));
+    document.querySelector('.nav-item[data-view="settings"]')?.classList.add('active');
+    currentView = 'settings';
+}
         });
     });
     const bottomAddBtn = document.getElementById('bottom-add-btn');
@@ -3408,6 +3429,510 @@ async function undoDelete() {
 }
 
 // ============================================
+// Settings Functions
+// ============================================
+
+let currentSettingsTab = 'general';
+
+/**
+ * Load settings view
+ */
+async function loadSettingsView() {
+    if (!currentOrganization) {
+        showToast('Loading organization settings...', 'info');
+        return;
+    }
+    
+    try {
+        // Load organization data
+        const orgDoc = await db.collection('organizations').doc(currentOrganization).get();
+        if (orgDoc.exists) {
+            const orgData = orgDoc.data();
+            
+            // Populate general settings
+            document.getElementById('org-name-input').value = orgData.name || '';
+            document.getElementById('org-slug-input').value = orgData.slug || '';
+            document.getElementById('slug-preview').textContent = orgData.slug || 'your-org';
+            
+            // Load user preferences
+            await loadUserPreferences();
+        }
+        
+        trackAnalytics('settings_viewed', {});
+    } catch (error) {
+        console.error('Error loading settings:', error);
+        showToast('Error loading settings', 'error');
+    }
+}
+
+/**
+ * Load user preferences
+ */
+async function loadUserPreferences() {
+    try {
+        const userDoc = await db.collection('users').doc(currentUser.uid).get();
+        if (userDoc.exists) {
+            const preferences = userDoc.data().preferences || {};
+            
+            // Appearance
+            const theme = localStorage.getItem('oriental_theme') || 'system';
+            document.getElementById('theme-select').value = theme;
+            
+            // Notifications
+            document.getElementById('notify-task-assigned').checked = 
+                preferences.notifyTaskAssigned !== false;
+            document.getElementById('notify-task-completed').checked = 
+                preferences.notifyTaskCompleted !== false;
+            document.getElementById('notify-comment-mention').checked = 
+                preferences.notifyCommentMention !== false;
+            document.getElementById('notify-project-updates').checked = 
+                preferences.notifyProjectUpdates !== false;
+            document.getElementById('notify-sprint-updates').checked = 
+                preferences.notifySprintUpdates !== false;
+            
+            // Digest
+            document.getElementById('digest-frequency').value = 
+                preferences.digestFrequency || 'never';
+            document.getElementById('digest-time').value = 
+                preferences.digestTime || '08:00';
+        }
+    } catch (error) {
+        console.error('Error loading preferences:', error);
+    }
+}
+
+/**
+ * Save organization settings
+ */
+async function saveOrganizationSettings() {
+    const orgName = document.getElementById('org-name-input').value.trim();
+    const orgSlug = document.getElementById('org-slug-input').value.trim().toLowerCase()
+        .replace(/[^a-z0-9-]/g, '-').replace(/--+/g, '-').replace(/^-|-$/g, '');
+    
+    if (!orgName) {
+        showToast('Organization name is required', 'warning');
+        return;
+    }
+    
+    if (!orgSlug) {
+        showToast('Organization slug is required', 'warning');
+        return;
+    }
+    
+    try {
+        // Check if slug is available
+        const existingOrgs = await db.collection('organizations')
+            .where('slug', '==', orgSlug)
+            .get();
+        
+        const isSlugTaken = !existingOrgs.empty && 
+            existingOrgs.docs.some(doc => doc.id !== currentOrganization);
+        
+        if (isSlugTaken) {
+            showToast('This slug is already taken. Please choose another.', 'error');
+            return;
+        }
+        
+        await db.collection('organizations').doc(currentOrganization).update({
+            name: orgName,
+            slug: orgSlug,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // Update UI
+        document.getElementById('org-name').textContent = orgName;
+        document.getElementById('slug-preview').textContent = orgSlug;
+        
+        await logActivity('update_organization', 'organization', currentOrganization, orgName, {});
+        showToast('Organization settings saved', 'success');
+        trackAnalytics('org_settings_updated', {});
+        
+    } catch (error) {
+        console.error('Error saving organization settings:', error);
+        showToast('Error saving settings: ' + error.message, 'error');
+    }
+}
+
+/**
+ * Save user preferences
+ */
+async function saveUserPreferences() {
+    try {
+        const preferences = {
+            // Notifications
+            notifyTaskAssigned: document.getElementById('notify-task-assigned').checked,
+            notifyTaskCompleted: document.getElementById('notify-task-completed').checked,
+            notifyCommentMention: document.getElementById('notify-comment-mention').checked,
+            notifyProjectUpdates: document.getElementById('notify-project-updates').checked,
+            notifySprintUpdates: document.getElementById('notify-sprint-updates').checked,
+            
+            // Digest
+            digestFrequency: document.getElementById('digest-frequency').value,
+            digestTime: document.getElementById('digest-time').value,
+            
+            // Appearance
+            theme: document.getElementById('theme-select').value,
+            density: document.getElementById('density-select').value,
+            showTaskCounts: document.getElementById('show-task-counts')?.checked !== false,
+            
+            // Defaults
+            defaultView: document.getElementById('default-view-select')?.value || 'board',
+            defaultPriority: document.getElementById('default-priority-select')?.value || 'medium',
+            autoAssignTasks: document.getElementById('auto-assign-tasks')?.checked || false,
+            
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        
+        await db.collection('users').doc(currentUser.uid).update({
+            preferences: preferences
+        });
+        
+        // Apply theme immediately
+        applyTheme(preferences.theme);
+        
+        showToast('Preferences saved', 'success');
+        trackAnalytics('user_preferences_updated', {});
+        
+    } catch (error) {
+        console.error('Error saving preferences:', error);
+        showToast('Error saving preferences', 'error');
+    }
+}
+
+/**
+ * Apply theme based on preference
+ */
+function applyTheme(themePreference) {
+    if (themePreference === 'system') {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+        localStorage.removeItem('oriental_theme');
+    } else {
+        document.documentElement.setAttribute('data-theme', themePreference);
+        localStorage.setItem('oriental_theme', themePreference);
+    }
+    updateThemeIcons(document.documentElement.getAttribute('data-theme') === 'dark');
+}
+
+/**
+ * Switch settings tab
+ */
+function switchSettingsTab(tabId) {
+    // Update active tab button
+    document.querySelectorAll('.settings-tab').forEach(tab => {
+        tab.classList.remove('active');
+        if (tab.dataset.tab === tabId) {
+            tab.classList.add('active');
+        }
+    });
+    
+    // Update active panel
+    document.querySelectorAll('.settings-panel').forEach(panel => {
+        panel.classList.remove('active');
+    });
+    document.getElementById(`panel-${tabId}`).classList.add('active');
+    
+    currentSettingsTab = tabId;
+    trackAnalytics('settings_tab_changed', { tab: tabId });
+}
+
+/**
+ * Setup settings event listeners
+ */
+function setupSettingsEventListeners() {
+    // Tab switching
+    document.querySelectorAll('.settings-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            switchSettingsTab(tab.dataset.tab);
+        });
+    });
+    
+    // Save organization settings
+    const saveOrgBtn = document.getElementById('save-org-settings');
+    if (saveOrgBtn) {
+        saveOrgBtn.addEventListener('click', saveOrganizationSettings);
+    }
+    
+    // Save preferences (auto-save on change)
+    const preferenceInputs = [
+        'theme-select', 'density-select', 'show-task-counts',
+        'default-view-select', 'default-priority-select', 'auto-assign-tasks',
+        'notify-task-assigned', 'notify-task-completed', 'notify-comment-mention',
+        'notify-project-updates', 'notify-sprint-updates',
+        'digest-frequency', 'digest-time'
+    ];
+    
+    preferenceInputs.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('change', saveUserPreferences);
+        }
+    });
+    
+    // Slug input live preview
+    const slugInput = document.getElementById('org-slug-input');
+    if (slugInput) {
+        slugInput.addEventListener('input', (e) => {
+            const slug = e.target.value.toLowerCase()
+                .replace(/[^a-z0-9-]/g, '-')
+                .replace(/--+/g, '-')
+                .replace(/^-|-$/g, '');
+            document.getElementById('slug-preview').textContent = slug || 'your-org';
+        });
+    }
+    
+    // Danger zone actions
+    const leaveOrgBtn = document.getElementById('leave-organization');
+    if (leaveOrgBtn) {
+        leaveOrgBtn.addEventListener('click', leaveOrganization);
+    }
+    
+    const deleteOrgBtn = document.getElementById('delete-organization');
+    if (deleteOrgBtn) {
+        deleteOrgBtn.addEventListener('click', deleteOrganization);
+    }
+    
+    const exportDataBtn = document.getElementById('export-all-data');
+    if (exportDataBtn) {
+        exportDataBtn.addEventListener('click', exportAllData);
+    }
+}
+
+/**
+ * Leave organization
+ */
+async function leaveOrganization() {
+    const confirmed = await showConfirmDialog(
+        'Leave Organization',
+        'Are you sure you want to leave this organization? You will lose access to all projects and tasks.',
+        'danger'
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+        // Remove user from organization members
+        await db.collection('organizations').doc(currentOrganization).update({
+            members: firebase.firestore.FieldValue.arrayRemove(currentUser.uid)
+        });
+        
+        // Update user's organizations list
+        await db.collection('users').doc(currentUser.uid).update({
+            organizations: firebase.firestore.FieldValue.arrayRemove(currentOrganization),
+            currentOrganization: null
+        });
+        
+        await logActivity('leave_organization', 'organization', currentOrganization, '', {});
+        
+        showToast('You have left the organization', 'success');
+        
+        // Redirect to create/join organization page or logout
+        setTimeout(() => {
+            auth.signOut();
+            window.location.href = 'login.html';
+        }, 2000);
+        
+    } catch (error) {
+        console.error('Error leaving organization:', error);
+        showToast('Error leaving organization: ' + error.message, 'error');
+    }
+}
+
+/**
+ * Delete organization
+ */
+async function deleteOrganization() {
+    const confirmed = await showConfirmDialog(
+        'Delete Organization',
+        'This action is IRREVERSIBLE. All projects, tasks, comments, and member data will be permanently deleted. Are you absolutely sure?',
+        'danger'
+    );
+    
+    if (!confirmed) return;
+    
+    // Double confirmation with typing
+    const secondConfirm = prompt('Type "DELETE" to confirm permanent deletion of your organization:');
+    if (secondConfirm !== 'DELETE') {
+        showToast('Deletion cancelled', 'info');
+        return;
+    }
+    
+    try {
+        showToast('Deleting organization... This may take a moment.', 'info');
+        
+        // Delete all projects and their tasks
+        const projectsSnapshot = await db.collection('projects')
+            .where('organizationId', '==', currentOrganization)
+            .get();
+        
+        for (const projectDoc of projectsSnapshot.docs) {
+            // Delete tasks in project
+            const tasksSnapshot = await db.collection('tasks')
+                .where('projectId', '==', projectDoc.id)
+                .get();
+            
+            for (const taskDoc of tasksSnapshot.docs) {
+                // Delete comments on task
+                const commentsSnapshot = await db.collection('comments')
+                    .where('taskId', '==', taskDoc.id)
+                    .get();
+                
+                for (const commentDoc of commentsSnapshot.docs) {
+                    await commentDoc.ref.delete();
+                }
+                
+                await taskDoc.ref.delete();
+            }
+            
+            await projectDoc.ref.delete();
+        }
+        
+        // Delete sprints
+        const sprintsSnapshot = await db.collection('sprints')
+            .where('organizationId', '==', currentOrganization)
+            .get();
+        
+        for (const sprintDoc of sprintsSnapshot.docs) {
+            await sprintDoc.ref.delete();
+        }
+        
+        // Delete invites
+        const invitesSnapshot = await db.collection('invites')
+            .where('organizationId', '==', currentOrganization)
+            .get();
+        
+        for (const inviteDoc of invitesSnapshot.docs) {
+            await inviteDoc.ref.delete();
+        }
+        
+        // Delete activity logs
+        const logsSnapshot = await db.collection('activity_logs')
+            .where('organizationId', '==', currentOrganization)
+            .get();
+        
+        for (const logDoc of logsSnapshot.docs) {
+            await logDoc.ref.delete();
+        }
+        
+        // Remove organization from all members
+        const membersSnapshot = await db.collection('users')
+            .where('organizations', 'array-contains', currentOrganization)
+            .get();
+        
+        for (const memberDoc of membersSnapshot.docs) {
+            await memberDoc.ref.update({
+                organizations: firebase.firestore.FieldValue.arrayRemove(currentOrganization),
+                currentOrganization: memberDoc.data().currentOrganization === currentOrganization 
+                    ? null 
+                    : memberDoc.data().currentOrganization
+            });
+        }
+        
+        // Finally, delete the organization
+        await db.collection('organizations').doc(currentOrganization).delete();
+        
+        trackAnalytics('organization_deleted', {});
+        
+        showToast('Organization deleted successfully', 'success');
+        
+        setTimeout(() => {
+            auth.signOut();
+            window.location.href = 'login.html';
+        }, 2000);
+        
+    } catch (error) {
+        console.error('Error deleting organization:', error);
+        showToast('Error deleting organization: ' + error.message, 'error');
+    }
+}
+
+/**
+ * Export all organization data
+ */
+async function exportAllData() {
+    showToast('Preparing data export...', 'info');
+    
+    try {
+        const exportData = {
+            organization: {},
+            projects: [],
+            tasks: [],
+            sprints: [],
+            members: [],
+            exportedAt: new Date().toISOString(),
+            exportedBy: currentUser.email
+        };
+        
+        // Get organization data
+        const orgDoc = await db.collection('organizations').doc(currentOrganization).get();
+        if (orgDoc.exists) {
+            exportData.organization = { id: orgDoc.id, ...orgDoc.data() };
+        }
+        
+        // Get projects
+        const projectsSnapshot = await db.collection('projects')
+            .where('organizationId', '==', currentOrganization)
+            .get();
+        
+        for (const projectDoc of projectsSnapshot.docs) {
+            exportData.projects.push({ id: projectDoc.id, ...projectDoc.data() });
+        }
+        
+        // Get tasks
+        const tasksSnapshot = await db.collection('tasks')
+            .where('organizationId', '==', currentOrganization)
+            .get();
+        
+        for (const taskDoc of tasksSnapshot.docs) {
+            exportData.tasks.push({ id: taskDoc.id, ...taskDoc.data() });
+        }
+        
+        // Get sprints
+        const sprintsSnapshot = await db.collection('sprints')
+            .where('organizationId', '==', currentOrganization)
+            .get();
+        
+        for (const sprintDoc of sprintsSnapshot.docs) {
+            exportData.sprints.push({ id: sprintDoc.id, ...sprintDoc.data() });
+        }
+        
+        // Get members
+        const membersSnapshot = await db.collection('users')
+            .where('organizations', 'array-contains', currentOrganization)
+            .get();
+        
+        for (const memberDoc of membersSnapshot.docs) {
+            const memberData = memberDoc.data();
+            delete memberData.password; // Remove sensitive data
+            exportData.members.push({ id: memberDoc.id, email: memberData.email, name: memberData.name });
+        }
+        
+        // Create and download file
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `oriental-export-${exportData.organization.slug || 'org'}-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        await logActivity('export_data', 'organization', currentOrganization, exportData.organization.name, {});
+        trackAnalytics('data_exported', {});
+        
+        showToast('Data exported successfully', 'success');
+        
+    } catch (error) {
+        console.error('Error exporting data:', error);
+        showToast('Error exporting data: ' + error.message, 'error');
+    }
+}
+
+// Add to global exports
+
+
+// ============================================
 // Keyboard Shortcuts
 // ============================================
 
@@ -3496,3 +4021,6 @@ window.completeSprint = completeSprint;
 window.openAddToSprintModal = openAddToSprintModal;
 window.closeAddToSprintModal = closeAddToSprintModal;
 window.exportChart = exportChart;
+window.leaveOrganization = leaveOrganization;
+window.deleteOrganization = deleteOrganization;
+window.exportAllData = exportAllData;

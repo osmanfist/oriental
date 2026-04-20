@@ -133,6 +133,10 @@
         <i class="fas fa-chart-line"></i>
         <span>Reports</span>
     </a>
+        <a href="#" class="nav-item" data-view="settings">
+        <i class="fas fa-cog"></i>
+        <span>Settings</span>
+    </a>
 </nav>
             
             <div class="projects-section">
@@ -483,7 +487,353 @@
         </div>
     </div>
 </div>
-        </main>
+<!-- Settings View -->
+<div id="settings-view" class="settings-view hidden">
+    <div class="settings-header">
+        <h2><i class="fas fa-cog"></i> Settings</h2>
+        <p class="settings-subtitle">Configure your workspace and personal preferences</p>
+    </div>
+
+    <!-- Settings Tabs -->
+    <div class="settings-tabs">
+        <button class="settings-tab active" data-tab="general">
+            <i class="fas fa-sliders-h"></i> General
+        </button>
+        <button class="settings-tab" data-tab="notifications">
+            <i class="fas fa-bell"></i> Notifications
+        </button>
+        <button class="settings-tab" data-tab="team">
+            <i class="fas fa-users"></i> Team
+        </button>
+        <button class="settings-tab" data-tab="integrations">
+            <i class="fas fa-plug"></i> Integrations
+        </button>
+        <button class="settings-tab" data-tab="danger">
+            <i class="fas fa-exclamation-triangle"></i> Danger Zone
+        </button>
+    </div>
+
+    <!-- Settings Content Panels -->
+    <div class="settings-panels">
+        
+        <!-- General Settings Panel -->
+        <div class="settings-panel active" id="panel-general">
+            <div class="settings-section">
+                <h3><i class="fas fa-building"></i> Organization Profile</h3>
+                <div class="settings-field">
+                    <label for="org-name-input">Organization Name</label>
+                    <input type="text" id="org-name-input" placeholder="Your organization name" value="">
+                    <span class="field-hint">This will be displayed to all team members and in email invites.</span>
+                </div>
+                <div class="settings-field">
+                    <label for="org-slug-input">Organization Slug</label>
+                    <input type="text" id="org-slug-input" placeholder="your-org-slug" value="">
+                    <span class="field-hint">Used in URLs: oriental.app/<span id="slug-preview">your-org</span></span>
+                </div>
+                <button class="btn-primary" id="save-org-settings">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+            </div>
+
+            <div class="settings-section">
+                <h3><i class="fas fa-palette"></i> Appearance</h3>
+                <div class="settings-field">
+                    <label for="theme-select">Theme</label>
+                    <select id="theme-select">
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                        <option value="system">System Default</option>
+                    </select>
+                </div>
+                <div class="settings-field">
+                    <label for="density-select">Display Density</label>
+                    <select id="density-select">
+                        <option value="comfortable">Comfortable</option>
+                        <option value="compact">Compact</option>
+                    </select>
+                </div>
+                <div class="settings-field">
+                    <label>
+                        <input type="checkbox" id="show-task-counts"> Show task counts in sidebar
+                    </label>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3><i class="fas fa-tasks"></i> Default Project Settings</h3>
+                <div class="settings-field">
+                    <label for="default-view-select">Default View</label>
+                    <select id="default-view-select">
+                        <option value="board">Board</option>
+                        <option value="sprints">Sprints</option>
+                        <option value="reports">Reports</option>
+                    </select>
+                </div>
+                <div class="settings-field">
+                    <label for="default-priority-select">Default Task Priority</label>
+                    <select id="default-priority-select">
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+                <div class="settings-field">
+                    <label>
+                        <input type="checkbox" id="auto-assign-tasks"> Auto-assign new tasks to creator
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notifications Panel -->
+        <div class="settings-panel" id="panel-notifications">
+            <div class="settings-section">
+                <h3><i class="fas fa-envelope"></i> Email Notifications</h3>
+                <div class="settings-field">
+                    <label>
+                        <input type="checkbox" id="notify-task-assigned"> When a task is assigned to me
+                    </label>
+                </div>
+                <div class="settings-field">
+                    <label>
+                        <input type="checkbox" id="notify-task-completed"> When a task I created is completed
+                    </label>
+                </div>
+                <div class="settings-field">
+                    <label>
+                        <input type="checkbox" id="notify-comment-mention"> When someone @mentions me in a comment
+                    </label>
+                </div>
+                <div class="settings-field">
+                    <label>
+                        <input type="checkbox" id="notify-project-updates"> Project updates and changes
+                    </label>
+                </div>
+                <div class="settings-field">
+                    <label>
+                        <input type="checkbox" id="notify-sprint-updates"> Sprint start, end, and completion
+                    </label>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3><i class="fas fa-digest"></i> Digest Settings</h3>
+                <div class="settings-field">
+                    <label for="digest-frequency">Email Digest Frequency</label>
+                    <select id="digest-frequency">
+                        <option value="never">Never</option>
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                    </select>
+                </div>
+                <div class="settings-field">
+                    <label for="digest-time">Digest Time</label>
+                    <select id="digest-time">
+                        <option value="08:00">8:00 AM</option>
+                        <option value="12:00">12:00 PM</option>
+                        <option value="17:00">5:00 PM</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3><i class="fas fa-mobile-alt"></i> Push Notifications</h3>
+                <div class="settings-field">
+                    <label>
+                        <input type="checkbox" id="push-enabled" disabled> Enable push notifications
+                    </label>
+                    <span class="field-hint">Coming soon! We'll notify you when this is available.</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Team Settings Panel -->
+        <div class="settings-panel" id="panel-team">
+            <div class="settings-section">
+                <h3><i class="fas fa-user-shield"></i> Member Roles & Permissions</h3>
+                <div class="permissions-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Permission</th>
+                                <th>Admin</th>
+                                <th>Member</th>
+                                <th>Viewer</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Create/Edit Tasks</td>
+                                <td><i class="fas fa-check-circle" style="color: var(--success)"></i></td>
+                                <td><i class="fas fa-check-circle" style="color: var(--success)"></i></td>
+                                <td><i class="fas fa-times-circle" style="color: var(--error)"></i></td>
+                            </tr>
+                            <tr>
+                                <td>Delete Tasks</td>
+                                <td><i class="fas fa-check-circle" style="color: var(--success)"></i></td>
+                                <td><i class="fas fa-check-circle" style="color: var(--success)"></i></td>
+                                <td><i class="fas fa-times-circle" style="color: var(--error)"></i></td>
+                            </tr>
+                            <tr>
+                                <td>Create/Edit Projects</td>
+                                <td><i class="fas fa-check-circle" style="color: var(--success)"></i></td>
+                                <td><i class="fas fa-check-circle" style="color: var(--success)"></i></td>
+                                <td><i class="fas fa-times-circle" style="color: var(--error)"></i></td>
+                            </tr>
+                            <tr>
+                                <td>Manage Team Members</td>
+                                <td><i class="fas fa-check-circle" style="color: var(--success)"></i></td>
+                                <td><i class="fas fa-times-circle" style="color: var(--error)"></i></td>
+                                <td><i class="fas fa-times-circle" style="color: var(--error)"></i></td>
+                            </tr>
+                            <tr>
+                                <td>Access Billing</td>
+                                <td><i class="fas fa-check-circle" style="color: var(--success)"></i></td>
+                                <td><i class="fas fa-times-circle" style="color: var(--error)"></i></td>
+                                <td><i class="fas fa-times-circle" style="color: var(--error)"></i></td>
+                            </tr>
+                            <tr>
+                                <td>View Reports</td>
+                                <td><i class="fas fa-check-circle" style="color: var(--success)"></i></td>
+                                <td><i class="fas fa-check-circle" style="color: var(--success)"></i></td>
+                                <td><i class="fas fa-check-circle" style="color: var(--success)"></i></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3><i class="fas fa-user-plus"></i> Default Invite Settings</h3>
+                <div class="settings-field">
+                    <label for="default-role-select">Default Role for New Members</label>
+                    <select id="default-role-select">
+                        <option value="member">Member</option>
+                        <option value="viewer">Viewer</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div class="settings-field">
+                    <label for="invite-expiry">Invitation Expiry</label>
+                    <select id="invite-expiry">
+                        <option value="3">3 days</option>
+                        <option value="7" selected>7 days</option>
+                        <option value="14">14 days</option>
+                        <option value="30">30 days</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3><i class="fas fa-shield-alt"></i> Security</h3>
+                <div class="settings-field">
+                    <label>
+                        <input type="checkbox" id="require-2fa"> Require Two-Factor Authentication for all members
+                    </label>
+                    <span class="field-hint badge-coming-soon">Coming Soon</span>
+                </div>
+                <div class="settings-field">
+                    <label>
+                        <input type="checkbox" id="sso-enabled"> Enable SSO (SAML)
+                    </label>
+                    <span class="field-hint badge-coming-soon">Coming Soon</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Integrations Panel -->
+        <div class="settings-panel" id="panel-integrations">
+            <div class="settings-section">
+                <h3><i class="fab fa-slack"></i> Slack Integration</h3>
+                <div class="integration-card">
+                    <div class="integration-info">
+                        <p>Get notifications in Slack when tasks are created, assigned, or completed.</p>
+                    </div>
+                    <button class="btn-secondary" id="connect-slack" disabled>
+                        <i class="fab fa-slack"></i> Connect Slack
+                    </button>
+                    <span class="badge-coming-soon">Coming Soon</span>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3><i class="fab fa-github"></i> GitHub Integration</h3>
+                <div class="integration-card">
+                    <div class="integration-info">
+                        <p>Link pull requests to tasks and automatically update task status.</p>
+                    </div>
+                    <button class="btn-secondary" id="connect-github" disabled>
+                        <i class="fab fa-github"></i> Connect GitHub
+                    </button>
+                    <span class="badge-coming-soon">Coming Soon</span>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3><i class="fab fa-google"></i> Google Calendar</h3>
+                <div class="integration-card">
+                    <div class="integration-info">
+                        <p>Sync task due dates and sprint schedules with Google Calendar.</p>
+                    </div>
+                    <button class="btn-secondary" id="connect-calendar" disabled>
+                        <i class="fab fa-google"></i> Connect Calendar
+                    </button>
+                    <span class="badge-coming-soon">Coming Soon</span>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3><i class="fas fa-code"></i> API & Webhooks</h3>
+                <div class="integration-card">
+                    <div class="integration-info">
+                        <p>Create custom integrations using our REST API and webhooks.</p>
+                    </div>
+                    <button class="btn-secondary" id="manage-api-keys" disabled>
+                        <i class="fas fa-key"></i> Manage API Keys
+                    </button>
+                    <span class="badge-coming-soon">Coming Soon</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Danger Zone Panel -->
+        <div class="settings-panel" id="panel-danger">
+            <div class="settings-section danger-section">
+                <h3><i class="fas fa-archive"></i> Archive Projects</h3>
+                <p>Archive projects you're no longer actively working on. Archived projects are hidden from the main view but can be restored later.</p>
+                <button class="btn-secondary" id="manage-archived-projects">
+                    <i class="fas fa-archive"></i> Manage Archived Projects
+                </button>
+            </div>
+
+            <div class="settings-section danger-section">
+                <h3><i class="fas fa-database"></i> Export Data</h3>
+                <p>Download all your organization's data including tasks, projects, comments, and activity logs.</p>
+                <button class="btn-secondary" id="export-all-data">
+                    <i class="fas fa-download"></i> Request Data Export
+                </button>
+            </div>
+
+            <div class="settings-section danger-section">
+                <h3><i class="fas fa-user-slash"></i> Leave Organization</h3>
+                <p>Leave this organization. You will lose access to all projects and tasks. This action cannot be undone.</p>
+                <button class="btn-danger" id="leave-organization">
+                    <i class="fas fa-sign-out-alt"></i> Leave Organization
+                </button>
+            </div>
+
+            <div class="settings-section danger-section critical">
+                <h3><i class="fas fa-trash-alt"></i> Delete Organization</h3>
+                <p>Permanently delete this organization and all associated data. This action is irreversible and will remove all projects, tasks, comments, and member associations.</p>
+                <button class="btn-danger" id="delete-organization">
+                    <i class="fas fa-trash-alt"></i> Delete Organization Permanently
+                </button>
+            </div>
+        </div>
+    </div>
+</div>        
+</main>
     </div>
     
     <!-- Mobile Bottom Navigation -->
@@ -503,6 +853,10 @@
     <button class="bottom-nav-item" id="bottom-add-btn">
         <i class="fas fa-plus-circle"></i>
         <span>New Task</span>
+    </button>
+        <button class="bottom-nav-item" data-view="settings">
+        <i class="fas fa-cog"></i>
+        <span>Settings</span>
     </button>
 </div>
     
