@@ -1,11 +1,9 @@
 /**
  * Oriental - Firebase Configuration
- * Version: 1.0.0
- * 
- * Uses Firebase Compat SDK (for script tag loading)
+ * Version: 2.0.0
+ * Phase 1 Features: Storage, Mentions, Attachments
  */
 
-// Firebase configuration - REPLACE with your actual values
 const firebaseConfig = {
     apiKey: "AIzaSyAvpRHzvlTkUqk2vTo_98K_QrpNmLCtgqw",
     authDomain: "oriental-8982d.firebaseapp.com",
@@ -18,9 +16,10 @@ const firebaseConfig = {
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 
-// Initialize services (using Compat SDK)
+// Initialize services
 const auth = firebase.auth();
 const db = firebase.firestore();
+const storage = firebase.storage(); // NEW: Storage for attachments
 
 // Enable offline persistence
 db.enablePersistence({ synchronizeTabs: true })
@@ -32,8 +31,11 @@ db.enablePersistence({ synchronizeTabs: true })
         }
     });
 
-// Keep user signed in across page refreshes
+// Keep user signed in
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
     .catch((err) => console.error('Auth persistence error:', err));
 
-console.log('✅ Firebase initialized successfully');
+// NEW: Storage settings
+storage.setMaxUploadRetryTime(10000);
+
+console.log('✅ Firebase initialized with Storage support');

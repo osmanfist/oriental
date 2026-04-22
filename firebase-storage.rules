@@ -1,0 +1,128 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // ============================================
+    // Helper Functions
+    // ============================================
+    
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Check if user is member of organization
+    function isOrgMember(orgId) {
+      return isAuthenticated() && 
+        request.auth.uid in firestore.get(/databases/(default)/documents/organizations/$(orgId)).data.members;
+    }
+    
+    // Check if user has access to task
+    function hasTaskAccess(taskId) {
+      let task = firestore.get(/databases/(default)/documents/tasks/$(taskId));
+      let project = firestore.get(/databases/(default)/documents/projects/$(task.data.projectId));
+      return isOrgMember(project.data.organizationId);
+    }
+    
+    // Validate file size (max 10MB)
+    function isValidFileSize() {
+      return request.resource.size < 10 * 1024 * 1024;
+    }
+    
+    // Validate file type
+    function isValidFileType() {
+      let contentType = request.resource.contentType;
+      return contentType.matches('image/.*') ||
+             contentType == 'application/pdf' ||
+             contentType == 'application/msword' ||
+             contentType == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+             contentType == 'application/vnd.ms-excel' ||
+             contentType == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+             contentType == 'text/plain' ||
+             contentType == 'text/csv' ||
+             contentType == 'application/zip' ||
+             contentType == 'application/x-zip-compressed';
+    }
+    
+    // ============================================
+    // Organization Attachments
+    // ============================================
+    match /organizations/{orgId}/attachments/{fileId} {
+      
+      // Read: Organization members only
+      allow read: if isOrgMember(orgId);
+      
+      // Write: Organization members only, with validation
+      allow write: if isOrgMember(orgId) && 
+                   isValidFileSize() && 
+                   isValidFileType();
+      
+      // Delete: Organization members only
+      allow delete: if isOrgMember(orgId);
+    }
+    
+    // ============================================
+    // Task Attachments
+    // ============================================
+    match /organizations/{orgId}/tasks/{taskId}/{fileId} {
+      
+      // Read: Users with task access
+      allow read: if isAuthenticated() && hasTaskAccess(taskId);
+      
+      // Write: Users with task access, with validation
+      allow create: if isAuthenticated() && 
+                     hasTaskAccess(taskId) && 
+                     isValidFileSize() && 
+                     isValidFileType();
+      
+      // Update: Not allowed (immutable files)
+      allow update: if false;
+      
+      // Delete: Users with task access OR file owner
+      allow delete: if isAuthenticated() && 
+                     (hasTaskAccess(taskId) || 
+                      request.auth.uid == resource.metadata.uploadedBy);
+    }
+    
+    // ============================================
+    // Template Thumbnails (Public Read)
+    // ============================================
+    match /templates/{templateId}/thumbnail {
+      
+      // Read: Anyone (public)
+      allow read: if true;
+      
+      // Write: Authenticated users (for custom templates)
+      allow write: if isAuthenticated();
+    }
+    
+    // ============================================
+    // User Avatars
+    // ============================================
+    match /users/{userId}/avatar/{fileId} {
+      
+      // Read: Anyone (public profile pictures)
+      allow read: if true;
+      
+      // Write: User themselves only
+      allow write: if isAuthenticated() && 
+                   request.auth.uid == userId && 
+                   request.resource.size < 2 * 1024 * 1024 && // 2MB max
+                   request.resource.contentType.matches('image/.*');
+    }
+    
+    // ============================================
+    // Exports (Temporary files for data export)
+    // ============================================
+    match /exports/{orgId}/{exportId} {
+      
+      // Read: Organization members only
+      allow read: if isOrgMember(orgId);
+      
+      // Write: Organization members only
+      allow write: if isOrgMember(orgId);
+      
+      // Auto-delete after 7 days (via lifecycle rules)
+    }
+  }
+}
