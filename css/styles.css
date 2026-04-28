@@ -627,111 +627,511 @@ a:hover {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: var(--space-sm);
-    padding: 0.75rem 1.25rem;
-    font-size: var(--text-base);
-    font-weight: 600;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
     border: none;
-    border-radius: var(--radius-lg);
+    border-radius: 0.5rem;
     cursor: pointer;
     font-family: inherit;
-    transition: all var(--transition-fast);
+    line-height: 1.5;
+    transition: all 0.2s ease;
     position: relative;
     overflow: hidden;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    user-select: none;
 }
 
 .btn:active {
     transform: scale(0.97);
 }
 
-.btn::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.3);
-    transform: translate(-50%, -50%);
-    transition: width 0.6s, height 0.6s;
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
 }
 
-.btn:active::before {
-    width: 300px;
-    height: 300px;
+.btn-block {
+    width: 100%;
 }
 
-.btn-block { width: 100%; }
-
+/* Primary Button */
 .btn-primary {
-    background: var(--primary-600);
+    background: linear-gradient(135deg, var(--primary-500) 0%, var(--primary-600) 100%);
     color: white;
-    box-shadow: 0 2px 4px rgba(22, 163, 74, 0.2);
+    box-shadow: 0 1px 3px rgba(22, 163, 74, 0.2), 0 1px 2px rgba(22, 163, 74, 0.1);
 }
 
 .btn-primary:hover {
-    background: var(--primary-700);
-    box-shadow: 0 4px 8px rgba(22, 163, 74, 0.3);
+    background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-700) 100%);
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3), 0 2px 4px rgba(22, 163, 74, 0.2);
     transform: translateY(-1px);
 }
 
+.btn-primary:active {
+    box-shadow: 0 1px 2px rgba(22, 163, 74, 0.2);
+    transform: translateY(0);
+}
+
+.btn-primary:focus-visible {
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.3), 0 4px 12px rgba(22, 163, 74, 0.2);
+}
+
+/* Secondary Button */
 .btn-secondary {
-    background: var(--bg-tertiary);
+    background: var(--bg-card);
     color: var(--text-secondary);
     border: 1px solid var(--border-color);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .btn-secondary:hover {
-    background: var(--gray-200);
+    background: var(--bg-tertiary);
+    border-color: var(--gray-300);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     transform: translateY(-1px);
+    color: var(--text-primary);
 }
 
+.btn-secondary:active {
+    background: var(--gray-200);
+    transform: translateY(0);
+}
+
+.btn-secondary:focus-visible {
+    box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.2), 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* Danger Button */
 .btn-danger {
-    background: #fee2e2;
-    color: var(--error);
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    color: #dc2626;
+    border: 1px solid #fecaca;
+    box-shadow: 0 1px 2px rgba(220, 38, 38, 0.1);
 }
 
 .btn-danger:hover {
-    background: #fecaca;
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    color: #b91c1c;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
     transform: translateY(-1px);
+    border-color: #fca5a5;
 }
 
+.btn-danger:active {
+    background: #fecaca;
+    transform: translateY(0);
+}
+
+.btn-danger:focus-visible {
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2), 0 4px 12px rgba(220, 38, 38, 0.15);
+}
+
+/* Google Button */
 .btn-google {
     background: var(--bg-card);
     color: var(--text-secondary);
-    border: 2px solid var(--border-color);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    gap: 0.75rem;
 }
 
 .btn-google:hover {
     background: var(--bg-tertiary);
+    border-color: var(--gray-300);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     transform: translateY(-1px);
+}
+
+.btn-google:active {
+    background: var(--gray-100);
+    transform: translateY(0);
+}
+
+.btn-google i {
+    font-size: 1.125rem;
+    color: #4285f4;
 }
 
 /* Icon Buttons */
 .icon-btn {
-    background: none;
+    background: transparent;
     border: none;
     cursor: pointer;
-    padding: var(--space-sm);
-    border-radius: var(--radius-md);
+    padding: 0.5rem;
+    border-radius: 0.5rem;
     color: var(--text-secondary);
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
-    transition: all var(--transition-fast);
+    width: 2.25rem;
+    height: 2.25rem;
+    transition: all 0.2s ease;
 }
 
 .icon-btn:hover {
     background: var(--bg-tertiary);
-    color: var(--primary-600);
+    color: var(--text-primary);
     transform: scale(1.05);
 }
 
 .icon-btn:active {
     transform: scale(0.95);
+    background: var(--gray-200);
+}
+
+.icon-btn:focus-visible {
+    box-shadow: 0 0 0 2px rgba(107, 114, 128, 0.3);
+}
+
+/* Ghost Button (for subtle actions) */
+.btn-ghost {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid transparent;
+}
+
+.btn-ghost:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+.btn-ghost:active {
+    background: var(--gray-200);
+}
+
+/* Small Button */
+.btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8125rem;
+    border-radius: 0.375rem;
+    gap: 0.375rem;
+}
+
+/* Large Button */
+.btn-lg {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    border-radius: 0.625rem;
+    gap: 0.625rem;
+}
+
+/* Button with icon only */
+.btn-icon {
+    padding: 0.5rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.5rem;
+}
+
+.btn-icon.btn-sm {
+    width: 2rem;
+    height: 2rem;
+    padding: 0.375rem;
+}
+
+.btn-icon.btn-lg {
+    width: 3rem;
+    height: 3rem;
+    padding: 0.625rem;
+}
+
+/* Create Task Button (special styling) */
+.create-task-btn {
+    background: linear-gradient(135deg, var(--primary-500) 0%, var(--primary-600) 100%);
+    color: white;
+    border: none;
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: inherit;
+    font-size: 0.875rem;
+    letter-spacing: 0.01em;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(22, 163, 74, 0.2), 0 1px 2px rgba(22, 163, 74, 0.1);
+}
+
+.create-task-btn:hover {
+    background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-700) 100%);
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3), 0 2px 4px rgba(22, 163, 74, 0.2);
+    transform: translateY(-1px);
+}
+
+.create-task-btn:active {
+    transform: scale(0.97);
+    box-shadow: 0 1px 2px rgba(22, 163, 74, 0.2);
+}
+
+.create-task-btn i {
+    font-size: 0.875rem;
+}
+
+/* Templates Button */
+.templates-btn {
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    padding: 0.625rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: inherit;
+    font-size: 0.875rem;
+    letter-spacing: 0.01em;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.templates-btn:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--gray-300);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+    color: var(--text-primary);
+}
+
+.templates-btn i {
+    color: var(--primary-600);
+    font-size: 0.875rem;
+}
+
+.templates-btn:active {
+    transform: translateY(0);
+}
+
+/* Filter & Sort Buttons */
+.filter-btn,
+.sort-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    padding: 0.625rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: inherit;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.01em;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.filter-btn:hover,
+.sort-btn:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--gray-300);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+    color: var(--text-primary);
+}
+
+.filter-btn.active,
+.sort-btn.active {
+    background: var(--primary-50);
+    border-color: var(--primary-400);
+    color: var(--primary-700);
+    box-shadow: 0 1px 3px rgba(22, 163, 74, 0.1);
+}
+
+.filter-btn:active,
+.sort-btn:active {
+    transform: translateY(0);
+}
+
+/* Complete Sprint Button */
+.complete-sprint-btn {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    color: white;
+    border: none;
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: inherit;
+    font-size: 0.875rem;
+    letter-spacing: 0.01em;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(5, 150, 105, 0.2);
+}
+
+.complete-sprint-btn:hover {
+    background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+    transform: translateY(-1px);
+}
+
+.complete-sprint-btn:active {
+    transform: scale(0.97);
+}
+
+/* Add to Sprint Button */
+.add-to-sprint-btn {
+    background: var(--primary-50);
+    color: var(--primary-700);
+    border: 2px dashed var(--primary-300);
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: inherit;
+    font-size: 0.875rem;
+    letter-spacing: 0.01em;
+    transition: all 0.2s ease;
+}
+
+.add-to-sprint-btn:hover {
+    background: var(--primary-100);
+    border-color: var(--primary-500);
+    border-style: solid;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.15);
+}
+
+.add-to-sprint-btn:active {
+    transform: scale(0.97);
+}
+
+.add-to-sprint-btn i {
+    transition: transform 0.3s ease;
+}
+
+.add-to-sprint-btn:hover i {
+    transform: rotate(90deg);
+}
+
+/* Create Sprint Button */
+.create-sprint-btn {
+    background: linear-gradient(135deg, var(--primary-500) 0%, var(--primary-600) 100%);
+    color: white;
+    border: none;
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: inherit;
+    font-size: 0.875rem;
+    letter-spacing: 0.01em;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(22, 163, 74, 0.2);
+}
+
+.create-sprint-btn:hover {
+    background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-700) 100%);
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+    transform: translateY(-1px);
+}
+
+.create-sprint-btn:active {
+    transform: scale(0.97);
+}
+
+/* Dark Mode Button Adjustments */
+[data-theme="dark"] .btn-primary {
+    box-shadow: 0 1px 3px rgba(22, 163, 74, 0.3);
+}
+
+[data-theme="dark"] .btn-secondary,
+[data-theme="dark"] .templates-btn,
+[data-theme="dark"] .filter-btn,
+[data-theme="dark"] .sort-btn {
+    border-color: var(--border-color);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .btn-secondary:hover,
+[data-theme="dark"] .templates-btn:hover,
+[data-theme="dark"] .filter-btn:hover,
+[data-theme="dark"] .sort-btn:hover {
+    border-color: var(--gray-500);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .btn-danger {
+    background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%);
+    border-color: #991b1b;
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .btn-danger:hover {
+    background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%);
+    border-color: #b91c1c;
+    color: #fecaca;
+}
+
+/* ============================================
+   BUTTON ANIMATIONS
+   ============================================ */
+
+/* Ripple effect on click */
+.btn-primary::after,
+.create-task-btn::after,
+.btn-danger::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    background-image: radial-gradient(circle, rgba(255, 255, 255, 0.3) 10%, transparent 10.01%);
+    background-repeat: no-repeat;
+    background-position: 50%;
+    transform: scale(10, 10);
+    opacity: 0;
+    transition: transform 0.5s, opacity 1s;
+}
+
+.btn-primary:active::after,
+.create-task-btn:active::after,
+.btn-danger:active::after {
+    transform: scale(0, 0);
+    opacity: 0.3;
+    transition: 0s;
+}
+
+/* Loading state */
+.btn-loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.btn-loading::before {
+    content: '';
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid transparent;
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    margin-right: 0.5rem;
+}
+
+.btn-loading .btn-text {
+    opacity: 0.7;
 }
 
 /* ============================================
@@ -2164,14 +2564,15 @@ a:hover {
 }
 
 .modal-footer {
-    padding: var(--space-lg) var(--space-xl);
+    padding: 1.25rem 1.5rem;
     border-top: 1px solid var(--border-color);
     display: flex;
     justify-content: flex-end;
-    gap: var(--space-md);
+    gap: 0.75rem;
     position: sticky;
     bottom: 0;
     background: var(--bg-modal);
+    backdrop-filter: blur(8px);
 }
 
 /* Comments */
@@ -2240,10 +2641,81 @@ hr {
     font-size: var(--text-sm);
 }
 
-.edit-task-actions {
+..edit-task-actions {
     display: flex;
-    gap: var(--space-md);
-    margin-top: var(--space-lg);
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.edit-task-actions .btn-primary {
+    background: linear-gradient(135deg, var(--primary-500) 0%, var(--primary-600) 100%);
+    color: white;
+    border: none;
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(22, 163, 74, 0.2);
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.edit-task-actions .btn-primary:hover {
+    background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-700) 100%);
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+    transform: translateY(-1px);
+}
+
+.edit-task-actions .btn-danger {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.edit-task-actions .btn-danger:hover {
+    background: #fee2e2;
+    color: #b91c1c;
+    border-color: #fca5a5;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.15);
+    transform: translateY(-1px);
+}
+
+.edit-task-actions .btn-danger:active {
+    transform: scale(0.97);
+}
+
+[data-theme="dark"] .edit-task-actions .btn-primary {
+    box-shadow: 0 1px 3px rgba(22, 163, 74, 0.3);
+}
+
+[data-theme="dark"] .edit-task-actions .btn-danger {
+    background: #450a0a;
+    border-color: #7f1d1d;
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .edit-task-actions .btn-danger:hover {
+    background: #7f1d1d;
+    border-color: #991b1b;
+    color: #fecaca;
 }
 
 /* ============================================
@@ -2572,6 +3044,227 @@ hr {
     font-size: var(--text-xs);
     padding: 2px 8px;
     border-radius: var(--radius-sm);
+}
+
+/* Add Comment Button */
+#add-comment-btn {
+    background: linear-gradient(135deg, var(--primary-500) 0%, var(--primary-600) 100%);
+    color: white;
+    border: none;
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(22, 163, 74, 0.2);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    justify-content: center;
+    margin-top: 0.5rem;
+}
+
+#add-comment-btn:hover {
+    background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-700) 100%);
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+    transform: translateY(-1px);
+}
+
+#add-comment-btn:active {
+    transform: scale(0.97);
+}
+
+[data-theme="dark"] #add-comment-btn {
+    box-shadow: 0 1px 3px rgba(22, 163, 74, 0.3);
+}
+
+/* Modal Footer Buttons */
+.modal-footer .btn-secondary,
+.modal-footer button[type="button"].btn-secondary {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: 0.01em;
+}
+
+.modal-footer .btn-secondary:hover {
+    background: var(--gray-200);
+    border-color: var(--gray-300);
+    color: var(--text-primary);
+}
+
+.modal-footer .btn-primary,
+.modal-footer button[type="submit"].btn-primary {
+    background: linear-gradient(135deg, var(--primary-500) 0%, var(--primary-600) 100%);
+    color: white;
+    border: none;
+    padding: 0.625rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(22, 163, 74, 0.2), 0 1px 2px rgba(22, 163, 74, 0.1);
+    letter-spacing: 0.01em;
+}
+
+.modal-footer .btn-primary:hover {
+    background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-700) 100%);
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3), 0 2px 4px rgba(22, 163, 74, 0.2);
+    transform: translateY(-1px);
+}
+
+.modal-footer .btn-primary:active {
+    transform: scale(0.97);
+    box-shadow: 0 1px 2px rgba(22, 163, 74, 0.15);
+}
+
+[data-theme="dark"] .modal-footer .btn-primary {
+    box-shadow: 0 1px 3px rgba(22, 163, 74, 0.3);
+}
+
+[data-theme="dark"] .modal-footer .btn-secondary {
+    border-color: var(--border-color);
+}
+
+/* Filter Actions Buttons */
+.filter-actions .btn-secondary {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    font-size: 0.8125rem;
+    cursor: pointer;
+    flex: 1;
+    transition: all 0.2s ease;
+}
+
+.filter-actions .btn-secondary:hover {
+    background: var(--gray-200);
+    border-color: var(--gray-300);
+}
+
+.filter-actions .btn-primary {
+    background: linear-gradient(135deg, var(--primary-500) 0%, var(--primary-600) 100%);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    font-size: 0.8125rem;
+    cursor: pointer;
+    flex: 1;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(22, 163, 74, 0.2);
+}
+
+.filter-actions .btn-primary:hover {
+    background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-700) 100%);
+    box-shadow: 0 4px 10px rgba(22, 163, 74, 0.3);
+    transform: translateY(-1px);
+}
+
+/* Danger Zone Buttons */
+.danger-section .btn-secondary {
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    font-size: 0.8125rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.danger-section .btn-secondary:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--gray-300);
+}
+
+.danger-section .btn-danger {
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    color: #dc2626;
+    border: 1px solid #fecaca;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    font-size: 0.8125rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.danger-section .btn-danger:hover {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    color: #b91c1c;
+    border-color: #fca5a5;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+    transform: translateY(-1px);
+}
+
+/* Settings Save Button */
+.settings-section .btn-primary {
+    background: linear-gradient(135deg, var(--primary-500) 0%, var(--primary-600) 100%);
+    color: white;
+    border: none;
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(22, 163, 74, 0.2);
+    margin-top: 1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.settings-section .btn-primary:hover {
+    background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-700) 100%);
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+    transform: translateY(-1px);
+}
+
+/* Responsive Modal Buttons */
+@media (max-width: 768px) {
+    .modal-footer {
+        padding: 1rem;
+        gap: 0.5rem;
+    }
+    
+    .modal-footer .btn-primary,
+    .modal-footer .btn-secondary {
+        padding: 0.75rem 1rem;
+        font-size: 0.875rem;
+        flex: 1;
+    }
+    
+    .edit-task-actions {
+        flex-direction: column;
+    }
+    
+    .edit-task-actions .btn-primary,
+    .edit-task-actions .btn-danger {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        font-size: 0.875rem;
+    }
+    
+    #add-comment-btn {
+        padding: 0.75rem 1rem;
+        font-size: 0.875rem;
+    }
 }
 
 /* ============================================
