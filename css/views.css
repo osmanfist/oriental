@@ -1520,3 +1520,67 @@
     color: var(--primary-600);
     transition: color var(--transition-fast);
 }
+
+/* ============================================
+   VIEW ENHANCEMENTS
+   ============================================ */
+
+/* Board Column Drop Zone Glow */
+.tasks-container.drag-over {
+    background: var(--primary-50);
+    outline: 2px dashed var(--primary-300);
+    animation: pulse-glow 1.5s var(--transition-base) infinite;
+}
+
+/* Sprint Progress Bar Shimmer */
+.progress-bar-fill {
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-bar-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    animation: shimmer 2s infinite;
+}
+
+/* Report Stat Card Hover */
+.stat-card:hover .stat-icon {
+    transform: scale(1.1);
+    background: var(--primary-100);
+}
+
+.stat-card:hover .stat-value {
+    color: var(--primary-600);
+}
+
+/* Settings Tab Active Indicator */
+.settings-tab.active::after {
+    transform: scaleX(1);
+    transition: transform var(--transition-base);
+}
+
+/* Recurring Badge Animation */
+.recurrence-badge {
+    animation: spin-slow 3s linear infinite;
+}
+
+/* Task Card Completion Style */
+.task-card[data-status="done"] {
+    opacity: 0.85;
+}
+
+.task-card[data-status="done"] .task-title {
+    text-decoration: line-through;
+    color: var(--text-muted);
+}
+
+/* Due Date Overdue Pulse */
+.due-overdue {
+    animation: pulse 1.5s var(--transition-base) infinite;
+}

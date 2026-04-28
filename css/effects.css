@@ -1,0 +1,113 @@
+/* ============================================
+   VISUAL EFFECTS & ENHANCEMENTS
+   ============================================ */
+
+/* Glassmorphism Modals */
+.modal-content {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+[data-theme="dark"] .modal-content {
+    background: rgba(26, 26, 46, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Glassmorphism Cards */
+.stat-card {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+[data-theme="dark"] .stat-card {
+    background: rgba(26, 26, 46, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Gradient Headers */
+.dashboard-header {
+    background: linear-gradient(135deg, var(--primary-50) 0%, transparent 100%);
+    padding: var(--space-lg);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-2xl);
+}
+
+[data-theme="dark"] .dashboard-header {
+    background: linear-gradient(135deg, rgba(22, 163, 74, 0.1) 0%, transparent 100%);
+}
+
+/* Custom Sidebar Scrollbar */
+.sidebar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: var(--primary-200);
+    border-radius: var(--radius-full);
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-400);
+}
+
+[data-theme="dark"] .sidebar::-webkit-scrollbar-thumb {
+    background: var(--primary-800);
+}
+
+/* Hover Card 3D Effect */
+.task-card:hover {
+    transform: translateY(-4px) rotateX(2deg);
+    box-shadow: 
+        0 10px 20px rgba(0, 0, 0, 0.1),
+        0 6px 6px rgba(0, 0, 0, 0.06);
+}
+
+.sprint-task-card:hover {
+    transform: translateY(-2px) rotateX(1deg);
+    box-shadow: 
+        0 8px 16px rgba(0, 0, 0, 0.08),
+        0 4px 4px rgba(0, 0, 0, 0.04);
+}
+
+/* Gradient Borders for Active Nav */
+.nav-item.active {
+    position: relative;
+    background: linear-gradient(135deg, var(--primary-50), var(--bg-secondary));
+}
+
+.nav-item.active::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-lg);
+    padding: 2px;
+    background: linear-gradient(135deg, var(--primary-400), var(--primary-600), var(--primary-400));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+}
+
+/* Input Focus Glow */
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    box-shadow: 
+        0 0 0 3px rgba(34, 197, 94, 0.15),
+        0 0 20px rgba(34, 197, 94, 0.1);
+}
+
+/* Smooth Section Transitions */
+.settings-panel.active,
+.templates-panel.active,
+.reports-view:not(.hidden),
+.sprints-view:not(.hidden) {
+    animation: fadeInUp 0.4s var(--transition-base);
+}

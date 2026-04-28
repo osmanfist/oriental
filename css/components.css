@@ -1635,3 +1635,76 @@ hr {
 .templates-btn i {
     color: var(--primary-600);
 }
+
+/* ============================================
+   COMPONENT ENHANCEMENTS
+   ============================================ */
+
+/* Activity Log Items - Staggered Animation */
+.activity-item:nth-child(1) { animation-delay: 0ms; }
+.activity-item:nth-child(2) { animation-delay: 50ms; }
+.activity-item:nth-child(3) { animation-delay: 100ms; }
+.activity-item:nth-child(4) { animation-delay: 150ms; }
+.activity-item:nth-child(5) { animation-delay: 200ms; }
+
+/* Comment Items - Staggered Animation */
+.comment-item:nth-child(1) { animation-delay: 0ms; }
+.comment-item:nth-child(2) { animation-delay: 60ms; }
+.comment-item:nth-child(3) { animation-delay: 120ms; }
+.comment-item:nth-child(4) { animation-delay: 180ms; }
+.comment-item:nth-child(5) { animation-delay: 240ms; }
+
+/* Toast Notification Enhancements */
+.toast {
+    border-left-width: 4px;
+    backdrop-filter: blur(10px);
+}
+
+.toast.toast-success { 
+    background: linear-gradient(135deg, #065f46, #047857);
+    border-left-color: #34d399;
+}
+
+.toast.toast-error { 
+    background: linear-gradient(135deg, #7f1d1d, #991b1b);
+    border-left-color: #f87171;
+}
+
+.toast.toast-warning { 
+    background: linear-gradient(135deg, #78350f, #92400e);
+    border-left-color: #fbbf24;
+}
+
+.toast.toast-info { 
+    background: linear-gradient(135deg, #1e3a5f, #1e40af);
+    border-left-color: #60a5fa;
+}
+
+/* Empty State Icon Animation */
+.empty-state i {
+    animation: float 3s ease-in-out infinite;
+}
+
+/* Modal Backdrop Blur */
+.modal {
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+/* Filter Badge Hover */
+.filter-badge:hover {
+    transform: scale(1.05);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Mention Highlight Enhancement */
+.mention-highlight {
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.mention-highlight:hover {
+    background: var(--primary-300);
+    color: var(--primary-900);
+    transform: scale(1.02);
+}
