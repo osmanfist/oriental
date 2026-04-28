@@ -2136,7 +2136,48 @@ function setupSettingsEventListeners() {
             trackAnalytics('settings_tab_changed', { tab: tabId });
         });
     });
+    // ============================================
+// SETTINGS FUNCTIONS
+// ============================================
+
+async function loadSettingsView() {
+    if (!currentOrganization) {
+        showToast('Loading organization settings...', 'info');
+        return;
+    }
     
+    try {
+        const orgDoc = await db.collection('organizations').doc(currentOrganization).get();
+        if (orgDoc.exists) {
+            const orgData = orgDoc.data();
+            
+            const nameInput = document.getElementById('org-name-input');
+            const slugInput = document.getElementById('org-slug-input');
+            const slugPreview = document.getElementById('slug-preview');
+            
+            if (nameInput) nameInput.value = orgData.name || '';
+            if (slugInput) slugInput.value = orgData.slug || '';
+            if (slugPreview) slugPreview.textContent = orgData.slug || 'your-org';
+        }
+        
+        // Load theme preference
+        const themeSelect = document.getElementById('theme-select');
+        if (themeSelect) {
+            themeSelect.value = localStorage.getItem('oriental_theme') || 'system';
+        }
+        
+        trackAnalytics('settings_viewed', {});
+        console.log('✅ Settings loaded');
+    } catch (error) {
+        console.error('Error loading settings:', error);
+        showToast('Error loading settings', 'error');
+    }
+}
+
+// Export immediately
+window.loadSettingsView = loadSettingsView;
+
+
     document.getElementById('save-org-settings')?.addEventListener('click', saveOrganizationSettings);
     
     const prefInputs = ['theme-select', 'density-select', 'show-task-counts',
@@ -2160,6 +2201,79 @@ function setupSettingsEventListeners() {
     document.getElementById('delete-organization')?.addEventListener('click', deleteOrganization);
     document.getElementById('export-all-data')?.addEventListener('click', exportAllData);
 }
+
+// ============================================
+// SPRINT FUNCTIONS
+// ============================================
+
+async function completeSprint() {
+    if (!currentSprint) {
+        showToast('No active sprint to complete', 'warning');
+        return;
+    }
+    
+    const confirmed = await showConfirmDialog(
+        'Complete Sprint',
+        `Mark "${currentSprint.name}" as completed? This cannot be undone.`,
+        'warning'
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+        await db.collection('sprints').doc(currentSprint.id).update({
+            status: 'completed',
+            completedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        await logActivity('complete_sprint', 'sprint', currentSprint.id, currentSprint.name);
+        
+        showToast('Sprint completed! 🎉', 'success');
+        currentSprint = null;
+        await loadSprints();
+        trackAnalytics('sprint_completed', {});
+        
+    } catch (error) {
+        console.error('Error completing sprint:', error);
+        showToast('Error completing sprint', 'error');
+    }
+}
+
+// Export immediately
+window.completeSprint = completeSprint;
+
+
+function openSprintModal() {
+    if (!currentProject) {
+        showToast('Please select a project first', 'warning');
+        return;
+    }
+    
+    if (currentSprint) {
+        showToast('There is already an active sprint. Complete it before starting a new one.', 'warning');
+        return;
+    }
+    
+    const modal = document.getElementById('sprint-modal');
+    if (!modal) return;
+    
+    // Set default dates
+    const today = new Date();
+    const twoWeeksLater = new Date();
+    twoWeeksLater.setDate(today.getDate() + 14);
+    
+    const startInput = document.getElementById('sprint-start-date');
+    const endInput = document.getElementById('sprint-end-date');
+    
+    if (startInput) startInput.value = today.toISOString().split('T')[0];
+    if (endInput) endInput.value = twoWeeksLater.toISOString().split('T')[0];
+    
+    modal.style.display = 'flex';
+    modal.classList.add('active');
+}
+
+// Export immediately
+window.openSprintModal = openSprintModal;
 
 // ============================================
 // MOBILE NAVIGATION
@@ -2316,26 +2430,83 @@ function showToast(message, type = 'info') {
 // GLOBAL EXPORTS
 // ============================================
 
-window.openTaskDetail = openTaskDetail;
-window.updateTask = updateTask;
-window.removeFilter = removeFilter;
-window.closeTaskModal = closeTaskModal;
-window.closeProjectModal = closeProjectModal;
-window.closeSprintModal = closeSprintModal;
-window.closeCommentModal = closeCommentModal;
-window.openTaskModal = openTaskModal;
-window.openProjectModal = openProjectModal;
-window.clearSearchAndReload = clearSearchAndReload;
-window.deleteProjectWithUndo = deleteProjectWithUndo;
-window.deleteTaskWithUndo = deleteTaskWithUndo;
-window.openInviteModal = openInviteModal;
-window.closeInviteModal = closeInviteModal;
-window.closePendingInvitesModal = closePendingInvitesModal;
-window.cancelInvite = cancelInvite;
-window.toggleTheme = toggleTheme;
-window.openActivityLog = openActivityLog;
-window.closeActivityLog = closeActivityLog;
-window.openTemplatesLibrary = openTemplatesLibrary;
-window.exportChart = exportChart;
-
-console.log('✅ Dashboard.js fully loaded - Phase 1 Ready!');
+(function() {
+    console.log('🔧 Setting up global exports...');
+    
+    // Define inline if the functions don't exist yet
+    if (typeof window.openTemplatesLibrary !== 'function') {
+        window.openTemplatesLibrary = function() {
+            if (window.TemplatesLibrary) {
+                new TemplatesLibrary().openTemplatesLibrary();
+            } else {
+                showToast('Templates library not loaded', 'error');
+            }
+        };
+        console.log('  ✅ openTemplatesLibrary created');
+    }
+    
+    if (typeof window.loadSettingsView !== 'function') {
+        window.loadSettingsView = async function() {
+            if (!currentOrganization) {
+                showToast('Loading settings...', 'info');
+                return;
+            }
+            try {
+                const orgDoc = await db.collection('organizations').doc(currentOrganization).get();
+                if (orgDoc.exists) {
+                    const data = orgDoc.data();
+                    const nameInput = document.getElementById('org-name-input');
+                    const slugInput = document.getElementById('org-slug-input');
+                    const slugPreview = document.getElementById('slug-preview');
+                    if (nameInput) nameInput.value = data.name || '';
+                    if (slugInput) slugInput.value = data.slug || '';
+                    if (slugPreview) slugPreview.textContent = data.slug || 'your-org';
+                }
+            } catch (error) {
+                console.error('Error loading settings:', error);
+                showToast('Error loading settings', 'error');
+            }
+        };
+        console.log('  ✅ loadSettingsView created');
+    }
+    
+    // Standard exports
+    const standardExports = {
+        openTaskDetail,
+        updateTask,
+        createTask,
+        openTaskModal,
+        closeTaskModal,
+        deleteTaskWithUndo,
+        openProjectModal,
+        closeProjectModal,
+        deleteProjectWithUndo,
+        closeCommentModal,
+        clearSearchAndReload,
+        removeFilter,
+        openInviteModal,
+        closeInviteModal,
+        closePendingInvitesModal,
+        cancelInvite,
+        openSprintModal,
+        closeSprintModal,
+        completeSprint,
+        openAddToSprintModal,
+        closeAddToSprintModal,
+        toggleTheme,
+        openActivityLog,
+        closeActivityLog,
+        exportChart,
+        setupSettingsEventListeners,
+    };
+    
+    Object.entries(standardExports).forEach(([name, fn]) => {
+        if (typeof fn === 'function') {
+            window[name] = fn;
+        }
+    });
+    
+    console.log('✅ Global exports complete');
+    console.log('  openTemplatesLibrary:', typeof window.openTemplatesLibrary);
+    console.log('  loadSettingsView:', typeof window.loadSettingsView);
+})();

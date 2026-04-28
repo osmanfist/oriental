@@ -1,69 +1,92 @@
-// Service Worker for Oriental - PWA support
-const CACHE_NAME = 'oriental-v1';
+// sw.js - Updated to exclude Firebase
+const CACHE_NAME = 'oriental-v2.1.1';
 const urlsToCache = [
     '/',
-    '/dashboard.html',
-    '/login.html',
     '/index.html',
-    '/css/styles.css',
+    '/login.html',
+    '/dashboard.html',
+    '/css/main.css',
+    '/css/variables.css',
+    '/css/themes.css',
+    '/css/reset.css',
+    '/css/animations.css',
+    '/css/buttons.css',
+    '/css/forms.css',
+    '/css/layout.css',
+    '/css/components.css',
+    '/css/views.css',
+    '/css/utilities.css',
+    '/css/responsive.css',
+    '/css/effects.css',
+    '/css/login.css',
     '/js/firebase-config.js',
     '/js/dashboard.js',
-    '/js/auth.js',
-    'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
-    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css'
+    '/js/mentions.js',
+    '/js/attachments.js',
+    '/js/recurring-tasks.js',
+    '/js/templates.js',
+    '/manifest.json'
 ];
 
-// Install event - cache assets
-self.addEventListener('install', event => {
+// Install
+self.addEventListener('install', (event) => {
     event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then(cache => {
-                console.log('Opened cache');
-                return cache.addAll(urlsToCache);
-            })
+        caches.open(CACHE_NAME).then((cache) => {
+            return cache.addAll(urlsToCache);
+        })
     );
 });
 
-// Fetch event - serve from cache if offline
-self.addEventListener('fetch', event => {
-    event.respondWith(
-        caches.match(event.request)
-            .then(response => {
-                // Cache hit - return response
-                if (response) {
-                    return response;
-                }
-                return fetch(event.request).then(
-                    response => {
-                        // Check if we received a valid response
-                        if (!response || response.status !== 200 || response.type !== 'basic') {
-                            return response;
-                        }
-                        // Clone the response
-                        const responseToCache = response.clone();
-                        caches.open(CACHE_NAME)
-                            .then(cache => {
-                                cache.put(event.request, responseToCache);
-                            });
-                        return response;
-                    }
-                );
-            })
-    );
-});
-
-// Activate event - clean up old caches
-self.addEventListener('activate', event => {
-    const cacheWhitelist = [CACHE_NAME];
+// Activate - Clean old caches
+self.addEventListener('activate', (event) => {
     event.waitUntil(
-        caches.keys().then(cacheNames => {
+        caches.keys().then((cacheNames) => {
             return Promise.all(
-                cacheNames.map(cacheName => {
-                    if (cacheWhitelist.indexOf(cacheName) === -1) {
+                cacheNames.map((cacheName) => {
+                    if (cacheName !== CACHE_NAME) {
                         return caches.delete(cacheName);
                     }
                 })
             );
+        })
+    );
+});
+
+// Fetch - Don't intercept Firebase/API calls
+self.addEventListener('fetch', (event) => {
+    const url = event.request.url;
+    
+    // Skip Firebase, Firestore, and Google APIs
+    if (url.includes('firestore.googleapis.com') ||
+        url.includes('firebase') ||
+        url.includes('googleapis.com') ||
+        url.includes('gstatic.com') ||
+        url.includes('google-analytics.com') ||
+        url.includes('googletagmanager.com') ||
+        url.includes('cdn.jsdelivr.net') ||
+        url.includes('cdnjs.cloudflare.com')) {
+        // Let the browser handle these directly
+        return;
+    }
+    
+    // Cache-first strategy for local assets
+    event.respondWith(
+        caches.match(event.request).then((response) => {
+            return response || fetch(event.request).then((fetchResponse) => {
+                // Cache new requests for future
+                if (fetchResponse && fetchResponse.status === 200) {
+                    const responseClone = fetchResponse.clone();
+                    caches.open(CACHE_NAME).then((cache) => {
+                        cache.put(event.request, responseClone);
+                    });
+                }
+                return fetchResponse;
+            });
+        }).catch(() => {
+            // Offline fallback
+            if (event.request.destination === 'document') {
+                return caches.match('/dashboard.html');
+            }
         })
     );
 });
