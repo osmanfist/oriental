@@ -1,0 +1,217 @@
+
+/* ============================================
+   24. RESPONSIVE STYLES
+   ============================================ */
+
+@media (max-width: 768px) {
+    .mobile-header { display: flex; }
+    .bottom-nav { display: flex; }
+    .fab-container { display: block; }
+    
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform var(--transition-base);
+        z-index: calc(var(--z-fixed) + 10);
+    }
+    
+    .sidebar.open {
+        transform: translateX(0);
+    }
+    
+    .sidebar-close-btn {
+        display: flex;
+    }
+    
+    .desktop-only {
+        display: none !important;
+    }
+    
+    .main-content {
+        margin-left: 0;
+        padding: 80px var(--space-md) 80px var(--space-md);
+    }
+    
+    .dashboard-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .dashboard-header h1 {
+        font-size: var(--text-2xl);
+    }
+    
+    .header-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .search-container,
+    .search-input,
+    .filter-container,
+    .sort-container {
+        width: 100%;
+    }
+    
+    .search-input:focus {
+        width: 100%;
+    }
+    
+    .filter-btn,
+    .sort-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .filter-dropdown,
+    .sort-dropdown {
+        position: fixed;
+        top: auto;
+        bottom: 80px;
+        left: var(--space-md);
+        right: var(--space-md);
+        width: auto;
+        max-height: 60vh;
+        overflow-y: auto;
+    }
+    
+    .board-view {
+        flex-direction: column;
+    }
+    
+    .board-column {
+        min-width: auto;
+        width: 100%;
+    }
+    
+    .sprint-columns {
+        flex-direction: column;
+    }
+    
+    .sprint-info {
+        flex-direction: column;
+        gap: var(--space-md);
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .charts-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .reports-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .settings-tabs {
+        flex-wrap: nowrap;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .settings-tab {
+        padding: var(--space-sm) var(--space-md);
+    }
+    
+    .settings-panel {
+        padding: var(--space-lg);
+    }
+    
+    .integration-card {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .integration-card button {
+        width: 100%;
+    }
+    
+    .edit-task-actions {
+        flex-direction: column;
+    }
+    
+    .edit-task-actions button {
+        width: 100%;
+    }
+    
+    .modal-content {
+        margin: var(--space-md);
+        max-width: calc(100% - 2rem);
+    }
+    
+    .toast {
+        right: var(--space-md);
+        left: var(--space-md);
+        max-width: none;
+    }
+    
+    .undo-toast {
+        flex-direction: column;
+        gap: var(--space-sm);
+        text-align: center;
+        white-space: normal;
+    }
+    
+    .pwa-install-prompt {
+        left: var(--space-md);
+        right: var(--space-md);
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .activity-log-container {
+        width: 100%;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    .main-content {
+        padding: var(--space-xl);
+    }
+    
+    .board-column {
+        min-width: 280px;
+    }
+    
+    .search-input {
+        width: 180px;
+    }
+    
+    .search-input:focus {
+        width: 220px;
+    }
+}
+
+/* ============================================
+   25. PRINT STYLES
+   ============================================ */
+
+@media print {
+    .sidebar,
+    .mobile-header,
+    .bottom-nav,
+    .create-task-btn,
+    .header-actions,
+    .filter-container,
+    .search-container,
+    .sort-container,
+    .fab-container,
+    .pull-to-refresh,
+    .theme-toggle,
+    .activity-log-container,
+    .activity-log-btn {
+        display: none !important;
+    }
+
+    .main-content {
+        margin-left: 0;
+        padding: 0;
+    }
+
+    .task-card {
+        break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid #ccc;
+    }
+}

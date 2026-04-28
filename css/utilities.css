@@ -1,0 +1,60 @@
+/* ============================================
+   4. UTILITY CLASSES
+   ============================================ */
+
+.hidden { display: none !important; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-muted { color: var(--text-muted); }
+
+.mt-1 { margin-top: var(--space-sm); }
+.mt-2 { margin-top: var(--space-md); }
+.mt-3 { margin-top: var(--space-lg); }
+.mb-1 { margin-bottom: var(--space-sm); }
+.mb-2 { margin-bottom: var(--space-md); }
+.mb-3 { margin-bottom: var(--space-lg); }
+
+
+/* ============================================
+   27. PERFORMANCE OPTIMIZATIONS
+   ============================================ */
+
+.project-list,
+.board-column,
+.task-card,
+.sprint-column {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 200px;
+}
+
+img {
+    loading: lazy;
+}
+
+/* Will-change for frequently animated elements */
+.task-card,
+.btn,
+.modal-content,
+.stat-card,
+.nav-item {
+    will-change: transform;
+}
+
+/* ============================================
+   28. PERFORMANCE MONITORING BADGE
+   ============================================ */
+
+.perf-badge {
+    position: fixed;
+    bottom: var(--space-sm);
+    left: var(--space-sm);
+    background: rgba(0, 0, 0, 0.6);
+    color: #4ade80;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    font-size: 10px;
+    font-family: monospace;
+    z-index: var(--z-tooltip);
+    pointer-events: none;
+    opacity: 0.7;
+}

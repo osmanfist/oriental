@@ -1,0 +1,161 @@
+/* ============================================
+   KEYFRAMES & ANIMATION CLASSES
+   ============================================ */
+
+/* Fade */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeInLeft { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes fadeInRight { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+/* Scale */
+@keyframes scaleIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+@keyframes popIn { 0% { opacity: 0; transform: scale(0.8); } 70% { transform: scale(1.05); } 100% { opacity: 1; transform: scale(1); } }
+
+/* Slide */
+@keyframes slideInUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes slideInDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes slideInLeft { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* Loading */
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes skeleton-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+@keyframes progressFill { from { width: 0%; } }
+
+/* Attention */
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+@keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); } 50% { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); } }
+@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); } 20%, 40%, 60%, 80% { transform: translateX(4px); } }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes ring { 0%, 100% { transform: rotate(0); } 10%, 30% { transform: rotate(-10deg); } 20%, 40% { transform: rotate(10deg); } 50% { transform: rotate(-5deg); } 60% { transform: rotate(5deg); } }
+@keyframes confetti-fall { 0% { transform: translateY(0) rotate(0deg); opacity: 1; } 100% { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
+
+/* Toast */
+@keyframes toastIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* Utility Animation Classes */
+.animate-fade-in { animation: fadeIn 0.5s var(--transition-base); }
+.animate-fade-in-up { animation: fadeInUp 0.5s var(--transition-base); }
+.animate-scale-in { animation: scaleIn 0.5s var(--transition-base); }
+.animate-pop-in { animation: popIn var(--transition-bounce); }
+.animate-slide-in-right { animation: slideInRight 0.5s var(--transition-base); }
+.animate-pulse { animation: pulse 2s infinite; }
+.animate-shake { animation: shake 0.5s; }
+.animate-spin { animation: spin 1s linear infinite; }
+.animate-float { animation: float 3s ease-in-out infinite; }
+
+/* Animation Delays */
+.animation-delay-100 { animation-delay: 100ms; }
+.animation-delay-200 { animation-delay: 200ms; }
+.animation-delay-300 { animation-delay: 300ms; }
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ============================================
+   ANIMATION UTILITY CLASSES
+   ============================================ */
+
+.animate-fade-in {
+    animation: fadeIn var(--animation-base) var(--transition-base);
+}
+
+.animate-fade-in-up {
+    animation: fadeInUp var(--animation-base) var(--transition-base);
+}
+
+.animate-fade-in-down {
+    animation: fadeInDown var(--animation-base) var(--transition-base);
+}
+
+.animate-scale-in {
+    animation: scaleIn var(--animation-base) var(--transition-base);
+}
+
+.animate-pop-in {
+    animation: popIn var(--transition-bounce);
+}
+
+.animate-slide-in-right {
+    animation: slideInRight var(--animation-base) var(--transition-base);
+}
+
+.animate-slide-in-left {
+    animation: slideInLeft var(--animation-base) var(--transition-base);
+}
+
+.animate-pulse {
+    animation: pulse 2s var(--transition-base) infinite;
+}
+
+.animate-pulse-glow {
+    animation: pulse-glow 2s var(--transition-base) infinite;
+}
+
+.animate-bounce {
+    animation: bounce 1s var(--transition-base) infinite;
+}
+
+.animate-shake {
+    animation: shake 0.5s var(--transition-base);
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+.animate-spin-slow {
+    animation: spin-slow 3s linear infinite;
+}
+
+.animate-float {
+    animation: float 3s ease-in-out infinite;
+}
+
+.animate-ring {
+    animation: ring 1s var(--transition-base);
+}
+
+/* Animation Delays */
+.animation-delay-100 { animation-delay: 100ms; }
+.animation-delay-200 { animation-delay: 200ms; }
+.animation-delay-300 { animation-delay: 300ms; }
+.animation-delay-500 { animation-delay: 500ms; }
+.animation-delay-1000 { animation-delay: 1000ms; }
+
+/* Reduced Motion Preference */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        animation-delay: 0ms !important;
+    }
+    
+    .animate-fade-in,
+    .animate-fade-in-up,
+    .animate-scale-in,
+    .animate-pop-in,
+    .animate-slide-in-right,
+    .animate-pulse,
+    .animate-bounce,
+    .animate-float {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+    }
+}

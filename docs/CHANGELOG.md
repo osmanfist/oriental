@@ -154,7 +154,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [2.0.0] - 2024-04-17
+## [2.0.0] - 2026-04-17
 
 ### Added
 - **Dark Mode:** Theme switcher with persistent preference (light/dark/system)
@@ -216,7 +216,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.0.0] - 2024-04-10
+## [1.0.0] - 2026-04-10
 
 ### Added
 - **Initial Release**
@@ -343,9 +343,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 | Version | Date | Key Features |
 |---------|------|--------------|
-| [2.1.0] | 2024-04-22 | @Mentions, Attachments, Recurring Tasks, Templates, Settings |
-| [2.0.0] | 2024-04-17 | Dark Mode, Activity Log, PWA, Sprints, Keyboard Shortcuts |
-| [1.0.0] | 2024-04-10 | Initial Release: Auth, Tasks, Kanban, Comments |
+| [2.1.0] | 2026-04-22 | @Mentions, Attachments, Recurring Tasks, Templates, Settings |
+| [2.0.0] | 2026-04-17 | Dark Mode, Activity Log, PWA, Sprints, Keyboard Shortcuts |
+| [1.0.0] | 2026-04-10 | Initial Release: Auth, Tasks, Kanban, Comments |
 
 ---
 

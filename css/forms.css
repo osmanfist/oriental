@@ -1,0 +1,92 @@
+/* ============================================
+   6. FORMS
+   ============================================ */
+
+.form-group {
+    margin-bottom: var(--space-lg);
+    animation: fadeInUp var(--animation-base) var(--transition-base);
+    animation-fill-mode: both;
+}
+
+.form-group:nth-child(1) { animation-delay: 50ms; }
+.form-group:nth-child(2) { animation-delay: 100ms; }
+.form-group:nth-child(3) { animation-delay: 150ms; }
+
+.form-group label {
+    display: block;
+    margin-bottom: var(--space-sm);
+    font-weight: 500;
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    transition: color var(--transition-fast);
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    padding: var(--space-md);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-base);
+    font-family: inherit;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    transition: all var(--transition-fast);
+}
+
+.form-group input:hover,
+.form-group textarea:hover,
+.form-group select:hover {
+    border-color: var(--gray-400);
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    border-color: var(--primary-400);
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+    transform: translateY(-1px);
+}
+
+.form-group input.error {
+    border-color: var(--error);
+    animation: shake 0.5s var(--transition-base);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+}
+
+.required {
+    color: var(--error);
+    margin-left: 2px;
+}
+
+.input-hint {
+    display: block;
+    margin-top: var(--space-xs);
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+}
+
+/* Checkbox & Radio */
+.form-group input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin-right: var(--space-sm);
+    accent-color: var(--primary-600);
+    vertical-align: middle;
+    cursor: pointer;
+    transition: transform var(--transition-fast);
+}
+
+.form-group input[type="checkbox"]:hover {
+    transform: scale(1.1);
+}
+
+.form-group input[type="checkbox"]:checked {
+    animation: popIn var(--transition-bounce);
+}
