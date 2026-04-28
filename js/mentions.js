@@ -223,18 +223,22 @@ class MentionsSystem {
     }
 
     showDropdown() {
-        if (!this.currentInput || !this.dropdown) return;
+    if (!this.currentInput || !this.dropdown) return;
 
-        const rect = this.currentInput.getBoundingClientRect();
-        
-        this.dropdown.style.display = 'block';
-        this.dropdown.style.position = 'absolute';
-        this.dropdown.style.top = (rect.bottom + window.scrollY + 5) + 'px';
-        this.dropdown.style.left = (rect.left + window.scrollX) + 'px';
-        this.dropdown.style.minWidth = Math.max(rect.width, 250) + 'px';
-        
-        this.dropdownVisible = true;
-    }
+    const rect = this.currentInput.getBoundingClientRect();
+    
+    // Position below the input
+    this.dropdown.style.display = 'block';
+    this.dropdown.style.position = 'fixed';
+    this.dropdown.style.top = (rect.bottom + 5) + 'px';
+    this.dropdown.style.left = rect.left + 'px';
+    this.dropdown.style.width = Math.max(rect.width, 250) + 'px';
+    this.dropdown.style.zIndex = '9999';
+    
+    this.dropdownVisible = true;
+    
+    console.log('Dropdown shown at:', rect.bottom + 5, rect.left);
+}
 
     hideDropdown() {
         if (this.dropdown) {

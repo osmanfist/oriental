@@ -2,7 +2,7 @@
  * Oriental - Main Stylesheet
  * Version: 10.3.0
  */
-@import 'login.css';
+
 @import 'variables.css';
 @import 'themes.css';
 @import 'reset.css';
@@ -21,3 +21,6 @@
 /* Feature-specific Styles */
 @import 'confetti.css';
 @import 'fab.css';
+
+/* Login Page */
+@import 'login.css';

@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.1.1] - 2024-04-28
+
+### Fixed
+- Fixed `enhanceTaskForm()` DOM insertion error in recurring tasks
+- Fixed mentions dropdown positioning (changed to `position: fixed`)
+- Fixed `initializeTaskDetailFeatures()` insertBefore error
+- Fixed attachments container placement in task detail modal
+- Removed duplicate methods in `recurring-tasks.js`
+- Added auto-initialization for RecurringTasksManager
+- Fixed event listener conflicts in recurrence checkbox
+- Fixed `getRecurrenceConfig()` to use safe DOM queries
+
+### Changed
+- Refactored `js/recurring-tasks.js` - removed 40+ lines of duplicate code
+- Improved `enhanceTaskForm()` with safer DOM manipulation
+- Updated mentions dropdown to use fixed positioning for modal compatibility
+- Enhanced `initializeTaskDetailFeatures()` with fallback insertion logic
+- Split CSS into 12 modular files
+
+### Added
+- New login page design with feature showcase panel
+- Modular CSS structure (variables, themes, reset, animations, buttons, forms, layout, components, views, utilities, responsive)
+- Visual effects CSS file (glassmorphism, gradients, glow effects)
+- Confetti animation CSS for celebrations
+- Floating action button styles
+- Password visibility toggle on login forms
+
+### Documentation
+- Updated README.md with Phase 1 feature badges
+- Updated API.md with Phase 1 collection schemas
+- Updated DEPLOYMENT.md with free tier instructions
+- Updated CHANGELOG.md with bug fix details
+
+
 ## [2.1.0] - 2024-04-22
 
 ### 🚀 Phase 1 Features Added

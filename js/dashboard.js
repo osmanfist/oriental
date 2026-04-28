@@ -1799,6 +1799,7 @@ async function openTaskDetail(taskId) {
 
 function initializeTaskDetailFeatures(taskId) {
     setTimeout(() => {
+        // Initialize mentions on comment input
         const commentInput = document.getElementById('new-comment');
         if (commentInput && window.mentionsSystem) {
             window.mentionsSystem.initMentions(commentInput, {
@@ -1807,34 +1808,53 @@ function initializeTaskDetailFeatures(taskId) {
                     trackAnalytics('user_mentioned', { mentionedUserId: mention.userId });
                 }
             });
+            console.log('✅ Mentions initialized on comment input');
         }
         
+        // Add attachments section
         const modalBody = document.querySelector('#comment-modal .modal-body');
-        if (modalBody && !document.getElementById('attachments-container')) {
-            const container = document.createElement('div');
-            container.id = 'attachments-container';
+        if (!modalBody) return;
+        
+        // Check if already added
+        if (document.getElementById('attachments-container')) return;
+        
+        const container = document.createElement('div');
+        container.id = 'attachments-container';
+        
+        // Find the comments section header
+        const hrElement = modalBody.querySelector('hr');
+        
+        if (hrElement) {
+            // Insert before the <hr> that separates edit task from comments
+            hrElement.parentNode.insertBefore(container, hrElement);
+        } else {
+            // Fallback: find the h4 with "Comments"
+            const commentsHeader = Array.from(modalBody.querySelectorAll('h4')).find(h => 
+                h.textContent.includes('Comments')
+            );
             
-            const commentsHeader = modalBody.querySelector('h4');
             if (commentsHeader) {
-                modalBody.insertBefore(container, commentsHeader);
+                commentsHeader.parentNode.insertBefore(container, commentsHeader);
             } else {
+                // Last resort: append to modal body
                 modalBody.appendChild(container);
             }
-            
-            if (window.AttachmentsManager) {
-                const manager = new AttachmentsManager();
-                manager.initAttachmentsUI('attachments-container', {
-                    taskId: taskId,
-                    onAttachmentAdded: (attachment) => {
-                        trackAnalytics('attachment_added', { fileType: attachment.fileType });
-                        logActivity('upload_attachment', 'attachment', taskId, attachment.fileName);
-                    },
-                    onAttachmentDeleted: () => trackAnalytics('attachment_deleted', {})
-                });
-                currentAttachmentsManager = manager;
-            }
         }
-    }, 100);
+        
+        // Initialize attachments
+        if (window.AttachmentsManager) {
+            const manager = new AttachmentsManager();
+            manager.initAttachmentsUI('attachments-container', {
+                taskId: taskId,
+                onAttachmentAdded: (attachment) => {
+                    trackAnalytics('attachment_added', { fileType: attachment.fileType });
+                    logActivity('upload_attachment', 'attachment', taskId, attachment.fileName);
+                },
+                onAttachmentDeleted: () => trackAnalytics('attachment_deleted', {})
+            });
+            currentAttachmentsManager = manager;
+        }
+    }, 150);
 }
 
 async function loadComments(taskId) {
@@ -2247,23 +2267,24 @@ function closeCommentModal() {
     if (textarea) textarea.value = '';
 }
 
-function openTaskModal() {
-    if (!currentProject) {
-        showToast('Please select a project first', 'warning');
-        return;
-    }
-    const modal = document.getElementById('task-modal');
-    if (modal) {
-        modal.style.display = 'flex';
-        modal.classList.add('active');
-        updateAssigneeDropdowns();
+function openTaskModal() { 
+    if (!currentProject) { 
+        showToast('Please select a project first', 'warning'); 
+        return; 
+    } 
+    const modal = document.getElementById('task-modal'); 
+    if (modal) { 
+        modal.style.display = 'flex'; 
+        modal.classList.add('active'); 
+        updateAssigneeDropdowns(); 
         
+        // PHASE 1: Enhance with recurrence options
         setTimeout(() => {
-            if (window.recurringManager) {
+            if (window.recurringManager && typeof window.recurringManager.enhanceTaskForm === 'function') {
                 window.recurringManager.enhanceTaskForm();
             }
-        }, 50);
-    }
+        }, 100); // Increased timeout to ensure modal is fully rendered
+    } 
 }
 
 function openProjectModal() {

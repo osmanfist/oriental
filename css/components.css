@@ -1089,6 +1089,44 @@ hr {
     background: var(--primary-200);
 }
 
+/* Mentions Dropdown - Fixed Positioning */
+.mentions-dropdown {
+    position: fixed !important;
+    background: var(--bg-modal);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border-color);
+    max-height: 250px;
+    overflow-y: auto;
+    z-index: 9999;
+    min-width: 250px;
+    display: none;
+}
+
+.mentions-dropdown .mention-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color var(--transition-fast);
+}
+
+.mentions-dropdown .mention-item:last-child {
+    border-bottom: none;
+}
+
+.mentions-dropdown .mention-item:hover,
+.mentions-dropdown .mention-item.selected {
+    background: var(--primary-50);
+}
+
+[data-theme="dark"] .mentions-dropdown .mention-item:hover,
+[data-theme="dark"] .mentions-dropdown .mention-item.selected {
+    background: var(--primary-900);
+}
+
 /* Attachments Section */
 .attachments-section {
     margin-top: var(--space-xl);

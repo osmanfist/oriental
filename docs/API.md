@@ -1006,6 +1006,13 @@ service cloud.firestore {
 
 ## Changelog
 
+### Version 2.1.1 (Current)
+- Fixed recurring tasks initialization
+- Fixed mentions dropdown positioning
+- Fixed attachments container placement
+- Added auto-initialization for RecurringTasksManager
+- Modular CSS architecture (12 files)
+
 ### Version 2.0.0 (Phase 1 Release)
 - Added `attachments` collection for file storage
 - Added `recurring_templates` collection

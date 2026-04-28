@@ -45,7 +45,7 @@ Oriental is a modern, open-source task management platform designed specifically
 | 📴 Offline Support | ✅ Complete | PWA with offline capability |
 | 📈 Reports | ✅ Complete | Charts, stats, and project health |
 
-### Phase 1 Features (v2.1.0) 🚀
+### Phase 1 Features ✅ Complete
 
 | Feature | Status | Description |
 |---------|--------|-------------|
@@ -55,6 +55,15 @@ Oriental is a modern, open-source task management platform designed specifically
 | 📚 Templates Library | ✅ Complete | 6+ project templates, 4+ task templates |
 | ⚙️ Settings Page | ✅ Complete | Organization, notifications, team, integrations |
 
+### Phase 2 Features 🚧 Planned
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| 💬 Real-time Chat | 🚧 Planned | Per-task and project chat rooms |
+| ⏱️ Time Tracking | 🚧 Planned | Start/stop timer with billable hours |
+| 📊 Gantt Charts | 🚧 Planned | Timeline view with dependencies |
+| 🔧 Custom Fields | 🚧 Planned | Text, number, date, dropdown custom fields |
+| 🔗 Integrations | 🚧 Planned | Slack, GitHub, Google Calendar |
 ---
 
 ## 🚀 Quick Start
@@ -114,26 +123,42 @@ vercel
 
 ```
 oriental/
-├── index.html                    # Splash/entry point
-├── login.html                    # Authentication page
-├── dashboard.html                # Main application
-├── manifest.json                 # PWA manifest
-├── sw.js                         # Service Worker for offline
+├── index.html # Splash/entry point
+├── login.html # Authentication page (split layout)
+├── dashboard.html # Main application
+├── manifest.json # PWA manifest
+├── sw.js # Service Worker for offline
 ├── css/
-│   └── styles.css               # Complete styling with animations
+│ ├── main.css # Main import file
+│ ├── variables.css # CSS custom properties
+│ ├── themes.css # Dark mode overrides
+│ ├── reset.css # Reset & base styles
+│ ├── animations.css # Keyframes & animation classes
+│ ├── buttons.css # All button styles
+│ ├── forms.css # Form elements
+│ ├── layout.css # Dashboard, sidebar, header
+│ ├── components.css # Cards, modals, badges, etc.
+│ ├── views.css # Board, sprints, reports, settings
+│ ├── utilities.css # Utility classes
+│ ├── responsive.css # Media queries
+│ ├── login.css # Login page styles
+│ ├── effects.css # Visual enhancements
+│ ├── confetti.css # Celebration animations
+│ └── fab.css # Floating action button
 ├── js/
-│   ├── firebase-config.js       # Firebase initialization
-│   ├── dashboard.js             # Main application logic
-│   ├── mentions.js              # @Mentions system (Phase 1)
-│   ├── attachments.js           # File attachments (Phase 1)
-│   ├── recurring-tasks.js       # Recurring tasks (Phase 1)
-│   └── templates.js             # Templates library (Phase 1)
-├── icons/                       # App icons for PWA
+│ ├── firebase-config.js # Firebase initialization
+│ ├── dashboard.js # Main application logic (v5.0.0)
+│ ├── login.js # Authentication logic
+│ ├── mentions.js # @Mentions system (Phase 1)
+│ ├── attachments.js # File attachments (Phase 1)
+│ ├── recurring-tasks.js # Recurring tasks (Phase 1) ✅ Fixed
+│ └── templates.js # Templates library (Phase 1)
+├── icons/ # App icons for PWA
 └── docs/
-    ├── API.md                   # Complete API reference
-    ├── DEPLOYMENT.md            # Deployment guide
-    ├── CHANGELOG.md             # Version history
-    └── CONTRIBUTING.md          # Contribution guidelines
+├── API.md # Complete API reference
+├── DEPLOYMENT.md # Deployment guide
+├── CHANGELOG.md # Version history
+└── CONTRIBUTING.md # Contribution guidelines
 ```
 
 ---
@@ -147,11 +172,12 @@ oriental/
 | **Frontend** | HTML5, CSS3, Vanilla JavaScript (ES6+) |
 | **Backend** | Firebase (Authentication, Firestore) |
 | **Real-time** | Firestore listeners |
-| **Deployment** | Vercel / Netlify / GitHub Pages |
+| **File Storage** | Firestore (Base64, 1MB limit) |
 | **Email** | EmailJS |
-| **Analytics** | Google Analytics 4 |
 | **Charts** | Chart.js 4.4.0 |
 | **PWA** | Service Worker + Manifest |
+| **Deployment** | Vercel / Netlify / GitHub Pages |
+| **Free Tier** | ✅ Runs entirely on Firebase Spark plan |
 
 ### Database Schema (Simplified)
 

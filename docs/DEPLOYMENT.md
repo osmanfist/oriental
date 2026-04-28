@@ -550,6 +550,26 @@ console.log('Templates:', !!window.TemplatesLibrary);
 
 All should return `true`.
 
+### Phase 1 Features Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| Mentions dropdown not appearing | Check `mentions.js` is loaded. Run `console.log(!!window.mentionsSystem)` |
+| Attachments section missing | Check `attachments.js` is loaded. Open task detail and look for `#attachments-container` |
+| Recurring checkbox missing | Check `recurring-tasks.js` is loaded. Run `console.log(!!window.recurringManager)` |
+| Templates button not working | Check `templates.js` is loaded. Run `console.log(!!window.TemplatesLibrary)` |
+| "Child to insert before" error | Fixed in v2.1.1. Update `recurring-tasks.js` and `dashboard.js` |
+
+### Quick Diagnostic
+```javascript
+// Run in browser console
+console.log('Mentions:', !!window.mentionsSystem);
+console.log('Attachments:', !!window.AttachmentsManager);
+console.log('Recurring:', !!window.recurringManager);
+console.log('Templates:', !!window.TemplatesLibrary);
+// All should return true
+
+
 ### Clear Cache
 
 After deployment, users may need to clear cache:
