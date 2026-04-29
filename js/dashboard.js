@@ -2638,6 +2638,48 @@ function setupEventListeners() {
         closeInviteModal();
     });
     
+// SPRINT FORM
+const sprintForm = document.getElementById('sprint-form');
+if (sprintForm) {
+    // Remove old listener by cloning
+    const newSprintForm = sprintForm.cloneNode(true);
+    sprintForm.parentNode.replaceChild(newSprintForm, sprintForm);
+    
+    newSprintForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const submitBtn = newSprintForm.querySelector('button[type="submit"]');
+        const originalText = submitBtn?.innerHTML;
+        
+        if (submitBtn) {
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+            submitBtn.disabled = true;
+        }
+        
+        const sprintData = {
+            name: document.getElementById('sprint-name')?.value?.trim(),
+            goal: document.getElementById('sprint-goal')?.value?.trim() || '',
+            startDate: document.getElementById('sprint-start-date')?.value || '',
+            endDate: document.getElementById('sprint-end-date')?.value || ''
+        };
+        
+        if (!sprintData.name) {
+            showToast('Please enter a sprint name', 'warning');
+            if (submitBtn) { submitBtn.innerHTML = originalText; submitBtn.disabled = false; }
+            return;
+        }
+        
+        const success = await createSprint(sprintData);
+        
+        if (success) {
+            closeSprintModal();
+            newSprintForm.reset();
+        }
+        
+        if (submitBtn) { submitBtn.innerHTML = originalText; submitBtn.disabled = false; }
+    });
+}
+
     document.getElementById('activity-log-btn')?.addEventListener('click', openActivityLog);
     document.getElementById('mobile-activity-log-btn')?.addEventListener('click', openActivityLog);
     document.getElementById('close-activity-log')?.addEventListener('click', closeActivityLog);
