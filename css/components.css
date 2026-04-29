@@ -419,7 +419,7 @@ hr {
     font-size: var(--text-sm);
 }
 
-..edit-task-actions {
+.edit-task-actions {
     display: flex;
     gap: 0.75rem;
     margin-top: 1.25rem;
@@ -1745,4 +1745,18 @@ hr {
     background: var(--primary-300);
     color: var(--primary-900);
     transform: scale(1.02);
+}
+
+/* Pending Member Pulse Animation */
+@keyframes pending-pulse {
+    0%, 100% { 
+        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4);
+    }
+    50% { 
+        box-shadow: 0 0 0 4px rgba(245, 158, 11, 0);
+    }
+}
+
+.team-member-item .pending-dot {
+    animation: pending-pulse 2s infinite;
 }

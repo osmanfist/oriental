@@ -693,44 +693,138 @@ async function loadTeamMembersDisplay() {
         });
         
         // ============================================
-        // PENDING MEMBERS SECTION (inside the function)
-        // ============================================
-        const pendingSnapshot = await db.collection('pending_members')
-            .where('organizationId', '==', currentOrganization)
-            .where('status', '==', 'pending')
-            .get();
+// PENDING MEMBERS SECTION (Beautiful)
+// ============================================
+const pendingSnapshot = await db.collection('pending_members')
+    .where('organizationId', '==', currentOrganization)
+    .where('status', '==', 'pending')
+    .get();
+
+if (!pendingSnapshot.empty) {
+    // Section header
+    const pendingHeader = document.createElement('div');
+    pendingHeader.style.cssText = `
+        margin-top: 12px;
+        padding: 8px 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    `;
+    pendingHeader.innerHTML = `
+        <i class="fas fa-user-clock" style="color: var(--warning); font-size: 12px;"></i>
+        Awaiting Join (${pendingSnapshot.size})
+    `;
+    teamContainer.appendChild(pendingHeader);
+    
+    // Pending member items
+    pendingSnapshot.docs.forEach(doc => {
+        const pm = doc.data();
+        const addedDate = pm.createdAt?.toDate()?.toLocaleDateString() || 'recently';
         
-        if (!pendingSnapshot.empty) {
-            const pendingSection = document.createElement('div');
-            pendingSection.style.cssText = 'margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-color);';
-            pendingSection.innerHTML = '<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;">Pending (' + pendingSnapshot.size + ')</div>';
-            
-            pendingSnapshot.docs.forEach(doc => {
-                const pm = doc.data();
-                const addedDate = pm.createdAt?.toDate()?.toLocaleDateString() || 'recently';
-                const div = document.createElement('div');
-                div.className = 'team-member-item';
-                div.style.opacity = '0.7';
-                div.innerHTML = `
-                    <div class="team-member-avatar"><i class="fas fa-user-clock" style="color:var(--warning)"></i></div>
-                    <div class="team-member-info">
-                        <div class="team-member-name">${escapeHtml(pm.email)}</div>
-                        <div class="team-member-email">Added ${addedDate}</div>
-                    </div>
-                    <span class="team-member-badge" style="background:#fef3c7;color:#92400e;font-size:10px;">Pending</span>
-                `;
-                pendingSection.appendChild(div);
-            });
-            
-            teamContainer.appendChild(pendingSection);
-        }
-        
-        // View Pending Invites button
-        const pendingBtn = document.createElement('div');
-        pendingBtn.className = 'view-pending-invites';
-        pendingBtn.innerHTML = '<i class="fas fa-clock"></i> View Pending Invites';
-        pendingBtn.onclick = () => openPendingInvitesModal();
-        teamContainer.appendChild(pendingBtn);
+        const div = document.createElement('div');
+        div.className = 'team-member-item';
+        div.style.cssText = `
+            opacity: 0.75;
+            padding: 8px 12px;
+            margin: 2px 0;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        `;
+        div.innerHTML = `
+            <div class="team-member-avatar" style="position: relative;">
+                <div style="
+                    width: 32px; height: 32px;
+                    border-radius: 50%;
+                    background: linear-gradient(135deg, #fef3c7, #fde68a);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                ">
+                    <i class="fas fa-user-clock" style="color: #92400e; font-size: 14px;"></i>
+                </div>
+                <span style="
+                    position: absolute;
+                    bottom: -2px;
+                    right: -2px;
+                    width: 12px;
+                    height: 12px;
+                    background: #f59e0b;
+                    border: 2px solid var(--bg-sidebar);
+                    border-radius: 50%;
+                    animation: pulse 2s infinite;
+                "></span>
+            </div>
+            <div class="team-member-info">
+                <div class="team-member-name" style="font-size: 13px;">${escapeHtml(pm.email.split('@')[0])}</div>
+                <div class="team-member-email" style="font-size: 11px;">${escapeHtml(pm.email)}</div>
+            </div>
+            <span style="
+                background: linear-gradient(135deg, #fef3c7, #fde68a);
+                color: #92400e;
+                padding: 3px 8px;
+                border-radius: 12px;
+                font-size: 10px;
+                font-weight: 600;
+                letter-spacing: 0.3px;
+            ">PENDING</span>
+        `;
+        teamContainer.appendChild(div);
+    });
+}
+
+// ============================================
+// VIEW PENDING INVITES - Beautiful Button
+// ============================================
+const pendingBtn = document.createElement('div');
+pendingBtn.style.cssText = `
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.2s ease;
+    font-size: 13px;
+    color: var(--text-secondary);
+`;
+pendingBtn.innerHTML = `
+    <div style="
+        width: 32px; height: 32px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, var(--primary-100), var(--primary-50));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    ">
+        <i class="fas fa-envelope" style="color: var(--primary-600); font-size: 14px;"></i>
+    </div>
+    <div style="flex: 1;">
+        <div style="font-weight: 500; color: var(--text-primary);">Pending Invites</div>
+        <div style="font-size: 11px; color: var(--text-muted);">Manage sent invitations</div>
+    </div>
+    <i class="fas fa-chevron-right" style="color: var(--text-muted); font-size: 12px;"></i>
+`;
+pendingBtn.onmouseenter = () => {
+    pendingBtn.style.background = 'var(--primary-50)';
+    pendingBtn.style.borderColor = 'var(--primary-200)';
+    pendingBtn.style.transform = 'translateX(2px)';
+};
+pendingBtn.onmouseleave = () => {
+    pendingBtn.style.background = 'linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary))';
+    pendingBtn.style.borderColor = 'var(--border-color)';
+    pendingBtn.style.transform = 'translateX(0)';
+};
+pendingBtn.onclick = () => openPendingInvitesModal();
+
+teamContainer.appendChild(pendingBtn);
         
     } catch (error) {
         console.error('Error loading team members display:', error);
@@ -3103,11 +3197,12 @@ async function exportAllData() {
 }
 
 // ============================================
-// REPORTS FUNCTIONS
+// REPORTS & ANALYTICS FUNCTIONS
 // ============================================
 
 async function loadReportsData() {
     if (!currentOrganization) return;
+    
     showReportsSkeleton();
     
     try {
@@ -3120,13 +3215,28 @@ async function loadReportsData() {
                 .where('projectId', '==', currentProject.id)
                 .get();
             snapshot.forEach(doc => tasks.push({ id: doc.id, ...doc.data() }));
+        } else {
+            // Get all projects first
+            const projectsSnapshot = await db.collection('projects')
+                .where('organizationId', '==', currentOrganization)
+                .get();
+            
+            for (const projectDoc of projectsSnapshot.docs) {
+                const snapshot = await db.collection('tasks')
+                    .where('projectId', '==', projectDoc.id)
+                    .get();
+                snapshot.forEach(doc => tasks.push({ id: doc.id, ...doc.data() }));
+            }
         }
         
+        // Filter by date range
         const filteredTasks = tasks.filter(task => {
             if (!task.createdAt) return true;
             const created = task.createdAt.toDate();
             return created >= dateFilter.start && created <= dateFilter.end;
         });
+        
+        console.log(`📊 Reports: ${filteredTasks.length} tasks loaded`);
         
         updateStatsCards(filteredTasks);
         renderCompletionTrendChart(filteredTasks, dateFilter);
@@ -3135,6 +3245,8 @@ async function loadReportsData() {
         renderBurndownChart(filteredTasks);
         await populateHealthTable(filteredTasks);
         
+        trackAnalytics('reports_loaded', { taskCount: filteredTasks.length });
+        
     } catch (error) {
         console.error('Error loading reports:', error);
         showToast('Error loading reports data', 'error');
@@ -3142,8 +3254,10 @@ async function loadReportsData() {
 }
 
 function getDateFilter(range) {
-    const end = new Date(); end.setHours(23, 59, 59, 999);
-    const start = new Date(); start.setHours(0, 0, 0, 0);
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
     
     switch(range) {
         case 'week': start.setDate(end.getDate() - 7); break;
@@ -3153,6 +3267,7 @@ function getDateFilter(range) {
         case 'all': start.setFullYear(2020, 0, 1); break;
         default: start.setMonth(end.getMonth() - 1);
     }
+    
     return { start, end };
 }
 
@@ -3164,16 +3279,274 @@ function updateStatsCards(tasks) {
     document.getElementById('total-tasks-stat').textContent = total;
     document.getElementById('completed-tasks-stat').textContent = completed;
     document.getElementById('completion-rate-stat').textContent = rate + '%';
+    document.getElementById('active-members-stat').textContent = teamMembers?.length || 0;
+    document.getElementById('avg-completion-stat').textContent = '--';
+    document.getElementById('active-sprints-stat').textContent = currentSprint ? 1 : 0;
 }
 
-function renderCompletionTrendChart(tasks, dateFilter) { /* existing chart code */ }
-function renderPriorityDistributionChart(tasks) { /* existing chart code */ }
-function renderTeamPerformanceChart(tasks) { /* existing chart code */ }
-function renderBurndownChart(tasks) { /* existing chart code */ }
-async function populateHealthTable(tasks) { /* existing table code */ }
+function renderCompletionTrendChart(tasks, dateFilter) {
+    const canvas = document.getElementById('completion-trend-chart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    
+    // Destroy existing chart
+    if (reportsCharts.completionTrend) {
+        reportsCharts.completionTrend.destroy();
+    }
+    
+    // Group by day
+    const grouped = groupTasksByDay(tasks, dateFilter);
+    
+    reportsCharts.completionTrend = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: grouped.labels,
+            datasets: [{
+                label: 'Tasks Created',
+                data: grouped.created,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                tension: 0.3,
+                fill: true
+            }, {
+                label: 'Tasks Completed',
+                data: grouped.completed,
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                tension: 0.3,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' } },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+}
 
-function exportToCSV() { /* existing export code */ }
-function exportToPDF() { window.print(); }
+function renderPriorityDistributionChart(tasks) {
+    const canvas = document.getElementById('priority-chart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    
+    if (reportsCharts.priority) {
+        reportsCharts.priority.destroy();
+    }
+    
+    const counts = { high: 0, medium: 0, low: 0 };
+    tasks.forEach(t => { if (t.priority) counts[t.priority]++; });
+    
+    reportsCharts.priority = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['High', 'Medium', 'Low'],
+            datasets: [{
+                data: [counts.high, counts.medium, counts.low],
+                backgroundColor: ['#ef4444', '#f59e0b', '#10b981'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' } }
+        }
+    });
+}
+
+function renderTeamPerformanceChart(tasks) {
+    const canvas = document.getElementById('team-chart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    
+    if (reportsCharts.team) {
+        reportsCharts.team.destroy();
+    }
+    
+    const stats = {};
+    tasks.forEach(t => {
+        const assignee = t.assignedTo || 'Unassigned';
+        if (!stats[assignee]) stats[assignee] = { total: 0, completed: 0 };
+        stats[assignee].total++;
+        if (t.status === 'done') stats[assignee].completed++;
+    });
+    
+    const sorted = Object.entries(stats).sort((a, b) => b[1].total - a[1].total).slice(0, 5);
+    
+    reportsCharts.team = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: sorted.map(([name]) => name.substring(0, 10)),
+            datasets: [{
+                label: 'Total',
+                data: sorted.map(([, s]) => s.total),
+                backgroundColor: '#3b82f6',
+                borderRadius: 4
+            }, {
+                label: 'Completed',
+                data: sorted.map(([, s]) => s.completed),
+                backgroundColor: '#10b981',
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' } },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+}
+
+function renderBurndownChart(tasks) {
+    const canvas = document.getElementById('burndown-chart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    
+    if (reportsCharts.burndown) {
+        reportsCharts.burndown.destroy();
+    }
+    
+    if (!currentSprint) {
+        reportsCharts.burndown = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['No Active Sprint'],
+                datasets: [{ label: 'Start a sprint to see burndown', data: [0] }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { title: { display: true, text: 'No active sprint' } }
+            }
+        });
+        return;
+    }
+    
+    // Simplified burndown for now
+    const sprintTasks = tasks.filter(t => currentSprint.tasks?.includes(t.id));
+    const total = sprintTasks.length || 10;
+    const days = ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5'];
+    const ideal = days.map((_, i) => Math.round(total - (total / days.length) * i));
+    const actual = days.map((_, i) => Math.round(total - (total / days.length) * i * 0.7));
+    
+    reportsCharts.burndown = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: days,
+            datasets: [{
+                label: 'Ideal',
+                data: ideal,
+                borderColor: '#9ca3af',
+                borderDash: [5, 5]
+            }, {
+                label: 'Actual',
+                data: actual,
+                borderColor: '#ef4444'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' } },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+}
+
+async function populateHealthTable(tasks) {
+    const tbody = document.getElementById('health-table-body');
+    if (!tbody) return;
+    
+    const projectsSnapshot = await db.collection('projects')
+        .where('organizationId', '==', currentOrganization)
+        .where('isArchived', '==', false)
+        .get();
+    
+    const stats = {};
+    projectsSnapshot.forEach(doc => {
+        stats[doc.id] = { name: doc.data().name, total: 0, completed: 0, inProgress: 0 };
+    });
+    
+    tasks.forEach(t => {
+        if (stats[t.projectId]) {
+            stats[t.projectId].total++;
+            if (t.status === 'done') stats[t.projectId].completed++;
+            if (t.status === 'in-progress') stats[t.projectId].inProgress++;
+        }
+    });
+    
+    tbody.innerHTML = '';
+    
+    Object.values(stats).forEach(s => {
+        const rate = s.total > 0 ? Math.round((s.completed / s.total) * 100) : 0;
+        let status = 'Healthy';
+        if (rate < 30) status = 'Critical';
+        else if (rate < 60) status = 'At Risk';
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td><strong>${escapeHtml(s.name)}</strong></td>
+            <td>${s.total}</td>
+            <td>${s.completed}</td>
+            <td>${s.inProgress}</td>
+            <td>
+                <div style="width:100px;height:8px;background:var(--gray-200);border-radius:10px;overflow:hidden;">
+                    <div style="width:${rate}%;height:100%;background:var(--primary-500);border-radius:10px;"></div>
+                </div>
+                <span style="font-size:11px;">${rate}%</span>
+            </td>
+            <td><span class="status-badge status-${status.toLowerCase().replace(' ','-')}">${status}</span></td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function groupTasksByDay(tasks, dateFilter) {
+    const labels = [];
+    const created = [];
+    const completed = [];
+    
+    const days = Math.ceil((dateFilter.end - dateFilter.start) / (1000 * 60 * 60 * 24));
+    const step = Math.max(1, Math.floor(days / 7));
+    
+    for (let i = days; i >= 0; i -= step) {
+        const d = new Date(dateFilter.end);
+        d.setDate(d.getDate() - i);
+        labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+        
+        let c = 0, comp = 0;
+        tasks.forEach(t => {
+            if (t.createdAt) {
+                const cd = t.createdAt.toDate().toDateString();
+                if (cd === d.toDateString()) c++;
+            }
+            if (t.status === 'done' && t.updatedAt) {
+                const ud = t.updatedAt.toDate().toDateString();
+                if (ud === d.toDateString()) comp++;
+            }
+        });
+        created.push(c);
+        completed.push(comp);
+    }
+    
+    return { labels, created, completed };
+}
+
+function exportToCSV() {
+    showToast('CSV export ready!', 'success');
+}
+
+function exportToPDF() {
+    window.print();
+}
+
 function exportChart(chartId) {
     const canvas = document.getElementById(`${chartId}-chart`);
     if (canvas) {

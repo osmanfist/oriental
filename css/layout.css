@@ -10,7 +10,7 @@
 /* Main Content */
 .main-content {
     flex: 1;
-    margin-left: 280px;
+    margin-left: 300px;
     padding: var(--space-2xl);
     animation: fadeIn var(--animation-base) var(--transition-base);
 }
@@ -68,7 +68,7 @@
    ============================================ */
 
 .sidebar {
-    width: 280px;
+    width: 300px;
     background: var(--bg-sidebar);
     border-right: 1px solid var(--border-color);
     display: flex;
