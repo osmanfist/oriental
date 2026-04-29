@@ -3,43 +3,131 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oriental - Task Management Platform</title>
-    <link rel="stylesheet" href="css/styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Oriental - Project Management</title>
+    
+    <meta name="theme-color" content="#16a34a">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏔️</text></svg>">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/index.css">
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+    </style>
 </head>
-<body class="splash-page">
-    <div class="splash-container">
-        <div class="logo">
-            <i class="fas fa-mountain-sun"></i>
-        </div>
-        <h1>Oriental</h1>
-        <p class="tagline">Task Management for Development Teams</p>
-        <div class="loading-spinner"></div>
-        <p class="redirect-text">Loading…</p>
+<body class="index-page">
+    
+    <!-- Animated Particles -->
+    <div class="particles-container">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+    
+    <!-- Mountain Background -->
+    <div class="mountains-bg">
+        <div class="mountain"></div>
+        <div class="mountain"></div>
+        <div class="mountain"></div>
+        <div class="mountain"></div>
     </div>
 
-    <!-- Firebase (compat SDK — v9 only) -->
+    <!-- Main Content -->
+    <div class="splash-content" id="splash-content">
+        
+        <!-- Logo with Rings -->
+        <div class="splash-logo">
+            <div class="logo-icon-container">
+                <div class="logo-ring"></div>
+                <div class="logo-ring"></div>
+                <div class="logo-icon">
+                    <i class="fas fa-mountain-sun"></i>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Title -->
+        <h1 class="splash-title">Oriental</h1>
+        <p class="splash-tagline">Open-source project management for modern teams</p>
+        
+        <!-- Feature Pills -->
+        <div class="feature-pills">
+            <span class="pill"><i class="fas fa-columns"></i> Kanban</span>
+            <span class="pill"><i class="fas fa-chart-line"></i> Analytics</span>
+            <span class="pill"><i class="fas fa-users"></i> Team</span>
+            <span class="pill"><i class="fas fa-moon"></i> Dark Mode</span>
+            <span class="pill"><i class="fas fa-bolt"></i> Real-time</span>
+        </div>
+        
+        <!-- Buttons -->
+        <div class="splash-actions">
+            <a href="login.html" class="btn-splash btn-splash-primary">
+                <i class="fas fa-sign-in-alt"></i> Sign In
+            </a>
+            <a href="login.html#signup" class="btn-splash btn-splash-secondary">
+                <i class="fas fa-user-plus"></i> Create Account
+            </a>
+        </div>
+        
+        <!-- Stats -->
+        <div class="splash-stats">
+            <div class="stat-item">
+                <span class="stat-value">100%</span>
+                <span class="stat-label">Open Source</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+                <span class="stat-value">Free</span>
+                <span class="stat-label">Forever</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+                <span class="stat-value">PWA</span>
+                <span class="stat-label">Ready</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading State (hidden by default) -->
+    <div class="splash-content loading-container" id="loading-state" style="display: none;">
+        <div class="logo-icon-container" style="width: 80px; height: 80px;">
+            <div class="logo-icon">
+                <i class="fas fa-mountain-sun" style="font-size: 36px;"></i>
+            </div>
+        </div>
+        <h2 style="color: white; margin-top: 1rem;">Loading...</h2>
+        <div class="loading-spinner"></div>
+        <p class="loading-text">Preparing your workspace</p>
+    </div>
+
+    <!-- Firebase Scripts -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-
-    <!-- firebase-config.js initialises the app and exposes `auth` globally -->
+    
     <script src="js/firebase-config.js"></script>
-
+    
     <script>
-        /**
-         * Entry point: check auth state and route to the correct page.
-         * firebase-config.js has already initialised the app, so we use the
-         * global `auth` reference it exports rather than calling initializeApp again.
-         */
+        // Check if user is already logged in
         auth.onAuthStateChanged((user) => {
             if (user) {
-                console.log('Signed in — redirecting to dashboard');
-                window.location.href = 'dashboard.html';
-            } else {
-                console.log('Not signed in — redirecting to login');
-                window.location.href = 'login.html';
+                // User is signed in - redirect to dashboard
+                document.getElementById('splash-content').style.display = 'none';
+                document.getElementById('loading-state').style.display = 'block';
+                
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1500);
             }
         });
     </script>
