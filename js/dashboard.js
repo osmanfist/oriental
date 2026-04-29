@@ -2136,48 +2136,7 @@ function setupSettingsEventListeners() {
             trackAnalytics('settings_tab_changed', { tab: tabId });
         });
     });
-    // ============================================
-// SETTINGS FUNCTIONS
-// ============================================
-
-async function loadSettingsView() {
-    if (!currentOrganization) {
-        showToast('Loading organization settings...', 'info');
-        return;
-    }
     
-    try {
-        const orgDoc = await db.collection('organizations').doc(currentOrganization).get();
-        if (orgDoc.exists) {
-            const orgData = orgDoc.data();
-            
-            const nameInput = document.getElementById('org-name-input');
-            const slugInput = document.getElementById('org-slug-input');
-            const slugPreview = document.getElementById('slug-preview');
-            
-            if (nameInput) nameInput.value = orgData.name || '';
-            if (slugInput) slugInput.value = orgData.slug || '';
-            if (slugPreview) slugPreview.textContent = orgData.slug || 'your-org';
-        }
-        
-        // Load theme preference
-        const themeSelect = document.getElementById('theme-select');
-        if (themeSelect) {
-            themeSelect.value = localStorage.getItem('oriental_theme') || 'system';
-        }
-        
-        trackAnalytics('settings_viewed', {});
-        console.log('✅ Settings loaded');
-    } catch (error) {
-        console.error('Error loading settings:', error);
-        showToast('Error loading settings', 'error');
-    }
-}
-
-// Export immediately
-window.loadSettingsView = loadSettingsView;
-
-
     document.getElementById('save-org-settings')?.addEventListener('click', saveOrganizationSettings);
     
     const prefInputs = ['theme-select', 'density-select', 'show-task-counts',
@@ -2201,79 +2160,6 @@ window.loadSettingsView = loadSettingsView;
     document.getElementById('delete-organization')?.addEventListener('click', deleteOrganization);
     document.getElementById('export-all-data')?.addEventListener('click', exportAllData);
 }
-
-// ============================================
-// SPRINT FUNCTIONS
-// ============================================
-
-async function completeSprint() {
-    if (!currentSprint) {
-        showToast('No active sprint to complete', 'warning');
-        return;
-    }
-    
-    const confirmed = await showConfirmDialog(
-        'Complete Sprint',
-        `Mark "${currentSprint.name}" as completed? This cannot be undone.`,
-        'warning'
-    );
-    
-    if (!confirmed) return;
-    
-    try {
-        await db.collection('sprints').doc(currentSprint.id).update({
-            status: 'completed',
-            completedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        
-        await logActivity('complete_sprint', 'sprint', currentSprint.id, currentSprint.name);
-        
-        showToast('Sprint completed! 🎉', 'success');
-        currentSprint = null;
-        await loadSprints();
-        trackAnalytics('sprint_completed', {});
-        
-    } catch (error) {
-        console.error('Error completing sprint:', error);
-        showToast('Error completing sprint', 'error');
-    }
-}
-
-// Export immediately
-window.completeSprint = completeSprint;
-
-
-function openSprintModal() {
-    if (!currentProject) {
-        showToast('Please select a project first', 'warning');
-        return;
-    }
-    
-    if (currentSprint) {
-        showToast('There is already an active sprint. Complete it before starting a new one.', 'warning');
-        return;
-    }
-    
-    const modal = document.getElementById('sprint-modal');
-    if (!modal) return;
-    
-    // Set default dates
-    const today = new Date();
-    const twoWeeksLater = new Date();
-    twoWeeksLater.setDate(today.getDate() + 14);
-    
-    const startInput = document.getElementById('sprint-start-date');
-    const endInput = document.getElementById('sprint-end-date');
-    
-    if (startInput) startInput.value = today.toISOString().split('T')[0];
-    if (endInput) endInput.value = twoWeeksLater.toISOString().split('T')[0];
-    
-    modal.style.display = 'flex';
-    modal.classList.add('active');
-}
-
-// Export immediately
-window.openSprintModal = openSprintModal;
 
 // ============================================
 // MOBILE NAVIGATION
@@ -2407,6 +2293,496 @@ function openProjectModal() {
 }
 
 // ============================================
+// SPRINT FUNCTIONS
+// ============================================
+
+/**
+ * Load all sprints for the current project
+ */
+async function loadSprints() {
+    if (!currentProject) return;
+    
+    try {
+        const activeSprintSnapshot = await db.collection('sprints')
+            .where('projectId', '==', currentProject.id)
+            .where('status', '==', 'active')
+            .limit(1)
+            .get();
+        
+        if (!activeSprintSnapshot.empty) {
+            currentSprint = { 
+                id: activeSprintSnapshot.docs[0].id, 
+                ...activeSprintSnapshot.docs[0].data() 
+            };
+            displayActiveSprint(currentSprint);
+            loadSprintTasks(currentSprint);
+        } else {
+            currentSprint = null;
+            displayNoActiveSprint();
+        }
+        
+        await loadPastSprints();
+    } catch (error) {
+        console.error('Error loading sprints:', error);
+    }
+}
+
+function displayActiveSprint(sprint) {
+    const nameEl = document.getElementById('active-sprint-name');
+    const goalEl = document.getElementById('active-sprint-goal');
+    const datesEl = document.getElementById('sprint-dates');
+    const createBtn = document.getElementById('create-sprint-btn');
+    const completeBtn = document.getElementById('complete-sprint-btn');
+    
+    if (nameEl) nameEl.textContent = sprint.name || 'Unnamed Sprint';
+    if (goalEl) goalEl.textContent = sprint.goal || 'No goal set';
+    
+    if (datesEl && sprint.startDate && sprint.endDate) {
+        const start = new Date(sprint.startDate).toLocaleDateString();
+        const end = new Date(sprint.endDate).toLocaleDateString();
+        datesEl.innerHTML = `<i class="fas fa-calendar-alt"></i> ${start} - ${end}`;
+    }
+    
+    if (createBtn) createBtn.style.display = 'none';
+    if (completeBtn) completeBtn.style.display = 'flex';
+}
+
+function displayNoActiveSprint() {
+    const nameEl = document.getElementById('active-sprint-name');
+    const goalEl = document.getElementById('active-sprint-goal');
+    const datesEl = document.getElementById('sprint-dates');
+    const createBtn = document.getElementById('create-sprint-btn');
+    const completeBtn = document.getElementById('complete-sprint-btn');
+    
+    if (nameEl) nameEl.textContent = 'No Active Sprint';
+    if (goalEl) goalEl.textContent = 'Start a sprint to track progress';
+    if (datesEl) datesEl.innerHTML = '';
+    if (createBtn) createBtn.style.display = 'flex';
+    if (completeBtn) completeBtn.style.display = 'none';
+    
+    ['planned-tasks', 'progress-tasks', 'completed-tasks'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '<div class="empty-state-small">No active sprint</div>';
+    });
+    
+    ['planned-count', 'progress-count', 'completed-count'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '0';
+    });
+    
+    const pp = document.getElementById('sprint-progress-percent');
+    const pf = document.getElementById('sprint-progress-fill');
+    const ct = document.getElementById('sprint-completed-tasks');
+    const tt = document.getElementById('sprint-total-tasks');
+    
+    if (pp) pp.textContent = '0%';
+    if (pf) pf.style.width = '0%';
+    if (ct) ct.textContent = '0';
+    if (tt) tt.textContent = '0';
+}
+
+async function loadSprintTasks(sprint) {
+    if (!sprint?.tasks?.length) {
+        showEmptySprintColumns();
+        updateSprintProgress(0, 0);
+        return;
+    }
+    
+    try {
+        const tasksData = [];
+        for (const taskId of sprint.tasks) {
+            const taskDoc = await db.collection('tasks').doc(taskId).get();
+            if (taskDoc.exists) tasksData.push({ id: taskDoc.id, ...taskDoc.data() });
+        }
+        
+        const planned = tasksData.filter(t => t.status === 'todo');
+        const inProgress = tasksData.filter(t => t.status === 'in-progress');
+        const completed = tasksData.filter(t => t.status === 'done');
+        
+        renderSprintColumns(planned, inProgress, completed);
+        updateSprintProgress(completed.length, tasksData.length);
+    } catch (error) {
+        console.error('Error loading sprint tasks:', error);
+    }
+}
+
+function renderSprintColumns(planned, inProgress, completed) {
+    const pEl = document.getElementById('planned-tasks');
+    const iEl = document.getElementById('progress-tasks');
+    const cEl = document.getElementById('completed-tasks');
+    
+    if (pEl) pEl.innerHTML = planned.map(t => createSprintTaskCard(t)).join('') || '<div class="empty-state-small">No tasks</div>';
+    if (iEl) iEl.innerHTML = inProgress.map(t => createSprintTaskCard(t)).join('') || '<div class="empty-state-small">No tasks</div>';
+    if (cEl) cEl.innerHTML = completed.map(t => createSprintTaskCard(t)).join('') || '<div class="empty-state-small">No tasks</div>';
+    
+    document.getElementById('planned-count').textContent = planned.length;
+    document.getElementById('progress-count').textContent = inProgress.length;
+    document.getElementById('completed-count').textContent = completed.length;
+}
+
+function createSprintTaskCard(task) {
+    const pc = task.priority === 'high' ? 'priority-high' : (task.priority === 'medium' ? 'priority-medium' : 'priority-low');
+    return `<div class="sprint-task-card" onclick="openTaskDetail('${task.id}')"><div class="sprint-task-title">${escapeHtml(task.title)}</div><div class="sprint-task-status"><span class="priority ${pc}">${task.priority||'medium'}</span><span><i class="fas fa-user"></i> ${task.assignedTo||'Unassigned'}</span></div></div>`;
+}
+
+function showEmptySprintColumns() {
+    ['planned-tasks','progress-tasks','completed-tasks'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '<div class="empty-state-small">No tasks</div>';
+    });
+    ['planned-count','progress-count','completed-count'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '0';
+    });
+}
+
+function updateSprintProgress(completed, total) {
+    const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+    const pe = document.getElementById('sprint-progress-percent');
+    const fe = document.getElementById('sprint-progress-fill');
+    const ce = document.getElementById('sprint-completed-tasks');
+    const te = document.getElementById('sprint-total-tasks');
+    if (pe) pe.textContent = `${percent}%`;
+    if (fe) fe.style.width = `${percent}%`;
+    if (ce) ce.textContent = completed;
+    if (te) te.textContent = total;
+}
+
+async function loadPastSprints() {
+    if (!currentProject) return;
+    try {
+        const snapshot = await db.collection('sprints')
+            .where('projectId', '==', currentProject.id)
+            .where('status', '==', 'completed')
+            .orderBy('endDate', 'desc').limit(10).get();
+        const container = document.getElementById('past-sprints-list');
+        if (!container) return;
+        if (snapshot.empty) { container.innerHTML = '<div class="empty-state-small">No past sprints</div>'; return; }
+        container.innerHTML = '';
+        snapshot.forEach(doc => {
+            const s = doc.data();
+            const d = document.createElement('div');
+            d.className = 'past-sprint-item';
+            d.onclick = () => showToast(`Sprint: ${s.name}`, 'info');
+            const start = s.startDate ? new Date(s.startDate).toLocaleDateString() : '?';
+            const end = s.endDate ? new Date(s.endDate).toLocaleDateString() : '?';
+            d.innerHTML = `<div class="past-sprint-name">${escapeHtml(s.name)}</div><div class="past-sprint-dates"><i class="fas fa-calendar-alt"></i> ${start} - ${end}</div><div class="past-sprint-stats"><i class="fas fa-tasks"></i> ${s.tasks?.length||0} tasks</div>`;
+            container.appendChild(d);
+        });
+    } catch (error) { console.error('Error loading past sprints:', error); }
+}
+
+async function createSprint(sprintData) {
+    if (!currentProject) { showToast('Select a project first', 'warning'); return false; }
+    try {
+        await db.collection('sprints').add({
+            organizationId: currentOrganization, projectId: currentProject.id,
+            name: sprintData.name, goal: sprintData.goal || '',
+            startDate: sprintData.startDate, endDate: sprintData.endDate,
+            status: 'active', tasks: [],
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        await logActivity('create_sprint', 'sprint', null, sprintData.name);
+        showToast('Sprint started!', 'success');
+        await loadSprints();
+        return true;
+    } catch (error) { console.error('Error creating sprint:', error); showToast('Error creating sprint', 'error'); return false; }
+}
+
+async function completeSprint() {
+    if (!currentSprint) { showToast('No active sprint', 'warning'); return; }
+    const confirmed = await showConfirmDialog('Complete Sprint', `Mark "${currentSprint.name}" as completed?`, 'warning');
+    if (!confirmed) return;
+    try {
+        await db.collection('sprints').doc(currentSprint.id).update({ status: 'completed', completedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        await logActivity('complete_sprint', 'sprint', currentSprint.id, currentSprint.name);
+        showToast('Sprint completed! 🎉', 'success');
+        currentSprint = null;
+        await loadSprints();
+    } catch (error) { console.error('Error:', error); showToast('Error completing sprint', 'error'); }
+}
+
+function openSprintModal() {
+    if (!currentProject) { showToast('Select a project first', 'warning'); return; }
+    if (currentSprint) { showToast('Active sprint exists. Complete it first.', 'warning'); return; }
+    const modal = document.getElementById('sprint-modal');
+    if (!modal) return;
+    const today = new Date();
+    const end = new Date(); end.setDate(today.getDate()+14);
+    document.getElementById('sprint-start-date').value = today.toISOString().split('T')[0];
+    document.getElementById('sprint-end-date').value = end.toISOString().split('T')[0];
+    modal.style.display = 'flex'; modal.classList.add('active');
+}
+
+async function openAddToSprintModal() {
+    if (!currentSprint) { showToast('No active sprint', 'warning'); return; }
+    await loadAvailableTasks();
+    const modal = document.getElementById('add-to-sprint-modal');
+    if (modal) { modal.style.display = 'flex'; modal.classList.add('active'); }
+}
+
+function closeAddToSprintModal() {
+    const modal = document.getElementById('add-to-sprint-modal');
+    if (modal) { modal.style.display = 'none'; modal.classList.remove('active'); }
+}
+
+async function loadAvailableTasks() {
+    if (!currentProject || !currentSprint) return;
+    try {
+        const snapshot = await db.collection('tasks').where('projectId', '==', currentProject.id).get();
+        const sprintIds = currentSprint.tasks || [];
+        availableTasks = [];
+        snapshot.forEach(doc => { if (!sprintIds.includes(doc.id)) availableTasks.push({ id: doc.id, ...doc.data() }); });
+        const container = document.getElementById('available-tasks-list');
+        if (!container) return;
+        if (!availableTasks.length) { container.innerHTML = '<div class="empty-state-small">No available tasks</div>'; return; }
+        container.innerHTML = availableTasks.map(t => `<div class="available-task-item"><input type="checkbox" value="${t.id}" id="task-${t.id}"><label for="task-${t.id}" class="available-task-title">${escapeHtml(t.title)}</label><span class="available-task-priority priority-${t.priority||'medium'}">${t.priority||'medium'}</span></div>`).join('');
+    } catch (error) { console.error('Error:', error); }
+}
+
+async function addSelectedTasksToSprint() {
+    const selected = document.querySelectorAll('#available-tasks-list input:checked');
+    const ids = Array.from(selected).map(cb => cb.value);
+    if (!ids.length) { showToast('Select tasks first', 'warning'); return; }
+    try {
+        const updated = [...(currentSprint.tasks||[]), ...ids];
+        await db.collection('sprints').doc(currentSprint.id).update({ tasks: updated });
+        currentSprint.tasks = updated;
+        showToast(`${ids.length} task(s) added`, 'success');
+        closeAddToSprintModal();
+        await loadSprintTasks(currentSprint);
+    } catch (error) { console.error('Error:', error); showToast('Error adding tasks', 'error'); }
+}
+
+// ============================================
+// SETTINGS FUNCTIONS
+// ============================================
+
+async function loadSettingsView() {
+    if (!currentOrganization) { showToast('Loading settings...', 'info'); return; }
+    try {
+        const orgDoc = await db.collection('organizations').doc(currentOrganization).get();
+        if (orgDoc.exists) {
+            const d = orgDoc.data();
+            const ni = document.getElementById('org-name-input');
+            const si = document.getElementById('org-slug-input');
+            const sp = document.getElementById('slug-preview');
+            if (ni) ni.value = d.name || '';
+            if (si) si.value = d.slug || '';
+            if (sp) sp.textContent = d.slug || 'your-org';
+        }
+        const ts = document.getElementById('theme-select');
+        if (ts) ts.value = localStorage.getItem('oriental_theme') || 'system';
+    } catch (error) { console.error('Error:', error); showToast('Error loading settings', 'error'); }
+}
+
+async function saveOrganizationSettings() {
+    const n = document.getElementById('org-name-input').value.trim();
+    if (!n) { showToast('Name required', 'warning'); return; }
+    try {
+        await db.collection('organizations').doc(currentOrganization).update({
+            name: n, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        document.getElementById('org-name').textContent = n;
+        showToast('Settings saved', 'success');
+    } catch (error) { showToast('Error saving', 'error'); }
+}
+
+async function saveUserPreferences() {
+    try {
+        const prefs = {
+            notifyTaskAssigned: document.getElementById('notify-task-assigned')?.checked ?? true,
+            notifyTaskCompleted: document.getElementById('notify-task-completed')?.checked ?? true,
+            notifyCommentMention: document.getElementById('notify-comment-mention')?.checked ?? true,
+            digestFrequency: document.getElementById('digest-frequency')?.value || 'never',
+            theme: document.getElementById('theme-select')?.value || 'system',
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        await db.collection('users').doc(currentUser.uid).update({ preferences: prefs });
+        const isDark = prefs.theme === 'dark' || (prefs.theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+        showToast('Preferences saved', 'success');
+    } catch (error) { console.error('Error:', error); }
+}
+
+async function leaveOrganization() {
+    const c = await showConfirmDialog('Leave Organization', 'Are you sure? You will lose access.', 'danger');
+    if (!c) return;
+    try {
+        await db.collection('organizations').doc(currentOrganization).update({ members: firebase.firestore.FieldValue.arrayRemove(currentUser.uid) });
+        await db.collection('users').doc(currentUser.uid).update({ organizations: firebase.firestore.FieldValue.arrayRemove(currentOrganization), currentOrganization: null });
+        showToast('You have left', 'success');
+        setTimeout(() => { auth.signOut(); window.location.href = 'login.html'; }, 1500);
+    } catch (error) { showToast('Error', 'error'); }
+}
+
+async function deleteOrganization() {
+    const c = await showConfirmDialog('Delete Organization', 'This is IRREVERSIBLE. Continue?', 'danger');
+    if (!c) return;
+    const confirm = prompt('Type DELETE to confirm:');
+    if (confirm !== 'DELETE') { showToast('Cancelled', 'info'); return; }
+    try {
+        showToast('Deleting...', 'info');
+        const ps = await db.collection('projects').where('organizationId', '==', currentOrganization).get();
+        for (const pd of ps.docs) {
+            const ts = await db.collection('tasks').where('projectId', '==', pd.id).get();
+            for (const td of ts.docs) {
+                const cs = await db.collection('comments').where('taskId', '==', td.id).get();
+                cs.forEach(cd => cd.ref.delete());
+                await td.ref.delete();
+            }
+            await pd.ref.delete();
+        }
+        await db.collection('organizations').doc(currentOrganization).delete();
+        showToast('Deleted', 'success');
+        setTimeout(() => { auth.signOut(); window.location.href = 'login.html'; }, 1500);
+    } catch (error) { showToast('Error: ' + error.message, 'error'); }
+}
+
+async function exportAllData() {
+    showToast('Preparing export...', 'info');
+    try {
+        const data = { exportedAt: new Date().toISOString(), projects: [], tasks: [] };
+        const ps = await db.collection('projects').where('organizationId', '==', currentOrganization).get();
+        for (const pd of ps.docs) {
+            data.projects.push({ id: pd.id, ...pd.data() });
+            const ts = await db.collection('tasks').where('projectId', '==', pd.id).get();
+            ts.forEach(td => data.tasks.push({ id: td.id, ...td.data() }));
+        }
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `oriental-export-${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        showToast('Exported!', 'success');
+    } catch (error) { showToast('Error exporting', 'error'); }
+}
+
+// ============================================
+// UNDO DELETE
+// ============================================
+
+function showUndoToast(message, undoFn) {
+    const existing = document.querySelector('.undo-toast');
+    if (existing) existing.remove();
+    if (undoTimeout) clearTimeout(undoTimeout);
+    const toast = document.createElement('div');
+    toast.className = 'undo-toast';
+    toast.innerHTML = `<span>${escapeHtml(message)}</span><button class="undo-btn">Undo</button>`;
+    document.body.appendChild(toast);
+    toast.querySelector('.undo-btn').addEventListener('click', () => { undoFn(); toast.remove(); clearTimeout(undoTimeout); showToast('Undone!', 'success'); });
+    undoTimeout = setTimeout(() => { toast.remove(); deletedItem = null; deletedItemType = null; }, UNDO_DURATION);
+}
+
+async function deleteTaskWithUndo(taskId, taskData) {
+    deletedItem = { id: taskId, ...taskData, type: 'task' };
+    deletedItemType = 'task';
+    try {
+        const cs = await db.collection('comments').where('taskId', '==', taskId).get();
+        const batch = db.batch();
+        cs.forEach(d => batch.delete(d.ref));
+        batch.delete(db.collection('tasks').doc(taskId));
+        await batch.commit();
+        await logActivity('delete_task', 'task', taskId, taskData.title, {});
+        showUndoToast('Task deleted', undoDelete);
+        closeCommentModal();
+        await loadTasks();
+        invalidateCache();
+    } catch (error) { console.error('Error:', error); showToast('Error deleting task', 'error'); }
+}
+
+async function deleteProjectWithUndo(projectId, projectData) {
+    deletedItem = { id: projectId, ...projectData, type: 'project' };
+    deletedItemType = 'project';
+    try {
+        const ts = await db.collection('tasks').where('projectId', '==', projectId).get();
+        const batch = db.batch();
+        const tasks = [];
+        for (const td of ts.docs) {
+            const cs = await db.collection('comments').where('taskId', '==', td.id).get();
+            cs.forEach(cd => batch.delete(cd.ref));
+            batch.delete(td.ref);
+            tasks.push({ id: td.id, ...td.data() });
+        }
+        batch.delete(db.collection('projects').doc(projectId));
+        await batch.commit();
+        deletedItem.tasks = tasks;
+        await logActivity('delete_project', 'project', projectId, projectData.name, {});
+        showUndoToast(`Project "${projectData.name}" deleted`, undoDelete);
+        await loadProjectsOptimized();
+        invalidateCache();
+    } catch (error) { console.error('Error:', error); showToast('Error deleting project', 'error'); }
+}
+
+async function undoDelete() {
+    if (!deletedItem) return;
+    try {
+        if (deletedItemType === 'task') {
+            await db.collection('tasks').add({
+                projectId: deletedItem.projectId, title: deletedItem.title,
+                description: deletedItem.description || '', priority: deletedItem.priority || 'medium',
+                status: deletedItem.status || 'todo', assignedTo: deletedItem.assignedTo,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } else if (deletedItemType === 'project') {
+            const ref = await db.collection('projects').add({
+                organizationId: deletedItem.organizationId, name: deletedItem.name,
+                description: deletedItem.description || '', color: deletedItem.color || '#16a34a',
+                isArchived: false, createdBy: deletedItem.createdBy,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            if (deletedItem.tasks) {
+                for (const t of deletedItem.tasks) {
+                    await db.collection('tasks').add({
+                        projectId: ref.id, title: t.title, description: t.description || '',
+                        priority: t.priority || 'medium', status: t.status || 'todo',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                }
+            }
+        }
+        deletedItem = null; deletedItemType = null;
+        invalidateCache();
+        if (deletedItemType === 'project') await loadProjectsOptimized();
+        else await loadTasks();
+    } catch (error) { console.error('Error:', error); showToast('Error undoing', 'error'); }
+}
+
+// ============================================
+// KEYBOARD SHORTCUTS
+// ============================================
+
+function setupKeyboardShortcuts() {
+    document.addEventListener('keydown', (e) => {
+        const isTyping = e.target.matches('input, textarea, select, [contenteditable]');
+        if (e.key === '?' && !isTyping) { e.preventDefault(); showShortcutsHelp(); return; }
+        if (e.key === 'Escape') { closeAllModals(); return; }
+        if (isTyping) return;
+        if (e.key === 'n' || e.key === 'N') { e.preventDefault(); openTaskModal(); }
+        if (e.key === 'p' || e.key === 'P') { e.preventDefault(); openProjectModal(); }
+        if (e.key === '/') { e.preventDefault(); document.getElementById('search-tasks')?.focus(); }
+        if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); if (deletedItem) undoDelete(); }
+    });
+}
+
+function closeAllModals() {
+    closeTaskModal(); closeProjectModal(); closeSprintModal(); closeCommentModal();
+    document.getElementById('filter-dropdown')?.classList.remove('show');
+}
+
+function showShortcutsHelp() {
+    let modal = document.getElementById('shortcuts-help-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'shortcuts-help-modal';
+        modal.className = 'modal';
+        modal.innerHTML = `<div class="modal-content" style="max-width:500px"><div class="modal-header"><h3><i class="fas fa-keyboard"></i> Shortcuts</h3><button class="close-modal" onclick="document.getElementById('shortcuts-help-modal').remove()">&times;</button></div><div class="modal-body"><div class="shortcuts-grid"><div class="shortcut-item"><kbd>N</kbd><span>New Task</span></div><div class="shortcut-item"><kbd>P</kbd><span>New Project</span></div><div class="shortcut-item"><kbd>/</kbd><span>Search</span></div><div class="shortcut-item"><kbd>Esc</kbd><span>Close</span></div><div class="shortcut-item"><kbd>Ctrl+Z</kbd><span>Undo Delete</span></div><div class="shortcut-item"><kbd>?</kbd><span>This help</span></div></div></div></div>`;
+        document.body.appendChild(modal);
+    }
+    modal.style.display = 'flex';
+}
+
+// ============================================
 // UTILITIES
 // ============================================
 
@@ -2430,83 +2806,71 @@ function showToast(message, type = 'info') {
 // GLOBAL EXPORTS
 // ============================================
 
-(function() {
-    console.log('🔧 Setting up global exports...');
-    
-    // Define inline if the functions don't exist yet
-    if (typeof window.openTemplatesLibrary !== 'function') {
-        window.openTemplatesLibrary = function() {
-            if (window.TemplatesLibrary) {
-                new TemplatesLibrary().openTemplatesLibrary();
-            } else {
-                showToast('Templates library not loaded', 'error');
-            }
-        };
-        console.log('  ✅ openTemplatesLibrary created');
+// Task Functions
+window.openTaskDetail = openTaskDetail;
+window.updateTask = updateTask;
+window.createTask = createTask;
+window.openTaskModal = openTaskModal;
+window.closeTaskModal = closeTaskModal;
+window.deleteTaskWithUndo = deleteTaskWithUndo;
+
+// Project Functions
+window.openProjectModal = openProjectModal;
+window.closeProjectModal = closeProjectModal;
+window.deleteProjectWithUndo = deleteProjectWithUndo;
+
+// Comment Functions
+window.closeCommentModal = closeCommentModal;
+
+// Search & Filter
+window.clearSearchAndReload = clearSearchAndReload;
+window.removeFilter = removeFilter;
+
+// Invite Functions
+window.openInviteModal = openInviteModal;
+window.closeInviteModal = closeInviteModal;
+window.closePendingInvitesModal = closePendingInvitesModal;
+window.cancelInvite = cancelInvite;
+
+// Sprint Functions
+window.openSprintModal = openSprintModal;
+window.closeSprintModal = closeSprintModal;
+window.completeSprint = completeSprint;
+window.openAddToSprintModal = openAddToSprintModal;
+window.closeAddToSprintModal = closeAddToSprintModal;
+
+// UI Functions
+window.toggleTheme = toggleTheme;
+window.openActivityLog = openActivityLog;
+window.closeActivityLog = closeActivityLog;
+window.exportChart = exportChart;
+
+// Phase 1 Feature Functions
+window.openTemplatesLibrary = function() {
+    if (window.TemplatesLibrary) {
+        new TemplatesLibrary().openTemplatesLibrary();
+    } else {
+        showToast('Templates library not loaded', 'error');
     }
-    
-    if (typeof window.loadSettingsView !== 'function') {
-        window.loadSettingsView = async function() {
-            if (!currentOrganization) {
-                showToast('Loading settings...', 'info');
-                return;
-            }
-            try {
-                const orgDoc = await db.collection('organizations').doc(currentOrganization).get();
-                if (orgDoc.exists) {
-                    const data = orgDoc.data();
-                    const nameInput = document.getElementById('org-name-input');
-                    const slugInput = document.getElementById('org-slug-input');
-                    const slugPreview = document.getElementById('slug-preview');
-                    if (nameInput) nameInput.value = data.name || '';
-                    if (slugInput) slugInput.value = data.slug || '';
-                    if (slugPreview) slugPreview.textContent = data.slug || 'your-org';
-                }
-            } catch (error) {
-                console.error('Error loading settings:', error);
-                showToast('Error loading settings', 'error');
-            }
-        };
-        console.log('  ✅ loadSettingsView created');
-    }
-    
-    // Standard exports
-    const standardExports = {
-        openTaskDetail,
-        updateTask,
-        createTask,
-        openTaskModal,
-        closeTaskModal,
-        deleteTaskWithUndo,
-        openProjectModal,
-        closeProjectModal,
-        deleteProjectWithUndo,
-        closeCommentModal,
-        clearSearchAndReload,
-        removeFilter,
-        openInviteModal,
-        closeInviteModal,
-        closePendingInvitesModal,
-        cancelInvite,
-        openSprintModal,
-        closeSprintModal,
-        completeSprint,
-        openAddToSprintModal,
-        closeAddToSprintModal,
-        toggleTheme,
-        openActivityLog,
-        closeActivityLog,
-        exportChart,
-        setupSettingsEventListeners,
-    };
-    
-    Object.entries(standardExports).forEach(([name, fn]) => {
-        if (typeof fn === 'function') {
-            window[name] = fn;
-        }
-    });
-    
-    console.log('✅ Global exports complete');
-    console.log('  openTemplatesLibrary:', typeof window.openTemplatesLibrary);
-    console.log('  loadSettingsView:', typeof window.loadSettingsView);
-})();
+};
+
+window.loadSettingsView = loadSettingsView;
+
+// Settings Functions
+window.setupSettingsEventListeners = setupSettingsEventListeners;
+window.saveOrganizationSettings = saveOrganizationSettings;
+window.saveUserPreferences = saveUserPreferences;
+window.leaveOrganization = leaveOrganization;
+window.deleteOrganization = deleteOrganization;
+window.exportAllData = exportAllData;
+
+// Utility Functions (already global via function declaration)
+// showToast, escapeHtml, logActivity are function declarations so they're hoisted
+
+console.log('✅ Dashboard.js fully loaded - Phase 1 Ready!');
+console.log('📋 Global functions available:', 
+    Object.keys(window).filter(k => 
+        typeof window[k] === 'function' && 
+        k.includes('open') || k.includes('close') || k.includes('load') || k.includes('show')
+    ).join(', ')
+);

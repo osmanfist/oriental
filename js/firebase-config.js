@@ -19,7 +19,7 @@ firebase.initializeApp(firebaseConfig);
 // Initialize services
 const auth = firebase.auth();
 const db = firebase.firestore();
-const storage = firebase.storage(); // NEW: Storage for attachments
+// Storage is not needed for Phase 1 (we use Base64 in Firestore)
 
 // Enable offline persistence
 db.enablePersistence({ synchronizeTabs: true })
@@ -34,8 +34,5 @@ db.enablePersistence({ synchronizeTabs: true })
 // Keep user signed in
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
     .catch((err) => console.error('Auth persistence error:', err));
-
-// NEW: Storage settings
-storage.setMaxUploadRetryTime(10000);
 
 console.log('✅ Firebase initialized with Storage support');
