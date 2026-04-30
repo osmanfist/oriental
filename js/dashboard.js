@@ -3581,8 +3581,138 @@ function groupTasksByDay(tasks, dateFilter) {
     return { labels, created, completed };
 }
 
-function exportToCSV() {
-    showToast('CSV export ready!', 'success');
+async function exportToCSV() {
+    if (!currentOrganization) {
+        showToast('No data to export', 'warning');
+        return;
+    }
+    
+    showToast('Preparing CSV export...', 'info');
+    
+    try {
+        let tasks = [];
+        
+        // Get tasks from current project or all projects
+        if (currentProject) {
+            const snapshot = await db.collection('tasks')
+                .where('projectId', '==', currentProject.id)
+                .get();
+            snapshot.forEach(doc => {
+                tasks.push({ 
+                    id: doc.id, 
+                    ...doc.data(),
+                    projectName: currentProject.name 
+                });
+            });
+        } else {
+            // Get all projects first
+            const projectsSnapshot = await db.collection('projects')
+                .where('organizationId', '==', currentOrganization)
+                .get();
+            
+            const projects = {};
+            projectsSnapshot.forEach(doc => {
+                projects[doc.id] = doc.data().name;
+            });
+            
+            // Get tasks for each project
+            for (const projectId of Object.keys(projects)) {
+                const snapshot = await db.collection('tasks')
+                    .where('projectId', '==', projectId)
+                    .get();
+                snapshot.forEach(doc => {
+                    tasks.push({ 
+                        id: doc.id, 
+                        ...doc.data(),
+                        projectName: projects[projectId] 
+                    });
+                });
+            }
+        }
+        
+        if (tasks.length === 0) {
+            showToast('No tasks to export', 'warning');
+            return;
+        }
+        
+        // Define CSV headers
+        const headers = [
+            'Title',
+            'Description',
+            'Status',
+            'Priority',
+            'Assignee',
+            'Due Date',
+            'Estimated Hours',
+            'Tags',
+            'Project',
+            'Created Date',
+            'Updated Date'
+        ];
+        
+        // Convert tasks to CSV rows
+        const rows = tasks.map(task => [
+            escapeCsvField(task.title || ''),
+            escapeCsvField((task.description || '').substring(0, 200)),
+            escapeCsvField(task.status || 'todo'),
+            escapeCsvField(task.priority || 'medium'),
+            escapeCsvField(task.assignedTo || 'Unassigned'),
+            escapeCsvField(task.dueDate || ''),
+            task.estimatedHours || 0,
+            escapeCsvField((task.tags || []).join('; ')),
+            escapeCsvField(task.projectName || ''),
+            task.createdAt ? new Date(task.createdAt.toDate()).toLocaleDateString() : '',
+            task.updatedAt ? new Date(task.updatedAt.toDate()).toLocaleDateString() : ''
+        ]);
+        
+        // Build CSV content
+        let csvContent = headers.join(',') + '\n';
+        rows.forEach(row => {
+            csvContent += row.join(',') + '\n';
+        });
+        
+        // Create and trigger download
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        
+        const filename = currentProject 
+            ? `oriental-${currentProject.name.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-tasks.csv`
+            : `oriental-all-tasks-${new Date().toISOString().split('T')[0]}.csv`;
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.display = 'none';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        trackAnalytics('csv_exported', { taskCount: tasks.length });
+        showToast(`Exported ${tasks.length} tasks to CSV!`, 'success');
+        
+    } catch (error) {
+        console.error('Error exporting CSV:', error);
+        showToast('Error exporting CSV: ' + error.message, 'error');
+    }
+}
+
+/**
+ * Escape a field value for CSV (handle commas, quotes, newlines)
+ */
+function escapeCsvField(value) {
+    if (value === null || value === undefined) return '';
+    
+    const str = String(value);
+    
+    // If the value contains commas, quotes, or newlines, wrap in quotes
+    if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+        // Double up any quotes
+        return '"' + str.replace(/"/g, '""') + '"';
+    }
+    
+    return str;
 }
 
 function exportToPDF() {
