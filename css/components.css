@@ -2117,3 +2117,167 @@ hr {
     background: #450a0a;
     color: #fca5a5;
 }
+/* ============================================
+   ENHANCED EXPORT BUTTONS
+   ============================================ */
+
+/* Export Buttons Container */
+.reports-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* Export CSV Button */
+#export-csv-btn {
+    background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+    padding: 0.625rem 1.25rem;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 2px 8px rgba(22, 163, 74, 0.08);
+    letter-spacing: 0.01em;
+}
+
+#export-csv-btn:hover {
+    background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+    color: #166534;
+    border-color: #86efac;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(22, 163, 74, 0.2);
+}
+
+#export-csv-btn:active {
+    transform: translateY(0) scale(0.97);
+    box-shadow: 0 1px 4px rgba(22, 163, 74, 0.1);
+}
+
+#export-csv-btn i {
+    font-size: 1rem;
+    transition: transform 0.3s ease;
+}
+
+#export-csv-btn:hover i {
+    transform: translateY(-2px);
+}
+
+/* Export PDF Button */
+#export-pdf-btn {
+    background: linear-gradient(135deg, #fef2f2, #fee2e2);
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+    padding: 0.625rem 1.25rem;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.06);
+    letter-spacing: 0.01em;
+}
+
+#export-pdf-btn:hover {
+    background: linear-gradient(135deg, #fee2e2, #fecaca);
+    color: #991b1b;
+    border-color: #fca5a5;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(220, 38, 38, 0.15);
+}
+
+#export-pdf-btn:active {
+    transform: translateY(0) scale(0.97);
+    box-shadow: 0 1px 4px rgba(220, 38, 38, 0.08);
+}
+
+#export-pdf-btn i {
+    font-size: 1rem;
+    transition: transform 0.3s ease;
+}
+
+#export-pdf-btn:hover i {
+    animation: pdf-bounce 0.5s ease;
+}
+
+@keyframes pdf-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+}
+
+/* Refresh Button */
+#refresh-reports-btn {
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    padding: 0.625rem 1.25rem;
+    border-radius: 10px;
+    font-weight: 500;
+    font-size: 0.875rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+#refresh-reports-btn:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--gray-300);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+#refresh-reports-btn i {
+    transition: transform 0.4s ease;
+}
+
+#refresh-reports-btn:hover i {
+    transform: rotate(180deg);
+}
+
+/* Dark Mode Export Buttons */
+[data-theme="dark"] #export-csv-btn {
+    background: linear-gradient(135deg, #052e16, #064e3b);
+    color: #86efac;
+    border-color: #065f46;
+}
+
+[data-theme="dark"] #export-csv-btn:hover {
+    background: linear-gradient(135deg, #064e3b, #065f46);
+    color: #bbf7d0;
+    border-color: #059669;
+}
+
+[data-theme="dark"] #export-pdf-btn {
+    background: linear-gradient(135deg, #450a0a, #7f1d1d);
+    color: #fca5a5;
+    border-color: #991b1b;
+}
+
+[data-theme="dark"] #export-pdf-btn:hover {
+    background: linear-gradient(135deg, #7f1d1d, #991b1b);
+    color: #fecaca;
+    border-color: #b91c1c;
+}
+
+[data-theme="dark"] #refresh-reports-btn {
+    background: #1a1a2e;
+    border-color: #1f2937;
+    color: #d1d5db;
+}
+
+[data-theme="dark"] #refresh-reports-btn:hover {
+    background: #16213e;
+    border-color: #374151;
+}
