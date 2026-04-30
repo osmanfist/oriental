@@ -7,7 +7,13 @@
     
     <meta name="theme-color" content="#16a34a">
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏔️</text></svg>">
+    
+    <!-- Favicon and App Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -52,8 +58,10 @@
                 <div class="logo-ring"></div>
                 <div class="logo-ring"></div>
                 <div class="logo-icon">
-                    <i class="fas fa-mountain-sun"></i>
-                </div>
+    <i class="fas fa-mountain-sun"></i>
+    <!-- Fallback emoji if icon fails -->
+    <span class="icon-fallback" style="display: none;">🏔️</span>
+</div>
             </div>
         </div>
         
