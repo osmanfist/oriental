@@ -1760,3 +1760,123 @@ hr {
 .team-member-item .pending-dot {
     animation: pending-pulse 2s infinite;
 }
+
+/* ============================================
+   ENHANCED EMPTY STATE BUTTONS
+   ============================================ */
+
+.empty-state .btn-primary {
+    background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-lg);
+    font-weight: 600;
+    font-size: 0.9375rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 4px 15px rgba(22, 163, 74, 0.3);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: var(--space-md);
+    letter-spacing: 0.01em;
+}
+
+.empty-state .btn-primary:hover {
+    background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(22, 163, 74, 0.4);
+}
+
+.empty-state .btn-primary:active {
+    transform: translateY(-1px) scale(0.98);
+    box-shadow: 0 2px 10px rgba(22, 163, 74, 0.2);
+}
+
+.empty-state .btn-primary i {
+    font-size: 1rem;
+    transition: transform 0.3s ease;
+}
+
+.empty-state .btn-primary:hover i {
+    transform: rotate(90deg);
+}
+
+/* Empty project state */
+.empty-projects .btn-primary {
+    background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+    color: white;
+    border: none;
+    padding: 0.625rem 1.25rem;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 0.8125rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 10px rgba(22, 163, 74, 0.2);
+}
+
+.empty-projects .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(22, 163, 74, 0.35);
+}
+
+/* Empty search state */
+.empty-search .btn-secondary {
+    padding: 0.625rem 1.25rem;
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.empty-search .btn-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+/* Pulsing icon in empty state */
+.empty-state i {
+    font-size: 72px;
+    margin-bottom: var(--space-lg);
+    display: block;
+    opacity: 0.4;
+    color: var(--primary-400);
+    animation: empty-float 3s ease-in-out infinite;
+}
+
+@keyframes empty-float {
+    0%, 100% { 
+        transform: translateY(0) scale(1);
+        opacity: 0.4;
+    }
+    50% { 
+        transform: translateY(-10px) scale(1.05);
+        opacity: 0.6;
+    }
+}
+
+/* Add a subtle glow behind the icon */
+.empty-state-icon {
+    position: relative;
+    display: inline-block;
+    margin-bottom: var(--space-md);
+}
+
+.empty-state-icon::after {
+    content: '';
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    background: radial-gradient(circle, rgba(22, 163, 74, 0.1), transparent 70%);
+    border-radius: 50%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    animation: empty-glow 3s ease-in-out infinite;
+}
+
+@keyframes empty-glow {
+    0%, 100% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.3; }
+    50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.6; }
+}

@@ -1584,3 +1584,90 @@
 .due-overdue {
     animation: pulse 1.5s var(--transition-base) infinite;
 }
+/* ============================================
+   STAT CARDS - FIXED VISIBILITY
+   ============================================ */
+
+.stat-card {
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    border: 1px solid var(--border-color);
+    transition: all var(--transition-fast);
+    cursor: default;
+}
+
+/* ENSURE VALUES ARE ALWAYS VISIBLE */
+.stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    display: block;
+    line-height: 1.2;
+    color: var(--text-primary) !important;  /* Force visibility */
+    transition: all var(--transition-fast);
+}
+
+.stat-label {
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    background: var(--primary-50);
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-600);
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+/* Hover effect */
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary-200);
+}
+
+.stat-card:hover .stat-icon {
+    transform: scale(1.1);
+    background: var(--primary-100);
+}
+
+.stat-card:hover .stat-value {
+    color: var(--primary-600) !important;
+}
+
+/* Dark mode */
+[data-theme="dark"] .stat-icon {
+    background: rgba(22, 163, 74, 0.15);
+    color: #4ade80;
+}
+
+[data-theme="dark"] .stat-value {
+    color: #f3f4f6 !important;
+}
+
+[data-theme="dark"] .stat-card:hover .stat-value {
+    color: #4ade80 !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .stat-value {
+        font-size: 22px;
+    }
+    
+    .stat-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+    }
+}
