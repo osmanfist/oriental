@@ -1880,3 +1880,240 @@ hr {
     0%, 100% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.3; }
     50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.6; }
 }
+/* ============================================
+   ENHANCED SIDEBAR ACTION BUTTONS
+   ============================================ */
+
+/* Theme Toggle Button */
+.theme-toggle {
+    position: relative;
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.theme-toggle::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, 
+        rgba(251, 191, 36, 0.15), 
+        rgba(139, 92, 246, 0.15)
+    );
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.theme-toggle:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+    border-color: var(--primary-200);
+}
+
+.theme-toggle:hover::before {
+    opacity: 1;
+}
+
+.theme-toggle:active {
+    transform: scale(0.95);
+}
+
+.theme-toggle i {
+    font-size: 18px;
+    transition: all 0.4s ease;
+    position: relative;
+    z-index: 1;
+}
+
+.theme-toggle[title*="Dark"] i,
+.theme-toggle .fa-moon {
+    color: #6366f1;
+}
+
+.theme-toggle[title*="Light"] i,
+.theme-toggle .fa-sun {
+    color: #f59e0b;
+    animation: sun-rotate 0.5s ease;
+}
+
+@keyframes sun-rotate {
+    from { transform: rotate(-90deg) scale(0.5); }
+    to { transform: rotate(0deg) scale(1); }
+}
+
+/* Sun rays effect */
+.theme-toggle .fa-sun::after {
+    content: '';
+    position: absolute;
+    width: inherit;
+    height: inherit;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(251, 191, 36, 0.3), transparent 70%);
+    animation: sun-glow 2s ease-in-out infinite;
+}
+
+@keyframes sun-glow {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.4); opacity: 0.2; }
+}
+
+/* Dark mode theme toggle */
+[data-theme="dark"] .theme-toggle {
+    background: linear-gradient(135deg, #1e1b4b, #312e81);
+    border-color: #4338ca;
+    box-shadow: 0 2px 12px rgba(99, 102, 241, 0.15);
+}
+
+[data-theme="dark"] .theme-toggle:hover {
+    border-color: #6366f1;
+    box-shadow: 0 6px 25px rgba(99, 102, 241, 0.3);
+}
+
+/* ============================================ */
+/* ACTIVITY LOG BUTTON */
+/* ============================================ */
+
+.activity-log-btn {
+    position: relative;
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+}
+
+.activity-log-btn:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+    border-color: var(--primary-200);
+    background: linear-gradient(135deg, var(--primary-50), var(--bg-tertiary));
+}
+
+.activity-log-btn:active {
+    transform: scale(0.95);
+}
+
+.activity-log-btn i {
+    font-size: 18px;
+    color: var(--text-secondary);
+    transition: all 0.3s ease;
+    position: relative;
+    z-index: 1;
+}
+
+.activity-log-btn:hover i {
+    color: var(--primary-600);
+    animation: clock-tick 0.6s ease;
+}
+
+@keyframes clock-tick {
+    0%, 100% { transform: rotate(0); }
+    25% { transform: rotate(15deg); }
+    75% { transform: rotate(-15deg); }
+}
+
+/* Unread notification dot */
+.activity-log-btn.has-unread::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 9px;
+    height: 9px;
+    background: var(--error);
+    border-radius: 50%;
+    border: 2px solid var(--bg-sidebar);
+    animation: notify-pulse 2s infinite;
+    z-index: 2;
+}
+
+@keyframes notify-pulse {
+    0%, 100% { 
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    }
+    50% { 
+        box-shadow: 0 0 0 5px rgba(239, 68, 68, 0);
+    }
+}
+
+/* Dark mode activity log */
+[data-theme="dark"] .activity-log-btn {
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    border-color: #1f2937;
+}
+
+[data-theme="dark"] .activity-log-btn:hover {
+    border-color: var(--primary-600);
+    background: linear-gradient(135deg, rgba(22, 163, 74, 0.1), #16213e);
+}
+
+[data-theme="dark"] .activity-log-btn:hover i {
+    color: #4ade80;
+}
+
+/* ============================================ */
+/* SIDEBAR HEADER ACTIONS CONTAINER */
+/* ============================================ */
+
+.sidebar-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Mobile header actions */
+.mobile-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ============================================ */
+/* LOGOUT BUTTON (in user info) */
+/* ============================================ */
+
+.logout-icon-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+.logout-icon-btn:hover {
+    background: #fee2e2;
+    color: var(--error);
+    transform: translateX(2px);
+}
+
+.logout-icon-btn i {
+    font-size: 16px;
+}
+
+[data-theme="dark"] .logout-icon-btn:hover {
+    background: #450a0a;
+    color: #fca5a5;
+}
