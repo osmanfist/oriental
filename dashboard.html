@@ -419,6 +419,16 @@
                     <!-- General Panel -->
                     <div class="settings-panel active" id="panel-general">
                         <div class="settings-section">
+    <h3><i class="fas fa-language"></i> <span data-i18n="language">Language</span></h3>
+    <div class="settings-field">
+        <label for="language-select">Select Language</label>
+        <select id="language-select">
+            <option value="en">English</option>
+            <option value="ar">العربية</option>
+        </select>
+    </div>
+</div>
+                        <div class="settings-section">
                             <h3><i class="fas fa-building"></i> Organization Profile</h3>
                             <div class="settings-field"><label for="org-name-input">Organization Name</label><input type="text" id="org-name-input" placeholder="Your organization name"><span class="field-hint">Displayed to team members and in email invites.</span></div>
                             <div class="settings-field"><label for="org-slug-input">Organization Slug</label><input type="text" id="org-slug-input" placeholder="your-org-slug"><span class="field-hint">URL: oriental.app/<span id="slug-preview">your-org</span></span></div>
@@ -700,5 +710,8 @@
             console.log('🚀 Oriental Dashboard Ready | Phase 1 Features Active');
         });
     </script>
+<script src="js/lang/en.js"></script>
+<script src="js/lang/ar.js"></script>
+<script src="js/lang.js"></script>
 </body>
 </html>
