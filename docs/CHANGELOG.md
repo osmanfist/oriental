@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [2.1.1] - 2024-04-28
+## [2.1.1] - 2026-04-28
 
 ### Fixed
 - Fixed `enhanceTaskForm()` DOM insertion error in recurring tasks
@@ -41,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated CHANGELOG.md with bug fix details
 
 
-## [2.1.0] - 2024-04-22
+## [2.1.0] - 2026-04-22
 
 ### 🚀 Phase 1 Features Added
 

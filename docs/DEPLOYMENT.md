@@ -1,6 +1,6 @@
 # Deployment Guide
 
-> Version: 2.1.0 | Last Updated: 2024-04-22
+> Version: 2.1.0 | Last Updated: 2026-04-22
 
 This guide covers deploying Oriental to various platforms, including Phase 1 features configuration.
 

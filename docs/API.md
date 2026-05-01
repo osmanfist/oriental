@@ -1,6 +1,6 @@
 # Oriental API Reference
 
-> Version: 2.0.0 | Last Updated: 2024
+> Version: 2.0.0 | Last Updated: 2026
 
 ## Overview
 
@@ -71,7 +71,7 @@ const storage = firebase.storage(); // Optional - Phase 1 uses Base64
     "email": "john@example.com",
     "currentOrganization": "org_abc123",
     "organizations": ["org_abc123", "org_xyz789"],
-    "createdAt": "2024-01-15T10:30:00Z",
+    "createdAt": "2026-01-15T10:30:00Z",
     "preferences": {
         "notifications": true,
         "notifyCommentMention": true,
@@ -104,8 +104,8 @@ const storage = firebase.storage(); // Optional - Phase 1 uses Base64
     "name": "Acme Inc",
     "slug": "acme-inc",
     "createdBy": "user_abc123",
-    "createdAt": "2024-01-15T10:30:00Z",
-    "updatedAt": "2024-02-20T14:22:00Z",
+    "createdAt": "2026-01-15T10:30:00Z",
+    "updatedAt": "2026-02-20T14:22:00Z",
     "members": ["user_abc123", "user_def456", "user_ghi789"],
     "admins": ["user_abc123"],
     "settings": {
@@ -140,7 +140,7 @@ const storage = firebase.storage(); // Optional - Phase 1 uses Base64
     "description": "Complete overhaul of company website",
     "organizationId": "org_abc123",
     "createdBy": "user_abc123",
-    "createdAt": "2024-02-01T09:00:00Z",
+    "createdAt": "2026-02-01T09:00:00Z",
     "isArchived": false,
     "color": "#16a34a",
     "fromTemplate": "agile-dev"
@@ -182,13 +182,13 @@ const storage = firebase.storage(); // Optional - Phase 1 uses Base64
     "priority": "high",
     "assignedTo": "John Doe",
     "assignedToId": "user_abc123",
-    "dueDate": "2024-03-15",
+    "dueDate": "2026-03-15",
     "estimatedHours": 8,
     "tags": ["design", "frontend", "priority"],
     "projectId": "proj_123",
     "createdBy": "user_manager",
-    "createdAt": "2024-03-01T10:00:00Z",
-    "updatedAt": "2024-03-10T15:30:00Z",
+    "createdAt": "2026-03-01T10:00:00Z",
+    "updatedAt": "2026-03-10T15:30:00Z",
     "order": 1,
     "recurringTemplateId": "recur_daily_standup",
     "occurrenceNumber": 5
@@ -216,7 +216,7 @@ const storage = firebase.storage(); // Optional - Phase 1 uses Base64
     "taskId": "task_456",
     "userId": "user_abc123",
     "userName": "John Doe",
-    "createdAt": "2024-03-10T14:00:00Z"
+    "createdAt": "2026-03-10T14:00:00Z"
 }
 ```
 
@@ -250,7 +250,7 @@ const storage = firebase.storage(); // Optional - Phase 1 uses Base64
     "base64Data": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...",
     "uploadedBy": "user_abc123",
     "uploadedByName": "John Doe",
-    "uploadedAt": "2024-03-10T16:00:00Z"
+    "uploadedAt": "2026-03-10T16:00:00Z"
 }
 ```
 
@@ -285,7 +285,7 @@ const storage = firebase.storage(); // Optional - Phase 1 uses Base64
 {
     "frequency": "weekly",
     "interval": 2,
-    "startDate": "2024-03-01",
+    "startDate": "2026-03-01",
     "endType": "after",
     "occurrences": 10,
     "weekdays": [1, 3, 5]
@@ -305,15 +305,15 @@ const storage = firebase.storage(); // Optional - Phase 1 uses Base64
     "recurrenceConfig": {
         "frequency": "weekly",
         "interval": 1,
-        "startDate": "2024-01-08",
+        "startDate": "2026-01-08",
         "endType": "never",
         "weekdays": [1]
     },
-    "nextOccurrence": "2024-03-18",
+    "nextOccurrence": "2026-03-18",
     "occurrencesCreated": 10,
     "createdBy": "user_lead",
     "organizationId": "org_abc123",
-    "createdAt": "2024-01-01T09:00:00Z"
+    "createdAt": "2026-01-01T09:00:00Z"
 }
 ```
 
@@ -357,7 +357,7 @@ const storage = firebase.storage(); // Optional - Phase 1 uses Base64
     ],
     "createdBy": "user_scrum",
     "organizationId": "org_abc123",
-    "createdAt": "2024-02-15T11:00:00Z"
+    "createdAt": "2026-02-15T11:00:00Z"
 }
 ```
 
@@ -387,11 +387,11 @@ const storage = firebase.storage(); // Optional - Phase 1 uses Base64
     "goal": "Complete user authentication flow",
     "organizationId": "org_abc123",
     "projectId": "proj_123",
-    "startDate": "2024-03-01",
-    "endDate": "2024-03-14",
+    "startDate": "2026-03-01",
+    "endDate": "2026-03-14",
     "status": "active",
     "tasks": ["task_001", "task_002", "task_003"],
-    "createdAt": "2024-03-01T09:00:00Z"
+    "createdAt": "2026-03-01T09:00:00Z"
 }
 ```
 
@@ -439,7 +439,7 @@ const storage = firebase.storage(); // Optional - Phase 1 uses Base64
         "mentionedUser": "Jane Smith",
         "mentionedUserId": "user_def456"
     },
-    "createdAt": "2024-03-10T14:00:00Z"
+    "createdAt": "2026-03-10T14:00:00Z"
 }
 ```
 
@@ -475,8 +475,8 @@ const storage = firebase.storage(); // Optional - Phase 1 uses Base64
     "invitedByEmail": "admin@example.com",
     "token": "abc123xyz789",
     "status": "pending",
-    "expiresAt": "2024-03-24T09:00:00Z",
-    "createdAt": "2024-03-17T09:00:00Z"
+    "expiresAt": "2026-03-24T09:00:00Z",
+    "createdAt": "2026-03-17T09:00:00Z"
 }
 ```
 
@@ -725,7 +725,7 @@ const config = manager.getRecurrenceConfig();
 await manager.createRecurringTaskTemplate(taskData, recurrenceConfig);
 
 // Calculate next occurrence
-const nextDate = manager.calculateNextOccurrence('2024-03-01', {
+const nextDate = manager.calculateNextOccurrence('2026-03-01', {
     frequency: 'weekly',
     interval: 1
 });
