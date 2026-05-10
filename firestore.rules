@@ -1,0 +1,154 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOrgMember(orgId) {
+      return isAuthenticated() && 
+        request.auth.uid in get(/databases/$(database)/documents/organizations/$(orgId)).data.members;
+    }
+    
+    function isOrgAdmin(orgId) {
+      return isAuthenticated() && 
+        request.auth.uid in get(/databases/$(database)/documents/organizations/$(orgId)).data.admins;
+    }
+    
+    function getUserRole(orgId) {
+      return get(/databases/$(database)/documents/user_roles/$(request.auth.uid + '_' + orgId)).data.role;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAuthenticated() && request.auth.uid == userId;
+      allow delete: if false; // Never delete users directly
+    }
+    
+    // Organizations collection
+    match /organizations/{orgId} {
+      allow read: if isOrgMember(orgId);
+      allow create: if isAuthenticated();
+      allow update: if isOrgAdmin(orgId);
+      allow delete: if isOrgAdmin(orgId);
+    }
+    
+    // User Roles collection
+    match /user_roles/{roleId} {
+      allow read: if isOrgMember(resource.data.organizationId);
+      allow create: if isAuthenticated() && (
+        isOrgAdmin(request.resource.data.organizationId) ||
+        request.resource.data.userId == request.auth.uid
+      );
+      allow update: if isOrgAdmin(resource.data.organizationId);
+      allow delete: if isOrgAdmin(resource.data.organizationId);
+    }
+    
+    // Projects collection
+    match /projects/{projectId} {
+      allow read: if isAuthenticated() && 
+        isOrgMember(resource.data.organizationId);
+      allow create: if isAuthenticated() && 
+        isOrgMember(request.resource.data.organizationId);
+      allow update: if isAuthenticated() && 
+        isOrgMember(resource.data.organizationId);
+      allow delete: if isOrgAdmin(resource.data.organizationId);
+    }
+    
+    // Tasks collection
+    match /tasks/{taskId} {
+      allow read: if isAuthenticated() && 
+        isOrgMember(resource.data.organizationId);
+      allow create: if isAuthenticated() && 
+        isOrgMember(request.resource.data.organizationId);
+      allow update: if isAuthenticated() && 
+        isOrgMember(resource.data.organizationId);
+      allow delete: if isAuthenticated() && 
+        isOrgMember(resource.data.organizationId);
+    }
+    
+    // Subtasks collection
+    match /subtasks/{subtaskId} {
+      allow read: if isAuthenticated() && 
+        isOrgMember(resource.data.organizationId);
+      allow create: if isAuthenticated() && 
+        isOrgMember(request.resource.data.organizationId);
+      allow update: if isAuthenticated() && 
+        isOrgMember(resource.data.organizationId);
+      allow delete: if isAuthenticated() && 
+        isOrgMember(resource.data.organizationId);
+    }
+    
+    // Milestones collection
+    match /milestones/{milestoneId} {
+      allow read: if isAuthenticated() && 
+        isOrgMember(resource.data.organizationId);
+      allow create: if isAuthenticated() && 
+        isOrgMember(request.resource.data.organizationId);
+      allow update: if isAuthenticated() && 
+        isOrgMember(resource.data.organizationId);
+      allow delete: if isOrgAdmin(resource.data.organizationId);
+    }
+    
+    // Task History collection
+    match /task_history/{historyId} {
+      allow read: if isAuthenticated() && 
+        isOrgMember(resource.data.organizationId);
+      allow create: if isAuthenticated();
+      allow update: if false; // History is immutable
+      allow delete: if false;
+    }
+    
+    // Comments collection
+    match /comments/{commentId} {
+      allow read: if isAuthenticated() && 
+        isOrgMember(resource.data.organizationId);
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && 
+        request.auth.uid == resource.data.userId;
+      allow delete: if isAuthenticated() && 
+        (request.auth.uid == resource.data.userId || 
+         isOrgAdmin(resource.data.organizationId));
+    }
+    
+    // Sprints collection
+    match /sprints/{sprintId} {
+      allow read: if isAuthenticated() && 
+        isOrgMember(resource.data.organizationId);
+      allow create: if isAuthenticated() && 
+        isOrgMember(request.resource.data.organizationId);
+      allow update: if isAuthenticated() && 
+        isOrgMember(resource.data.organizationId);
+      allow delete: if isOrgAdmin(resource.data.organizationId);
+    }
+    
+    // Activity Logs
+    match /activity_logs/{logId} {
+      allow read: if isAuthenticated() && 
+        isOrgMember(resource.data.organizationId);
+      allow create: if isAuthenticated();
+      allow update: if false;
+      allow delete: if isOrgAdmin(resource.data.organizationId);
+    }
+    
+    // Invites collection
+    match /invites/{inviteId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && 
+        isOrgMember(request.resource.data.organizationId);
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated() && 
+        isOrgMember(resource.data.organizationId);
+    }
+    
+    // Seed data flag (allow deletion of test data)
+    match /{document=**} {
+      allow delete: if isAuthenticated() && 
+        resource.data.isSeedData == true;
+    }
+  }
+}
