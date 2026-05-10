@@ -1,20 +1,26 @@
 /**
- * Oriental v3.0.0 - Admin Overview
- * Draggable widgets for admin dashboard
+ * Oriental v3.0 - Admin Overview with Graphs
+ * Shows project performance, task distribution, and stats
  */
 
 class AdminOverview {
     constructor() {
-        this.widgets = [];
-        this.widgetOrder = [];
         this.charts = {};
-        this.refreshInterval = null;
+        this.widgets = [
+            'projectPerformance',
+            'taskDistribution', 
+            'teamVelocity',
+            'overdueTasks',
+            'recentActivity'
+        ];
     }
 
-    async init() {
-        this.loadWidgetOrder();
+    async update() {
+        const container = document.getElementById('admin-view');
+        if (!container) return;
+        
+        container.style.display = 'block';
         await this.render();
-        this.startAutoRefresh();
     }
 
     async render() {
@@ -22,164 +28,171 @@ class AdminOverview {
         if (!container) return;
 
         container.innerHTML = `
-            <div class="admin-header">
-                <h2><i class="fas fa-chart-pie"></i> Overview</h2>
-                <div class="admin-actions">
-                    <button class="btn-secondary" onclick="app.modules.admin.refreshAll()">
-                        <i class="fas fa-sync-alt"></i> Refresh
-                    </button>
-                    <button class="btn-secondary" onclick="app.modules.admin.resetWidgets()">
-                        <i class="fas fa-undo"></i> Reset Layout
-                    </button>
+            <div style="padding:24px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+                    <h2 style="margin:0;">📊 Project Overview</h2>
+                    <button class="btn-secondary" onclick="app.modules.admin.refresh()">🔄 Refresh</button>
+                </div>
+                
+                <!-- Stats Cards -->
+                <div id="admin-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px;"></div>
+                
+                <!-- Charts Row -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:20px;margin-bottom:24px;">
+                    <div class="admin-widget">
+                        <div class="widget-header">
+                            <span class="widget-title">📈 Project Performance</span>
+                        </div>
+                        <div class="widget-content">
+                            <canvas id="chart-project-performance" height="250"></canvas>
+                        </div>
+                    </div>
+                    <div class="admin-widget">
+                        <div class="widget-header">
+                            <span class="widget-title">🍩 Task Distribution</span>
+                        </div>
+                        <div class="widget-content">
+                            <canvas id="chart-task-distribution" height="250"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Second Row -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:20px;">
+                    <div class="admin-widget">
+                        <div class="widget-header">
+                            <span class="widget-title">⚠️ Overdue Tasks</span>
+                        </div>
+                        <div class="widget-content" id="overdue-tasks-list" style="max-height:300px;overflow-y:auto;"></div>
+                    </div>
+                    <div class="admin-widget">
+                        <div class="widget-header">
+                            <span class="widget-title">📋 Recent Activity</span>
+                        </div>
+                        <div class="widget-content" id="recent-activity-list" style="max-height:300px;overflow-y:auto;"></div>
+                    </div>
                 </div>
             </div>
-            <div class="admin-widgets" id="admin-widgets"></div>
         `;
 
-        await this.renderWidgets();
-        this.setupDragAndDrop();
+        await this.loadStats();
+        await this.loadProjectPerformanceChart();
+        await this.loadTaskDistributionChart();
+        await this.loadOverdueTasks();
+        await this.loadRecentActivity();
     }
 
-    async renderWidgets() {
-        const container = document.getElementById('admin-widgets');
-        if (!container) return;
-
-        const widgetConfigs = [
-            { id: 'projectPerformance', title: 'Project Performance', icon: 'fa-chart-bar' },
-            { id: 'taskDistribution', title: 'Task Distribution', icon: 'fa-pie-chart' },
-            { id: 'teamVelocity', title: 'Team Velocity', icon: 'fa-tachometer-alt' },
-            { id: 'overdueTasks', title: 'Overdue Tasks', icon: 'fa-exclamation-triangle' },
-            { id: 'recentActivity', title: 'Recent Activity', icon: 'fa-history' },
-            { id: 'milestoneProgress', title: 'Milestone Progress', icon: 'fa-flag-checkered' }
-        ];
-
-        container.innerHTML = widgetConfigs.map(config => `
-            <div class="admin-widget" data-widget="${config.id}" draggable="true">
-                <div class="widget-header">
-                    <div class="widget-title">
-                        <i class="fas ${config.icon}"></i>
-                        <span>${config.title}</span>
-                    </div>
-                    <div class="widget-actions">
-                        <button class="widget-refresh" onclick="app.modules.admin.updateWidget('${config.id}')">
-                            <i class="fas fa-sync-alt"></i>
-                        </button>
-                        <button class="widget-collapse" onclick="this.closest('.admin-widget').classList.toggle('collapsed')">
-                            <i class="fas fa-chevron-up"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="widget-content" id="widget-${config.id}">
-                    <div class="skeleton-loader"></div>
-                </div>
-            </div>
-        `).join('');
-
-        // Update each widget
-        await Promise.all(
-            widgetConfigs.map(config => this.updateWidget(config.id))
-        );
-    }
-
-    async updateWidget(widgetId) {
-        switch (widgetId) {
-            case 'projectPerformance':
-                await this.renderProjectPerformance();
-                break;
-            case 'taskDistribution':
-                await this.renderTaskDistribution();
-                break;
-            case 'teamVelocity':
-                await this.renderTeamVelocity();
-                break;
-            case 'overdueTasks':
-                await this.renderOverdueTasks();
-                break;
-            case 'recentActivity':
-                await this.renderRecentActivity();
-                break;
-            case 'milestoneProgress':
-                await this.renderMilestoneProgress();
-                break;
-        }
-    }
-
-    async renderProjectPerformance() {
-        const container = document.getElementById('widget-projectPerformance');
+    async loadStats() {
+        const container = document.getElementById('admin-stats');
         if (!container) return;
 
         try {
-            const projectsSnapshot = await db.collection('projects')
-                .where('organizationId', '==', app.state.currentOrganization)
-                .where('isArchived', '==', false)
-                .get();
-
-            const projectStats = [];
+            const tasks = await localDB.getAll('tasks') || [];
+            const projects = await localDB.getAll('projects') || [];
             
-            for (const doc of projectsSnapshot.docs) {
-                const project = { id: doc.id, ...doc.data() };
-                const tasksSnapshot = await db.collection('tasks')
-                    .where('projectId', '==', project.id)
-                    .get();
+            const total = tasks.length;
+            const completed = tasks.filter(t => t.status === 'completed').length;
+            const inProgress = tasks.filter(t => ['started', 'review'].includes(t.status)).length;
+            const stuck = tasks.filter(t => t.status === 'stuck').length;
+            const overdue = tasks.filter(t => t.dueDate && getDaysOverdue(t.dueDate) > 0 && t.status !== 'completed').length;
+            const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-                const tasks = tasksSnapshot.docs.map(d => d.data());
-                const total = tasks.length;
-                const completed = tasks.filter(t => t.status === 'completed').length;
-                const overdue = tasks.filter(t => {
-                    if (!t.dueDate || ['completed', 'archived'].includes(t.status)) return false;
-                    return getDaysOverdue(t.dueDate) > 0;
-                }).length;
+            const stats = [
+                { label: 'Total Tasks', value: total, color: '#7c3aed', bg: '#f3e8ff' },
+                { label: 'Completion Rate', value: rate + '%', color: '#22c55e', bg: '#dcfce7' },
+                { label: 'In Progress', value: inProgress, color: '#3b82f6', bg: '#dbeafe' },
+                { label: 'Overdue', value: overdue, color: '#ef4444', bg: '#fee2e2' },
+                { label: 'Stuck', value: stuck, color: '#f59e0b', bg: '#fef3c7' },
+                { label: 'Projects', value: projects.length, color: '#06b6d4', bg: '#cffafe' },
+            ];
 
-                projectStats.push({
-                    name: project.name,
-                    total,
-                    completed,
-                    overdue,
-                    completionRate: total > 0 ? Math.round((completed / total) * 100) : 0
-                });
+            container.innerHTML = stats.map(s => `
+                <div style="background:var(--bg-primary);border:1px solid var(--border-color);border-radius:12px;padding:20px;text-align:center;">
+                    <div style="font-size:36px;font-weight:800;color:${s.color};line-height:1;">${s.value}</div>
+                    <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">${s.label}</div>
+                </div>
+            `).join('');
+
+        } catch (e) {
+            console.warn('Error loading stats:', e);
+        }
+    }
+
+    async loadProjectPerformanceChart() {
+        const canvas = document.getElementById('chart-project-performance');
+        if (!canvas) return;
+
+        if (this.charts.performance) this.charts.performance.destroy();
+
+        try {
+            const projects = await localDB.getAll('projects') || [];
+            const tasks = await localDB.getAll('tasks') || [];
+            
+            const projectStats = projects.map(p => {
+                const ptasks = tasks.filter(t => t.projectId === p.id);
+                const completed = ptasks.filter(t => t.status === 'completed').length;
+                const total = ptasks.length;
+                const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+                return { name: p.name || 'Unknown', total, completed, rate };
+            }).filter(p => p.total > 0).sort((a, b) => b.total - a.total).slice(0, 8);
+
+            if (projectStats.length === 0) {
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '14px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('No project data yet', canvas.width/2, canvas.height/2);
+                return;
             }
 
-            projectStats.sort((a, b) => b.total - a.total);
+            const ctx = canvas.getContext('2d');
+            
+            this.charts.performance = new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels: projectStats.map(p => p.name.substring(0, 15)),
+                    datasets: [
+                        {
+                            label: 'Total Tasks',
+                            data: projectStats.map(p => p.total),
+                            backgroundColor: '#7c3aed',
+                            borderRadius: 6
+                        },
+                        {
+                            label: 'Completed',
+                            data: projectStats.map(p => p.completed),
+                            backgroundColor: '#22c55e',
+                            borderRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
 
-            container.innerHTML = `
-                <div class="performance-list">
-                    ${projectStats.map(stat => `
-                        <div class="performance-item">
-                            <div class="performance-header">
-                                <span class="performance-name">${escapeHtml(stat.name)}</span>
-                                <span class="performance-rate" style="color: ${this.getHealthColor(stat.completionRate)}">
-                                    ${stat.completionRate}%
-                                </span>
-                            </div>
-                            <div class="performance-bar">
-                                <div class="performance-fill" style="width: ${stat.completionRate}%; background: ${this.getHealthColor(stat.completionRate)}"></div>
-                            </div>
-                            <div class="performance-stats">
-                                <span>${stat.completed}/${stat.total} completed</span>
-                                ${stat.overdue > 0 ? `<span class="overdue-count">${stat.overdue} overdue</span>` : ''}
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        } catch (error) {
-            console.error('Error rendering project performance:', error);
+        } catch (e) {
+            console.warn('Error loading performance chart:', e);
         }
     }
 
-    async renderTaskDistribution() {
-        const container = document.getElementById('widget-taskDistribution');
-        if (!container) return;
+    async loadTaskDistributionChart() {
+        const canvas = document.getElementById('chart-task-distribution');
+        if (!canvas) return;
+
+        if (this.charts.distribution) this.charts.distribution.destroy();
 
         try {
-            const snapshot = await db.collection('tasks')
-                .where('organizationId', '==', app.state.currentOrganization)
-                .get();
-
-            const tasks = snapshot.docs.map(d => d.data());
+            const tasks = await localDB.getAll('tasks') || [];
             
-            // Distribution by status
-            const statusDist = {
+            const statusCounts = {
                 planned: tasks.filter(t => t.status === 'planned').length,
                 started: tasks.filter(t => t.status === 'started').length,
                 stuck: tasks.filter(t => t.status === 'stuck').length,
@@ -187,416 +200,123 @@ class AdminOverview {
                 completed: tasks.filter(t => t.status === 'completed').length
             };
 
-            // Distribution by assignee
-            const assigneeDist = {};
-            tasks.forEach(t => {
-                const assignee = t.assignedTo || 'Unassigned';
-                assigneeDist[assignee] = (assigneeDist[assignee] || 0) + 1;
-            });
+            const total = Object.values(statusCounts).reduce((a, b) => a + b, 0);
+            
+            if (total === 0) {
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '14px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('No tasks yet', canvas.width/2, canvas.height/2);
+                return;
+            }
 
-            container.innerHTML = `
-                <div class="distribution-charts">
-                    <div class="chart-container" style="height: 200px;">
-                        <canvas id="status-dist-chart"></canvas>
-                    </div>
-                    <div class="chart-container" style="height: 200px;">
-                        <canvas id="assignee-dist-chart"></canvas>
-                    </div>
-                </div>
-            `;
-
-            // Render status distribution chart
-            const statusCtx = document.getElementById('status-dist-chart');
-            if (statusCtx) {
-                this.charts.statusDist = new Chart(statusCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Planned', 'Started', 'Stuck', 'Review', 'Completed'],
-                        datasets: [{
-                            data: [statusDist.planned, statusDist.started, statusDist.stuck, 
-                                   statusDist.review, statusDist.completed],
-                            backgroundColor: ['#9ca3af', '#3b82f6', '#ef4444', '#f59e0b', '#10b981']
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { position: 'bottom' } }
+            this.charts.distribution = new Chart(canvas, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Planned', 'Started', 'Stuck', 'Review', 'Completed'],
+                    datasets: [{
+                        data: [statusCounts.planned, statusCounts.started, statusCounts.stuck, 
+                               statusCounts.review, statusCounts.completed],
+                        backgroundColor: ['#9ca3af', '#3b82f6', '#ef4444', '#f59e0b', '#22c55e'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
                     }
-                });
-            }
-
-            // Render assignee distribution chart
-            const assigneeCtx = document.getElementById('assignee-dist-chart');
-            if (assigneeCtx) {
-                const sortedAssignees = Object.entries(assigneeDist)
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 5);
-
-                this.charts.assigneeDist = new Chart(assigneeCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: sortedAssignees.map(([name]) => name.substring(0, 10)),
-                        datasets: [{
-                            label: 'Tasks',
-                            data: sortedAssignees.map(([, count]) => count),
-                            backgroundColor: '#8b5cf6'
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: { y: { beginAtZero: true } }
-                    }
-                });
-            }
-        } catch (error) {
-            console.error('Error rendering task distribution:', error);
-        }
-    }
-
-    async renderTeamVelocity() {
-        const container = document.getElementById('widget-teamVelocity');
-        if (!container) return;
-
-        try {
-            // Get completed sprints
-            const sprintsSnapshot = await db.collection('sprints')
-                .where('organizationId', '==', app.state.currentOrganization)
-                .where('status', '==', 'completed')
-                .orderBy('completedAt', 'desc')
-                .limit(10)
-                .get();
-
-            const velocityData = [];
-            sprintsSnapshot.forEach(doc => {
-                const sprint = doc.data();
-                const total = sprint.tasks?.length || 0;
-                velocityData.push({
-                    name: sprint.name,
-                    total: total,
-                    completedAt: sprint.completedAt?.toDate()
-                });
-            });
-
-            velocityData.reverse();
-
-            container.innerHTML = `
-                <div class="chart-container" style="height: 250px;">
-                    <canvas id="velocity-chart"></canvas>
-                </div>
-            `;
-
-            const ctx = document.getElementById('velocity-chart');
-            if (ctx) {
-                this.charts.velocity = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: velocityData.map(d => d.name),
-                        datasets: [{
-                            label: 'Tasks Completed',
-                            data: velocityData.map(d => d.total),
-                            backgroundColor: '#3b82f6',
-                            borderRadius: 4
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { display: false },
-                            title: {
-                                display: true,
-                                text: 'Sprint Velocity (Tasks per Sprint)'
-                            }
-                        },
-                        scales: { y: { beginAtZero: true } }
-                    }
-                });
-            }
-        } catch (error) {
-            console.error('Error rendering team velocity:', error);
-        }
-    }
-
-    async renderOverdueTasks() {
-        const container = document.getElementById('widget-overdueTasks');
-        if (!container) return;
-
-        try {
-            const snapshot = await db.collection('tasks')
-                .where('organizationId', '==', app.state.currentOrganization)
-                .get();
-
-            const tasks = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            }));
-
-            const overdueTasks = tasks.filter(t => {
-                if (!t.dueDate || ['completed', 'archived'].includes(t.status)) return false;
-                return getDaysOverdue(t.dueDate) > 0;
-            }).sort((a, b) => getDaysOverdue(b.dueDate) - getDaysOverdue(a.dueDate));
-
-            container.innerHTML = `
-                <div class="overdue-list">
-                    ${overdueTasks.length === 0 ? `
-                        <div class="empty-state-small">
-                            <i class="fas fa-check-circle" style="color: #10b981"></i>
-                            <p>No overdue tasks! 🎉</p>
-                        </div>
-                    ` : overdueTasks.slice(0, 10).map(task => `
-                        <div class="overdue-item" onclick="app.modules.ui.openTaskDetail('${task.id}')">
-                            <div class="overdue-info">
-                                <span class="overdue-title">${escapeHtml(task.title)}</span>
-                                <span class="overdue-assignee">${escapeHtml(task.assignedTo || 'Unassigned')}</span>
-                            </div>
-                            <span class="overdue-days overdue-severity-${this.getOverdueSeverity(task.dueDate)}">
-                                +${getDaysOverdue(task.dueDate)}d
-                            </span>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        } catch (error) {
-            console.error('Error rendering overdue tasks:', error);
-        }
-    }
-
-    async renderRecentActivity() {
-        const container = document.getElementById('widget-recentActivity');
-        if (!container) return;
-
-        try {
-            const snapshot = await db.collection('activity_logs')
-                .where('organizationId', '==', app.state.currentOrganization)
-                .orderBy('createdAt', 'desc')
-                .limit(20)
-                .get();
-
-            const activities = snapshot.docs.map(doc => doc.data());
-
-            container.innerHTML = `
-                <div class="activity-feed">
-                    ${activities.map(activity => `
-                        <div class="activity-item">
-                            <i class="fas ${this.getActivityIcon(activity.action)}"></i>
-                            <div class="activity-content">
-                                <span class="activity-user">${escapeHtml(activity.userName)}</span>
-                                <span class="activity-action">${this.formatActivityAction(activity)}</span>
-                                <span class="activity-time">${this.formatTimeAgo(activity.createdAt)}</span>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        } catch (error) {
-            console.error('Error rendering recent activity:', error);
-        }
-    }
-
-    async renderMilestoneProgress() {
-        const container = document.getElementById('widget-milestoneProgress');
-        if (!container) return;
-
-        try {
-            const snapshot = await db.collection('milestones')
-                .where('organizationId', '==', app.state.currentOrganization)
-                .orderBy('date', 'asc')
-                .limit(10)
-                .get();
-
-            const milestones = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            }));
-
-            const now = new Date();
-            now.setHours(0, 0, 0, 0);
-
-            container.innerHTML = `
-                <div class="milestone-list">
-                    ${milestones.map(milestone => {
-                        const milestoneDate = new Date(milestone.date);
-                        const daysUntil = Math.ceil((milestoneDate - now) / (1000 * 60 * 60 * 24));
-                        const isPast = daysUntil < 0;
-                        const isToday = daysUntil === 0;
-                        
-                        return `
-                            <div class="milestone-item ${isPast ? 'past' : ''} ${isToday ? 'today' : ''}">
-                                <div class="milestone-indicator" style="background: ${isPast ? '#ef4444' : isToday ? '#f59e0b' : '#3b82f6'}">
-                                    <i class="fas fa-flag"></i>
-                                </div>
-                                <div class="milestone-content">
-                                    <span class="milestone-name">${escapeHtml(milestone.name)}</span>
-                                    <span class="milestone-date">
-                                        ${isPast ? `${Math.abs(daysUntil)} days ago` : 
-                                          isToday ? 'Today' : 
-                                          `In ${daysUntil} days`}
-                                    </span>
-                                </div>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-            `;
-        } catch (error) {
-            console.error('Error rendering milestones:', error);
-        }
-    }
-
-    getHealthColor(rate) {
-        if (rate >= 80) return '#10b981';
-        if (rate >= 50) return '#f59e0b';
-        return '#ef4444';
-    }
-
-    getOverdueSeverity(dueDate) {
-        const days = getDaysOverdue(dueDate);
-        if (days > 7) return 'critical';
-        if (days > 3) return 'high';
-        if (days > 1) return 'medium';
-        return 'low';
-    }
-
-    getActivityIcon(action) {
-        const icons = {
-            create_task: 'fa-plus-circle',
-            update_task: 'fa-edit',
-            delete_task: 'fa-trash',
-            task_completed: 'fa-check-circle',
-            comment_added: 'fa-comment',
-            sprint_created: 'fa-calendar-plus',
-            member_added: 'fa-user-plus'
-        };
-        return icons[action] || 'fa-info-circle';
-    }
-
-    formatActivityAction(activity) {
-        switch (activity.action) {
-            case 'create_task':
-                return `created task "${activity.entityName}"`;
-            case 'update_task':
-                return `updated task "${activity.entityName}"`;
-            case 'delete_task':
-                return `deleted task "${activity.entityName}"`;
-            case 'task_completed':
-                return `completed task "${activity.entityName}"`;
-            case 'comment_added':
-                return `commented on "${activity.entityName}"`;
-            default:
-                return activity.action.replace(/_/g, ' ');
-        }
-    }
-
-    formatTimeAgo(timestamp) {
-        if (!timestamp?.toDate) return '';
-        const now = new Date();
-        const date = timestamp.toDate();
-        const diff = Math.floor((now - date) / 1000);
-        
-        if (diff < 60) return 'Just now';
-        if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-        if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-        if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
-        return formatDate(date);
-    }
-
-    setupDragAndDrop() {
-        const container = document.getElementById('admin-widgets');
-        if (!container) return;
-
-        let draggedWidget = null;
-
-        container.addEventListener('dragstart', (e) => {
-            draggedWidget = e.target.closest('.admin-widget');
-            if (draggedWidget) {
-                draggedWidget.classList.add('dragging');
-                e.dataTransfer.setData('text/plain', draggedWidget.dataset.widget);
-            }
-        });
-
-        container.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            const target = e.target.closest('.admin-widget');
-            if (target && target !== draggedWidget) {
-                const rect = target.getBoundingClientRect();
-                const mid = rect.top + rect.height / 2;
-                if (e.clientY < mid) {
-                    container.insertBefore(draggedWidget, target);
-                } else {
-                    container.insertBefore(draggedWidget, target.nextSibling);
                 }
-            }
-        });
+            });
 
-        container.addEventListener('dragend', () => {
-            if (draggedWidget) {
-                draggedWidget.classList.remove('dragging');
-                draggedWidget = null;
-            }
-            this.saveWidgetOrder();
-        });
+        } catch (e) {
+            console.warn('Error loading distribution chart:', e);
+        }
     }
 
-    saveWidgetOrder() {
-        const container = document.getElementById('admin-widgets');
+    async loadOverdueTasks() {
+        const container = document.getElementById('overdue-tasks-list');
         if (!container) return;
 
-        const order = [];
-        container.querySelectorAll('.admin-widget').forEach(widget => {
-            order.push(widget.dataset.widget);
-        });
+        try {
+            const tasks = await localDB.getAll('tasks') || [];
+            const overdue = tasks
+                .filter(t => t.dueDate && getDaysOverdue(t.dueDate) > 0 && t.status !== 'completed')
+                .sort((a, b) => getDaysOverdue(b.dueDate) - getDaysOverdue(a.dueDate));
 
-        localStorage.setItem('oriental_widget_order', JSON.stringify(order));
-    }
-
-    loadWidgetOrder() {
-        const saved = localStorage.getItem('oriental_widget_order');
-        if (saved) {
-            try {
-                this.widgetOrder = JSON.parse(saved);
-            } catch {
-                this.widgetOrder = [];
+            if (overdue.length === 0) {
+                container.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px;">✅ No overdue tasks!</p>';
+                return;
             }
+
+            container.innerHTML = overdue.slice(0, 10).map(t => {
+                const days = getDaysOverdue(t.dueDate);
+                const severity = days > 7 ? 'critical' : days > 3 ? 'high' : days > 1 ? 'medium' : 'low';
+                const colors = { critical: '#7f1d1d', high: '#991b1b', medium: '#9a3412', low: '#92400e' };
+                const bgs = { critical: '#fee2e2', high: '#fecaca', medium: '#fed7aa', low: '#fef3c7' };
+                
+                return `
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-color);">
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(t.title)}</div>
+                            <div style="font-size:11px;color:var(--text-muted);">${escapeHtml(t.assignedTo || 'Unassigned')}</div>
+                        </div>
+                        <span style="background:${bgs[severity]};color:${colors[severity]};padding:2px 8px;border-radius:10px;font-size:12px;font-weight:600;white-space:nowrap;margin-left:8px;">
+                            +${days}d
+                        </span>
+                    </div>
+                `;
+            }).join('');
+        } catch (e) {
+            console.warn('Error loading overdue tasks:', e);
         }
     }
 
-    resetWidgets() {
-        localStorage.removeItem('oriental_widget_order');
-        this.widgetOrder = [];
+    async loadRecentActivity() {
+        const container = document.getElementById('recent-activity-list');
+        if (!container) return;
+
+        try {
+            const activities = await localDB.getAll('activity') || [];
+            const recent = activities
+                .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+                .slice(0, 10);
+
+            if (recent.length === 0) {
+                container.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:20px;">No recent activity</p>';
+                return;
+            }
+
+            container.innerHTML = recent.map(a => `
+                <div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-color);font-size:13px;">
+                    <span style="color:#7c3aed;flex-shrink:0;">●</span>
+                    <div style="flex:1;">
+                        <span style="font-weight:500;">${escapeHtml(a.userName || 'User')}</span>
+                        <span style="color:var(--text-secondary);">${escapeHtml(a.action || '')} ${escapeHtml(a.entityName || '')}</span>
+                        <div style="font-size:11px;color:var(--text-muted);">${a.createdAt ? new Date(a.createdAt).toLocaleString() : ''}</div>
+                    </div>
+                </div>
+            `).join('');
+        } catch (e) {
+            console.warn('Error loading activity:', e);
+        }
+    }
+
+    refresh() {
+        Object.values(this.charts).forEach(c => c?.destroy?.());
+        this.charts = {};
         this.render();
-        showToast('Widget layout reset', 'success');
+        showToast('Dashboard refreshed', 'success');
     }
 
-    async refreshAll() {
-        showToast('Refreshing widgets...', 'info');
-        const widgetIds = [
-            'projectPerformance', 'taskDistribution', 'teamVelocity',
-            'overdueTasks', 'recentActivity', 'milestoneProgress'
-        ];
-        
-        await Promise.all(widgetIds.map(id => this.updateWidget(id)));
-        showToast('Widgets refreshed', 'success');
-    }
-
-    startAutoRefresh() {
-        this.refreshInterval = setInterval(() => {
-            this.updateWidget('overdueTasks');
-            this.updateWidget('recentActivity');
-        }, 30000); // Refresh every 30 seconds
-    }
-
-    stopAutoRefresh() {
-        if (this.refreshInterval) {
-            clearInterval(this.refreshInterval);
-            this.refreshInterval = null;
+    async updateWidget(widgetName) {
+        switch (widgetName) {
+            case 'projectPerformance':
+                await this.loadProjectPerformanceChart();
+                break;
         }
-    }
-
-    destroy() {
-        this.stopAutoRefresh();
-        Object.values(this.charts).forEach(chart => chart?.destroy());
     }
 }

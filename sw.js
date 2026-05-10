@@ -1,6 +1,5 @@
 /**
  * Oriental v3.0 - Offline-First Service Worker
- * Aggressive caching strategy for resource-constrained environments
  * Enables full offline functionality
  */
 
@@ -12,6 +11,7 @@ const PRECACHE_RESOURCES = [
     '/',
     '/dashboard.html',
     '/login.html',
+    '/index.html',
     '/css/main.css',
     '/css/variables.css',
     '/css/themes.css',
@@ -19,13 +19,17 @@ const PRECACHE_RESOURCES = [
     '/css/animations.css',
     '/css/components.css',
     '/css/layout.css',
+    '/css/dashboard.css',
     '/css/responsive.css',
     '/js/db.js',
     '/js/sync.js',
     '/js/charts.js',
     '/js/icons.js',
     '/js/auth-offline.js',
+    '/js/network.js',
     '/js/utils.js',
+    '/js/auth.js',
+    '/js/roles.js',
     '/js/app.js',
     '/js/tasks.js',
     '/js/board.js',
@@ -34,28 +38,40 @@ const PRECACHE_RESOURCES = [
     '/js/milestones.js',
     '/js/reports.js',
     '/js/admin.js',
-    '/js/roles.js',
     '/js/seed.js',
+    '/js/firebase-config.js',
     '/manifest.json'
 ];
 
-// Install event - cache all core resources
+// Install event - cache core resources one by one (more resilient)
 self.addEventListener('install', (event) => {
+    console.log('🔄 Service Worker installing...');
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
-                console.log('🔄 Caching core resources...');
-                return cache.addAll(PRECACHE_RESOURCES);
+                console.log('📦 Caching core resources...');
+                // Cache one at a time to avoid failing all if one fails
+                return Promise.allSettled(
+                    PRECACHE_RESOURCES.map(url =>
+                        cache.add(url).catch(err => {
+                            console.warn('⚠️ Failed to cache:', url, err.message);
+                        })
+                    )
+                );
             })
             .then(() => {
-                console.log('✅ Core resources cached');
+                console.log('✅ Service Worker installed');
                 return self.skipWaiting();
+            })
+            .catch(err => {
+                console.error('❌ Service Worker install failed:', err);
             })
     );
 });
 
 // Activate event - clean old caches
 self.addEventListener('activate', (event) => {
+    console.log('🔄 Service Worker activating...');
     event.waitUntil(
         caches.keys().then(cacheNames => {
             return Promise.all(
@@ -66,25 +82,31 @@ self.addEventListener('activate', (event) => {
                         return caches.delete(name);
                     })
             );
-        }).then(() => self.clients.claim())
+        }).then(() => {
+            console.log('✅ Service Worker activated');
+            return self.clients.claim();
+        })
     );
 });
 
 // Fetch event - Network first, fallback to cache
 self.addEventListener('fetch', (event) => {
-    // Skip Firebase and analytics requests
-    if (event.request.url.includes('firestore.googleapis.com') ||
-        event.request.url.includes('google-analytics.com') ||
-        event.request.url.includes('firebaseio.com')) {
+    // Skip Firebase, analytics, and chrome-extension requests
+    const url = event.request.url;
+    if (url.includes('firestore.googleapis.com') ||
+        url.includes('google-analytics.com') ||
+        url.includes('firebaseio.com') ||
+        url.includes('googleapis.com') ||
+        url.includes('gstatic.com') ||
+        url.includes('chrome-extension')) {
         return;
     }
 
     event.respondWith(
-        // Try network first
         fetch(event.request)
             .then(response => {
-                // Cache successful responses
-                if (response.status === 200) {
+                // Cache successful GET responses
+                if (event.request.method === 'GET' && response.status === 200) {
                     const responseClone = response.clone();
                     caches.open(RUNTIME_CACHE).then(cache => {
                         cache.put(event.request, responseClone);
@@ -100,43 +122,31 @@ self.addEventListener('fetch', (event) => {
                             return cachedResponse;
                         }
                         
-                        // Return offline page for navigation requests
+                        // Return dashboard for navigation requests
                         if (event.request.mode === 'navigate') {
                             return caches.match('/dashboard.html');
                         }
                         
-                        return new Response('Offline - Resource not cached', {
+                        // Return empty response for other requests
+                        return new Response('', {
                             status: 503,
-                            statusText: 'Service Unavailable'
+                            statusText: 'Offline'
                         });
                     });
             })
     );
 });
 
-// Handle messages from the app
+// Handle messages
 self.addEventListener('message', (event) => {
     if (event.data === 'skipWaiting') {
         self.skipWaiting();
     }
-    
     if (event.data === 'clearCache') {
         caches.delete(CACHE_NAME);
         caches.delete(RUNTIME_CACHE);
+        console.log('🗑️ Caches cleared');
     }
 });
 
-// Background sync for offline changes
-self.addEventListener('sync', (event) => {
-    if (event.tag === 'sync-data') {
-        event.waitUntil(syncOfflineData());
-    }
-});
-
-async function syncOfflineData() {
-    // This would sync any queued changes when back online
-    const clients = await self.clients.matchAll();
-    clients.forEach(client => {
-        client.postMessage({ type: 'sync-triggered' });
-    });
-}
+console.log('📡 Service Worker script loaded');

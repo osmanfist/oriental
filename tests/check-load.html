@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Script Load Check</title>
+</head>
+<body>
+    <h1>Checking script loading order...</h1>
+    <div id="results"></div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="../js/firebase-config.js"></script>
+    <script src="../js/utils.js"></script>
+    <script src="../js/db.js"></script>
+    <script src="../js/sync.js"></script>
+    <script src="../js/charts.js"></script>
+    <script src="../js/icons.js"></script>
+    <script src="../js/auth-offline.js"></script>
+    <script src="../js/network.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/roles.js"></script>
+
+    <script>
+        const results = document.getElementById('results');
+        
+        const checks = [
+            { name: 'Firebase', test: () => typeof firebase !== 'undefined' },
+            { name: 'auth', test: () => typeof auth !== 'undefined' },
+            { name: 'db (Firestore)', test: () => typeof db !== 'undefined' },
+            { name: 'localDB', test: () => typeof localDB !== 'undefined' },
+            { name: 'syncManager', test: () => typeof syncManager !== 'undefined' },
+            { name: 'charts', test: () => typeof charts !== 'undefined' },
+            { name: 'renderIcon', test: () => typeof renderIcon !== 'undefined' },
+            { name: 'offlineAuth', test: () => typeof offlineAuth !== 'undefined' },
+            { name: 'networkManager', test: () => typeof networkManager !== 'undefined' },
+            { name: 'authManager', test: () => typeof authManager !== 'undefined' },
+            { name: 'rolesManager', test: () => typeof rolesManager !== 'undefined' },
+        ];
+
+        let html = '';
+        checks.forEach(check => {
+            const pass = check.test();
+            html += `<p style="color:${pass ? 'green' : 'red'}">${pass ? '✅' : '❌'} ${check.name}</p>`;
+        });
+
+        results.innerHTML = html;
+        console.log('Check complete!');
+    </script>
+</body>
+</html>

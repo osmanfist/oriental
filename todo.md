@@ -1,0 +1,1 @@
+the sprints, reports, and settings don't show up

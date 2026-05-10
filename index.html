@@ -686,7 +686,7 @@
     <!-- Service Worker -->
     <script>
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw-offline.js')
+            navigator.serviceWorker.register('/sw.js')
                 .then(() => console.log('✅ Service Worker registered'))
                 .catch(() => console.log('Service Worker not registered'));
         }
