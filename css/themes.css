@@ -1,0 +1,148 @@
+/* ============================================
+   Oriental v3.0 - Dark Mode Theme
+   ============================================ */
+
+[data-theme="dark"] {
+    /* Background Colors */
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-tertiary: #334155;
+    --bg-card: #1e293b;
+    --bg-sidebar: #0f172a;
+    --bg-modal: #1e293b;
+    --bg-hover: #334155;
+    --bg-active: #475569;
+    --bg-overlay: rgba(0, 0, 0, 0.7);
+
+    /* Text Colors */
+    --text-primary: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
+    --text-inverse: #0f172a;
+    --text-link: #a78bfa;
+
+    /* Border Colors */
+    --border-color: #334155;
+    --border-light: #1e293b;
+    --border-focus: #7c3aed;
+
+    /* Neutral Colors (dark scale) */
+    --gray-50: #0f172a;
+    --gray-100: #1e293b;
+    --gray-200: #334155;
+    --gray-300: #475569;
+    --gray-400: #64748b;
+    --gray-500: #94a3b8;
+    --gray-600: #cbd5e1;
+    --gray-700: #e2e8f0;
+    --gray-800: #f1f5f9;
+    --gray-900: #f8fafc;
+
+    /* Shadows (darker for dark mode) */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+
+    color-scheme: dark;
+}
+
+/* Dark mode specific overrides */
+[data-theme="dark"] .btn-primary {
+    box-shadow: 0 1px 3px rgba(124, 58, 237, 0.3);
+}
+
+[data-theme="dark"] .btn-primary:hover {
+    box-shadow: 0 4px 6px rgba(124, 58, 237, 0.4);
+}
+
+[data-theme="dark"] .btn-danger {
+    background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%);
+    border-color: #991b1b;
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .btn-danger:hover {
+    background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%);
+    border-color: #b91c1c;
+    color: #fecaca;
+}
+
+[data-theme="dark"] .task-card {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .task-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .modal-content {
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .toast {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .skeleton-loader {
+    background: linear-gradient(
+        90deg,
+        var(--bg-tertiary) 25%,
+        var(--border-color) 50%,
+        var(--bg-tertiary) 75%
+    );
+}
+
+[data-theme="dark"] .danger-section {
+    background: rgba(127, 29, 29, 0.2);
+    border-color: #7f1d1d;
+}
+
+[data-theme="dark"] .danger-section h3 {
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .danger-section p {
+    color: #fecaca;
+}
+
+[data-theme="dark"] .search-highlight {
+    background: rgba(124, 58, 237, 0.4);
+    color: #e9d5ff;
+}
+
+[data-theme="dark"] ::selection {
+    background: var(--primary-800);
+    color: var(--primary-100);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+    background: var(--gray-600);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-500);
+}
+
+/* Chart colors for dark mode */
+[data-theme="dark"] .chart-container canvas {
+    filter: brightness(0.9);
+}
+
+/* Heatmap adjustments */
+[data-theme="dark"] .heatmap-cell {
+    border: 1px solid var(--border-color);
+}
+
+/* Form elements */
+[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+}
+
+[data-theme="dark"] select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+}

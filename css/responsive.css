@@ -1,0 +1,340 @@
+/* ============================================
+   Oriental v3.0 - Responsive Styles
+   ============================================ */
+
+/* Tablet (768px - 1024px) */
+@media (max-width: 1024px) {
+    :root {
+        --sidebar-width: 260px;
+        --board-column-width: 260px;
+    }
+
+    .dashboard-header {
+        padding: 0 var(--space-4);
+    }
+
+    .header-actions {
+        gap: var(--space-2);
+    }
+
+    .search-input {
+        width: 160px;
+    }
+
+    .search-input:focus {
+        width: 200px;
+    }
+
+    .admin-widgets {
+        grid-template-columns: 1fr;
+    }
+
+    .charts-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Mobile (< 768px) */
+@media (max-width: 768px) {
+    :root {
+        --header-height: var(--mobile-header-height);
+    }
+
+    /* Sidebar becomes slide-out */
+    .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        transform: translateX(-100%);
+        box-shadow: var(--shadow-xl);
+        width: 280px;
+        transition: transform var(--transition-base);
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+    }
+
+    .sidebar-overlay {
+        display: none;
+    }
+
+    .sidebar-overlay.active {
+        display: block;
+    }
+
+    /* Mobile Header */
+    .mobile-header {
+        display: flex;
+    }
+
+    /* Desktop Header - Hide on mobile */
+    .dashboard-header {
+        display: none;
+    }
+
+    /* Bottom Navigation */
+    .bottom-nav {
+        display: flex;
+    }
+
+    /* Main Content */
+    .main-content {
+        margin-left: 0;
+    }
+
+    .content-area {
+        padding: var(--space-4);
+        padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + var(--space-4));
+    }
+
+    /* Board - Single column scroll */
+    .board-scroll {
+        flex-direction: column;
+        overflow-x: hidden;
+        overflow-y: auto;
+        gap: var(--space-3);
+    }
+
+    .board-column {
+        min-width: 100%;
+        max-width: 100%;
+    }
+
+    .tasks-container {
+        max-height: none;
+    }
+
+    /* Admin Widgets */
+    .admin-widgets {
+        grid-template-columns: 1fr;
+    }
+
+    /* Reports */
+    .charts-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .chart-container {
+        height: 250px;
+    }
+
+    .stats-cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    /* Sprint */
+    .sprint-columns {
+        grid-template-columns: 1fr;
+    }
+
+    /* Modals */
+    .modal {
+        padding: var(--space-3);
+        align-items: flex-end;
+    }
+
+    .modal-content {
+        max-height: 85vh;
+        border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+        animation: slideInUp var(--transition-base) ease;
+    }
+
+    .modal-header {
+        padding: var(--space-4);
+    }
+
+    .modal-body {
+        padding: var(--space-4);
+    }
+
+    .modal-footer {
+        padding: var(--space-3) var(--space-4);
+    }
+
+    /* Task Detail Grid */
+    .task-detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Search */
+    .search-input {
+        width: 140px;
+        font-size: 14px;
+    }
+
+    .search-input:focus {
+        width: 180px;
+    }
+
+    /* Settings Tabs */
+    .settings-tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .settings-tab {
+        white-space: nowrap;
+        padding: var(--space-2) var(--space-3);
+    }
+
+    /* Toast */
+    .toast {
+        bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + var(--space-4));
+        left: var(--space-4);
+        right: var(--space-4);
+        transform: none;
+        max-width: none;
+    }
+}
+
+/* Small Mobile (< 480px) */
+@media (max-width: 480px) {
+    .content-area {
+        padding: var(--space-3);
+        padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + var(--space-3));
+    }
+
+    .stats-cards {
+        grid-template-columns: 1fr;
+    }
+
+    .header-actions {
+        flex-wrap: wrap;
+        gap: var(--space-1);
+    }
+
+    .btn span {
+        display: none;
+    }
+
+    .btn i {
+        margin: 0;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    /* Hide some elements for cleaner mobile view */
+    .desktop-only {
+        display: none !important;
+    }
+}
+
+/* Large Desktop (> 1440px) */
+@media (min-width: 1440px) {
+    :root {
+        --board-column-width: 320px;
+    }
+
+    .content-area {
+        padding: var(--space-8);
+    }
+
+    .admin-widgets {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .charts-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Extra Large Desktop (> 1920px) */
+@media (min-width: 1920px) {
+    .content-area {
+        max-width: 1600px;
+        margin: 0 auto;
+    }
+
+    .admin-widgets {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* Tablet Landscape & Desktop */
+@media (min-width: 769px) {
+    .mobile-only {
+        display: none !important;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .sidebar,
+    .sidebar-overlay,
+    .mobile-header,
+    .bottom-nav,
+    .dashboard-header .header-actions,
+    .btn,
+    .modal {
+        display: none !important;
+    }
+
+    .main-content {
+        margin-left: 0;
+    }
+
+    .content-area {
+        padding: 0;
+        overflow: visible;
+    }
+
+    .board-scroll {
+        flex-direction: column;
+        overflow: visible;
+    }
+
+    .task-card {
+        break-inside: avoid;
+        border: 1px solid #ccc;
+    }
+}
+
+/* Touch Device Optimizations */
+@media (hover: none) and (pointer: coarse) {
+    .task-card:hover {
+        transform: none;
+        box-shadow: none;
+    }
+
+    .btn:active {
+        transform: scale(0.95);
+    }
+
+    /* Larger touch targets */
+    .btn-icon {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    .nav-item,
+    .project-item,
+    .bottom-nav-item {
+        min-height: 44px;
+    }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+    .task-card {
+        border: 2px solid currentColor;
+    }
+
+    .btn {
+        border: 2px solid currentColor;
+    }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
