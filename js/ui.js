@@ -546,38 +546,49 @@ class UIManager {
     }
 
     async createProject() {
-        const name = document.getElementById('project-name')?.value.trim();
-        if (!name) {
-            showToast('Please enter a project name', 'warning');
-            return;
-        }
-
-        const colorInput = document.querySelector('input[name="project-color"]:checked');
-        const color = colorInput?.value || '#8b5cf6';
-
-        try {
-            await db.collection('projects').add({
-                name: name,
-                description: document.getElementById('project-description')?.value || '',
-                color: color,
-                organizationId: app.state.currentOrganization,
-                createdBy: authManager.getCurrentUser().uid,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                isArchived: false
-            });
-
-            showToast('Project created!', 'success');
-            this.closeModal('project-modal');
-            
-            // Refresh project list
-            await app.loadUserData();
-            app.modules.board.render();
-
-        } catch (error) {
-            console.error('Error creating project:', error);
-            showToast('Error creating project', 'error');
-        }
+    const name = document.getElementById('project-name')?.value.trim();
+    if (!name) {
+        showToast('Please enter a project name', 'warning');
+        return;
     }
+
+    const colorInput = document.querySelector('input[name="project-color"]:checked');
+    const color = colorInput?.value || '#8b5cf6';
+
+    try {
+        const projectRef = await db.collection('projects').add({
+            name: name,
+            description: document.getElementById('project-description')?.value || '',
+            color: color,
+            organizationId: app.state.currentOrganization,
+            createdBy: authManager.getCurrentUser().uid,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            isArchived: false
+        });
+
+        // Save to local DB immediately
+        await localDB.put('projects', {
+            id: projectRef.id,
+            name: name,
+            description: document.getElementById('project-description')?.value || '',
+            color: color,
+            organizationId: app.state.currentOrganization,
+            isArchived: false
+        });
+
+        showToast('Project created!', 'success');
+        this.closeModal('project-modal');
+        
+        // Refresh the project list in sidebar
+        await loadProjectsList();
+        
+        console.log('✅ Project created and UI refreshed:', name);
+
+    } catch (error) {
+        console.error('Error creating project:', error);
+        showToast('Error creating project', 'error');
+    }
+}
 
     // ============================================
     // MILESTONE MODAL

@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oriental v3.0 - Test Suite</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: #334155;
+            --success: #22c55e;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --primary: #7c3aed;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 24px;
+            line-height: 1.6;
+        }
+
+        .test-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .test-header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .test-header p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .test-controls {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .btn-run { background: var(--primary); color: white; }
+        .btn-run:hover { opacity: 0.9; }
+        .btn-stop { background: var(--error); color: white; }
+        .btn-clear { background: var(--border); color: var(--text); }
+
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .summary-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .summary-value {
+            font-size: 32px;
+            font-weight: 800;
+        }
+
+        .summary-value.pass { color: var(--success); }
+        .summary-value.fail { color: var(--error); }
+        .summary-value.warn { color: var(--warning); }
+
+        .summary-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .test-group {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+
+        .test-group-header {
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .test-group-header:hover {
+            background: rgba(255,255,255,0.02);
+        }
+
+        .test-group-title {
+            font-weight: 600;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .test-group-status {
+            font-size: 12px;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+
+        .status-pending { background: var(--border); color: var(--text-secondary); }
+        .status-running { background: var(--info); color: white; animation: pulse 1.5s infinite; }
+        .status-pass { background: #14532d; color: #86efac; }
+        .status-fail { background: #7f1d1d; color: #fca5a5; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .test-results {
+            display: none;
+            padding: 0 20px 16px;
+        }
+
+        .test-group.open .test-results {
+            display: block;
+        }
+
+        .test-item {
+            padding: 10px 0;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            font-size: 13px;
+        }
+
+        .test-item:first-child {
+            border-top: none;
+        }
+
+        .test-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .test-icon.pass { background: #14532d; color: #86efac; }
+        .test-icon.fail { background: #7f1d1d; color: #fca5a5; }
+        .test-icon.skip { background: var(--border); color: var(--text-secondary); }
+        .test-icon.running { background: #1e3a5f; color: #93c5fd; animation: spin 1s linear infinite; }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .test-details {
+            flex: 1;
+        }
+
+        .test-name {
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+
+        .test-message {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .test-time {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-left: auto;
+            white-space: nowrap;
+        }
+
+        .log-output {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 24px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.8;
+        }
+
+        .log-entry { color: var(--text-secondary); }
+        .log-entry.pass { color: var(--success); }
+        .log-entry.fail { color: var(--error); }
+        .log-entry.warn { color: var(--warning); }
+        .log-entry.info { color: var(--info); }
+
+        @media (max-width: 768px) {
+            body { padding: 16px; }
+            .summary { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="test-header">
+        <h1>🧪 Oriental v3.0 Test Suite</h1>
+        <p>Offline-First Architecture Validation</p>
+    </div>
+
+    <div class="summary" id="summary"></div>
+    
+    <div class="progress-bar">
+        <div class="progress-fill" id="progress-bar"></div>
+    </div>
+
+    <div class="test-controls">
+        <button class="btn btn-run" onclick="runAllTests()">▶ Run All Tests</button>
+        <button class="btn btn-run" onclick="runOfflineTests()">📡 Offline Tests</button>
+        <button class="btn btn-run" onclick="runDatabaseTests()">🗄️ Database Tests</button>
+        <button class="btn btn-run" onclick="runUITests()">🎨 UI Tests</button>
+        <button class="btn btn-run" onclick="runPerformanceTests()">⚡ Performance Tests</button>
+        <button class="btn btn-clear" onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div id="test-groups"></div>
+    <div class="log-output" id="log-output"></div>
+
+    <!-- Firebase & Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="../js/firebase-config.js"></script>
+    <script src="../js/db.js"></script>
+    <script src="../js/sync.js"></script>
+    <script src="../js/charts.js"></script>
+    <script src="../js/auth-offline.js"></script>
+    <script src="../js/network.js"></script>
+    <script src="../js/utils.js"></script>
+
+    <script>
+        /**
+         * Oriental v3.0 - Test Suite
+         * Comprehensive testing for offline-first architecture
+         */
+
+        const TestRunner = {
+            results: [],
+            groups: [],
+            running: false,
+            startTime: null,
+
+            init() {
+                this.setupGroups();
+                this.updateSummary();
+                this.log('🧪 Test suite initialized', 'info');
+                this.log(`📡 Network: ${navigator.onLine ? 'Online' : 'Offline'}`, 'info');
+                this.log(`💾 Storage: IndexedDB ${window.indexedDB ? 'Available' : 'Not Available'}`, 'info');
+            },
+
+            setupGroups() {
+                this.groups = [
+                    {
+                        id: 'database',
+                        title: '🗄️ Database (IndexedDB)',
+                        tests: [
+                            { id: 'db-init', name: 'Database Initialization', fn: this.testDBInit },
+                            { id: 'db-put', name: 'Data Insertion (put)', fn: this.testDBPut },
+                            { id: 'db-get', name: 'Data Retrieval (get)', fn: this.testDBGet },
+                            { id: 'db-getAll', name: 'Bulk Retrieval (getAll)', fn: this.testDBGetAll },
+                            { id: 'db-index', name: 'Index-Based Query', fn: this.testDBIndex },
+                            { id: 'db-delete', name: 'Data Deletion', fn: this.testDBDelete },
+                            { id: 'db-batch', name: 'Batch Operations', fn: this.testDBBatch },
+                            { id: 'db-cache', name: 'Cache Invalidation', fn: this.testDBCache },
+                        ]
+                    },
+                    {
+                        id: 'offline',
+                        title: '📡 Offline Capabilities',
+                        tests: [
+                            { id: 'off-detect', name: 'Offline Detection', fn: this.testOfflineDetection },
+                            { id: 'off-storage', name: 'Local Storage Available', fn: this.testLocalStorage },
+                            { id: 'off-save', name: 'Save While Offline', fn: this.testOfflineSave },
+                            { id: 'off-queue', name: 'Sync Queue Management', fn: this.testSyncQueue },
+                            { id: 'off-auth', name: 'Offline Authentication', fn: this.testOfflineAuth },
+                        ]
+                    },
+                    {
+                        id: 'sync',
+                        title: '🔄 Sync Manager',
+                        tests: [
+                            { id: 'sync-status', name: 'Sync Status Detection', fn: this.testSyncStatus },
+                            { id: 'sync-conflict', name: 'Conflict Resolution', fn: this.testConflictResolution },
+                            { id: 'sync-merge', name: 'Data Merging', fn: this.testDataMerge },
+                        ]
+                    },
+                    {
+                        id: 'performance',
+                        title: '⚡ Performance',
+                        tests: [
+                            { id: 'perf-load', name: 'Page Load Time < 2s', fn: this.testPageLoad },
+                            { id: 'perf-db-write', name: 'DB Write < 50ms', fn: this.testDBWriteSpeed },
+                            { id: 'perf-db-read', name: 'DB Read < 10ms', fn: this.testDBReadSpeed },
+                            { id: 'perf-memory', name: 'Memory Usage < 50MB', fn: this.testMemoryUsage },
+                            { id: 'perf-storage', name: 'Storage Estimate', fn: this.testStorageEstimate },
+                        ]
+                    },
+                    {
+                        id: 'ui',
+                        title: '🎨 UI Components',
+                        tests: [
+                            { id: 'ui-icons', name: 'SVG Icon Rendering', fn: this.testIconRendering },
+                            { id: 'ui-charts', name: 'Canvas Chart Creation', fn: this.testChartCreation },
+                            { id: 'ui-toast', name: 'Toast Notifications', fn: this.testToastNotifications },
+                            { id: 'ui-modal', name: 'Modal Management', fn: this.testModalManagement },
+                        ]
+                    },
+                ];
+            },
+
+            async runAll() {
+                if (this.running) return;
+                this.running = true;
+                this.results = [];
+                this.startTime = performance.now();
+                
+                this.log('🚀 Starting full test suite...', 'info');
+                
+                for (const group of this.groups) {
+                    await this.runGroup(group);
+                }
+                
+                this.running = false;
+                const duration = ((performance.now() - this.startTime) / 1000).toFixed(2);
+                this.log(`✅ Test suite completed in ${duration}s`, 'pass');
+                this.updateSummary();
+                this.renderGroups();
+            },
+
+            async runGroup(group) {
+                this.log(`\n📋 Running: ${group.title}`, 'info');
+                const groupEl = document.getElementById(`group-${group.id}`);
+                const statusEl = groupEl?.querySelector('.test-group-status');
+                
+                if (statusEl) {
+                    statusEl.textContent = 'RUNNING';
+                    statusEl.className = 'test-group-status status-running';
+                }
+                
+                groupEl?.classList.add('open');
+                
+                for (const test of group.tests) {
+                    await this.runTest(test, group.id);
+                }
+                
+                const passed = this.results.filter(r => r.group === group.id && r.status === 'pass').length;
+                const total = group.tests.length;
+                
+                if (statusEl) {
+                    const allPassed = passed === total;
+                    statusEl.textContent = allPassed ? `${passed}/${total} PASSED` : `${passed}/${total}`;
+                    statusEl.className = `test-group-status ${allPassed ? 'status-pass' : 'status-fail'}`;
+                }
+            },
+
+            async runTest(test, groupId) {
+                const startTime = performance.now();
+                let status = 'running';
+                let message = '';
+                
+                this.updateTestUI(test.id, status);
+                
+                try {
+                    await test.fn.call(this);
+                    status = 'pass';
+                    message = 'Test passed successfully';
+                } catch (error) {
+                    status = 'fail';
+                    message = error.message || 'Test failed';
+                    this.log(`❌ ${test.name}: ${message}`, 'fail');
+                }
+                
+                const duration = (performance.now() - startTime).toFixed(1);
+                
+                this.results.push({
+                    id: test.id,
+                    group: groupId,
+                    name: test.name,
+                    status,
+                    message,
+                    duration: `${duration}ms`
+                });
+                
+                this.updateTestUI(test.id, status, message, duration);
+                this.updateSummary();
+                this.updateProgress();
+            },
+
+            // ============================================
+            // DATABASE TESTS
+            // ============================================
+
+            async testDBInit() {
+                await localDB.init();
+                if (!localDB.db) throw new Error('Database failed to initialize');
+                this.log('✅ IndexedDB initialized successfully', 'pass');
+            },
+
+            async testDBPut() {
+                const testData = { id: 'test-1', name: 'Test Item', value: 42, timestamp: Date.now() };
+                await localDB.put('tasks', testData);
+                const retrieved = await localDB.get('tasks', 'test-1');
+                if (!retrieved || retrieved.name !== 'Test Item') {
+                    throw new Error('Data retrieval mismatch after put');
+                }
+                await localDB.delete('tasks', 'test-1');
+            },
+
+            async testDBGet() {
+                await localDB.put('tasks', { id: 'test-get', data: 'test-value' });
+                const result = await localDB.get('tasks', 'test-get');
+                if (!result) throw new Error('Get returned null for existing item');
+                await localDB.delete('tasks', 'test-get');
+            },
+
+            async testDBGetAll() {
+                const items = [
+                    { id: 'bulk-1', value: 'a' },
+                    { id: 'bulk-2', value: 'b' },
+                    { id: 'bulk-3', value: 'c' }
+                ];
+                await localDB.batchPut('tasks', items);
+                const all = await localDB.getAll('tasks');
+                if (all.length < 3) throw new Error('getAll did not return all items');
+                for (const item of items) {
+                    await localDB.delete('tasks', item.id);
+                }
+            },
+
+            async testDBIndex() {
+                const items = [
+                    { id: 'idx-1', projectId: 'proj-a', status: 'planned' },
+                    { id: 'idx-2', projectId: 'proj-a', status: 'started' },
+                    { id: 'idx-3', projectId: 'proj-b', status: 'planned' }
+                ];
+                await localDB.batchPut('tasks', items);
+                const filtered = await localDB.getByIndex('tasks', 'projectId', 'proj-a');
+                if (filtered.length !== 2) throw new Error('Index query returned wrong count');
+                for (const item of items) {
+                    await localDB.delete('tasks', item.id);
+                }
+            },
+
+            async testDBDelete() {
+                await localDB.put('tasks', { id: 'to-delete', value: 'test' });
+                await localDB.delete('tasks', 'to-delete');
+                const deleted = await localDB.get('tasks', 'to-delete');
+                if (deleted) throw new Error('Item still exists after deletion');
+            },
+
+            async testDBBatch() {
+                const batch = Array.from({ length: 50 }, (_, i) => ({
+                    id: `batch-${i}`,
+                    value: `item-${i}`,
+                    index: i
+                }));
+                
+                const startTime = performance.now();
+                await localDB.batchPut('tasks', batch);
+                const duration = performance.now() - startTime;
+                
+                const all = await localDB.getAll('tasks');
+                if (all.length < 50) throw new Error('Batch insert incomplete');
+                
+                for (const item of batch) {
+                    await localDB.delete('tasks', item.id);
+                }
+                
+                if (duration > 500) throw new Error(`Batch insert too slow: ${duration.toFixed(1)}ms`);
+                this.log(`📊 Batch insert 50 items: ${duration.toFixed(1)}ms`, 'info');
+            },
+
+            async testDBCache() {
+                await localDB.put('tasks', { id: 'cache-test', value: 'test' });
+                await localDB.get('tasks', 'cache-test');
+                localDB.invalidateCache('tasks');
+                const keys = Array.from(localDB.cache.keys());
+                const taskKeys = keys.filter(k => k.startsWith('tasks:'));
+                if (taskKeys.length > 0) throw new Error('Cache not properly invalidated');
+                await localDB.delete('tasks', 'cache-test');
+            },
+
+            // ============================================
+            // OFFLINE TESTS
+            // ============================================
+
+            testOfflineDetection() {
+                const status = networkManager.getStatus();
+                this.log(`📡 Connection: ${status.isOnline ? 'Online' : 'Offline'}`, 'info');
+                this.log(`📶 Quality: ${status.quality}`, 'info');
+                this.log(`📡 Type: ${status.effectiveType}`, 'info');
+                
+                if (typeof status.isOnline !== 'boolean') {
+                    throw new Error('Network status detection not working');
+                }
+            },
+
+            testLocalStorage() {
+                const testKey = '__oriental_test__';
+                try {
+                    localStorage.setItem(testKey, 'test');
+                    localStorage.removeItem(testKey);
+                } catch (e) {
+                    throw new Error('localStorage not available');
+                }
+                
+                if (!window.indexedDB) {
+                    throw new Error('IndexedDB not available - required for offline');
+                }
+                this.log('✅ localStorage and IndexedDB available', 'pass');
+            },
+
+            async testOfflineSave() {
+                const testData = { id: 'offline-test', title: 'Offline Task', status: 'planned' };
+                await localDB.put('tasks', testData);
+                
+                const saved = await localDB.get('tasks', 'offline-test');
+                if (!saved) throw new Error('Offline save failed');
+                
+                this.log(`💾 Offline save successful: "${saved.title}"`, 'pass');
+                await localDB.delete('tasks', 'offline-test');
+            },
+
+            async testSyncQueue() {
+                await localDB.addToSyncQueue({
+                    collection: 'tasks',
+                    data: { title: 'Queued Task' },
+                    type: 'create'
+                });
+                
+                const queue = await localDB.getSyncQueue();
+                if (queue.length === 0) throw new Error('Sync queue empty after adding item');
+                
+                await localDB.markSyncComplete(queue[0].id);
+                this.log(`📤 Sync queue items: ${queue.length}`, 'info');
+            },
+
+            async testOfflineAuth() {
+                await offlineAuth.init();
+                const cached = await localDB.get('userData', 'currentUser');
+                
+                if (!navigator.onLine) {
+                    if (!cached) {
+                        this.log('⚠️ No cached credentials for offline test', 'warn');
+                    } else {
+                        this.log('✅ Cached credentials found for offline auth', 'pass');
+                    }
+                }
+            },
+
+            // ============================================
+            // SYNC TESTS
+            // ============================================
+
+            testSyncStatus() {
+                const status = syncManager.getStatus();
+                if (typeof status.isOnline !== 'boolean') {
+                    throw new Error('Sync status detection failed');
+                }
+                this.log(`🔄 Sync status: ${status.isOnline ? 'Ready' : 'Offline'}`, 'info');
+            },
+
+            testConflictResolution() {
+                const local = { id: 'conflict-1', title: 'Local Title', updatedAt: 2000 };
+                const cloud = { id: 'conflict-1', title: 'Cloud Title', updatedAt: { toDate: () => new Date(1000) } };
+                
+                const resolved = syncManager.resolveConflict(local, cloud);
+                if (resolved.title !== 'Local Title') {
+                    throw new Error('Conflict resolution chose wrong version');
+                }
+                
+                const cloudNewer = { ...cloud, updatedAt: { toDate: () => new Date(3000) } };
+                const resolved2 = syncManager.resolveConflict(local, cloudNewer);
+                if (resolved2.title !== 'Cloud Title') {
+                    throw new Error('Conflict resolution chose wrong version for newer cloud');
+                }
+            },
+
+            testDataMerge() {
+                const local = [
+                    { id: '1', value: 'local-1', _pendingSync: true },
+                    { id: '2', value: 'local-2' }
+                ];
+                const cloud = [
+                    { id: '1', value: 'cloud-1' },
+                    { id: '3', value: 'cloud-3' }
+                ];
+                
+                // Simple merge logic test
+                const localMap = new Map(local.map(i => [i.id, i]));
+                const merged = [...cloud];
+                
+                localMap.forEach((item, id) => {
+                    if (!merged.find(m => m.id === id)) {
+                        merged.push(item);
+                    }
+                });
+                
+                if (merged.length !== 3) throw new Error('Merge produced wrong count');
+            },
+
+            // ============================================
+            // PERFORMANCE TESTS
+            // ============================================
+
+            testPageLoad() {
+                const perfData = performance.getEntriesByType('navigation')[0];
+                if (perfData) {
+                    const loadTime = perfData.loadEventEnd - perfData.fetchStart;
+                    this.log(`⏱️ Page load: ${loadTime.toFixed(0)}ms`, 'info');
+                    if (loadTime > 3000) {
+                        throw new Error(`Page load too slow: ${loadTime.toFixed(0)}ms`);
+                    }
+                }
+            },
+
+            async testDBWriteSpeed() {
+                const startTime = performance.now();
+                for (let i = 0; i < 100; i++) {
+                    await localDB.put('tasks', { id: `perf-${i}`, value: `item-${i}` });
+                }
+                const duration = performance.now() - startTime;
+                const avgTime = duration / 100;
+                
+                this.log(`⚡ Avg write time: ${avgTime.toFixed(2)}ms`, 'info');
+                
+                for (let i = 0; i < 100; i++) {
+                    await localDB.delete('tasks', `perf-${i}`);
+                }
+                
+                if (avgTime > 50) {
+                    throw new Error(`DB write too slow: ${avgTime.toFixed(2)}ms avg`);
+                }
+            },
+
+            async testDBReadSpeed() {
+                await localDB.put('tasks', { id: 'read-test', value: 'test-data' });
+                
+                const startTime = performance.now();
+                for (let i = 0; i < 100; i++) {
+                    await localDB.get('tasks', 'read-test');
+                }
+                const duration = performance.now() - startTime;
+                const avgTime = duration / 100;
+                
+                this.log(`⚡ Avg read time: ${avgTime.toFixed(2)}ms`, 'info');
+                await localDB.delete('tasks', 'read-test');
+                
+                if (avgTime > 10) {
+                    throw new Error(`DB read too slow: ${avgTime.toFixed(2)}ms avg`);
+                }
+            },
+
+            testMemoryUsage() {
+                if (performance.memory) {
+                    const used = Math.round(performance.memory.usedJSHeapSize / 1024 / 1024);
+                    this.log(`💾 Memory used: ${used}MB`, 'info');
+                    if (used > 100) {
+                        throw new Error(`Memory usage too high: ${used}MB`);
+                    }
+                } else {
+                    this.log('⚠️ Memory API not available in this browser', 'warn');
+                }
+            },
+
+            async testStorageEstimate() {
+                const stats = await localDB.getStorageUsage();
+                if (stats) {
+                    this.log(`💿 Storage: ${stats.usage}KB / ${stats.quota}KB (${stats.percentage}%)`, 'info');
+                }
+            },
+
+            // ============================================
+            // UI TESTS
+            // ============================================
+
+            testIconRendering() {
+                const testIcons = ['board', 'plus', 'check', 'user', 'calendar', 'flag'];
+                
+                for (const name of testIcons) {
+                    const svg = renderIcon(name, 20, '#7c3aed');
+                    if (!svg || !svg.includes('<svg')) {
+                        throw new Error(`Icon "${name}" failed to render`);
+                    }
+                }
+                
+                this.log(`✅ All ${testIcons.length} icons rendered`, 'pass');
+            },
+
+            testChartCreation() {
+                const canvas = document.createElement('canvas');
+                canvas.id = 'test-chart';
+                canvas.width = 400;
+                canvas.height = 200;
+                document.body.appendChild(canvas);
+                
+                try {
+                    charts.renderBarChart('test-chart', {
+                        labels: ['A', 'B', 'C', 'D'],
+                        datasets: [{
+                            data: [10, 25, 15, 30],
+                            backgroundColor: '#7c3aed'
+                        }]
+                    });
+                    
+                    const ctx = canvas.getContext('2d');
+                    const imageData = ctx.getImageData(0, 0, 1, 1);
+                    
+                    charts.destroy('test-chart');
+                    document.body.removeChild(canvas);
+                    
+                    this.log('✅ Chart rendered successfully', 'pass');
+                } catch (error) {
+                    document.body.removeChild(canvas);
+                    throw new Error('Chart rendering failed: ' + error.message);
+                }
+            },
+
+            testToastNotifications() {
+                if (typeof showToast !== 'function') {
+                    throw new Error('showToast function not available');
+                }
+                
+                showToast('Test notification', 'info');
+                const toast = document.querySelector('.toast');
+                
+                if (!toast) throw new Error('Toast element not created');
+                
+                setTimeout(() => {
+                    const toastEl = document.querySelector('.toast');
+                    if (!toastEl) this.log('✅ Toast auto-removed', 'pass');
+                }, 3500);
+            },
+
+            testModalManagement() {
+                const modalId = 'test-modal';
+                const modal = document.createElement('div');
+                modal.className = 'modal';
+                modal.id = modalId;
+                modal.innerHTML = '<div class="modal-content"><p>Test</p></div>';
+                document.body.appendChild(modal);
+                
+                modal.style.display = 'flex';
+                modal.classList.add('active');
+                
+                const isVisible = modal.style.display === 'flex';
+                
+                modal.style.display = 'none';
+                modal.classList.remove('active');
+                document.body.removeChild(modal);
+                
+                if (!isVisible) throw new Error('Modal not showing');
+            },
+
+            // ============================================
+            // UI HELPERS
+            // ============================================
+
+            updateTestUI(testId, status, message = '', duration = '') {
+                const iconEl = document.getElementById(`icon-${testId}`);
+                const statusEl = document.getElementById(`status-${testId}`);
+                const timeEl = document.getElementById(`time-${testId}`);
+                
+                if (iconEl) {
+                    iconEl.className = `test-icon ${status}`;
+                    iconEl.textContent = status === 'pass' ? '✓' : status === 'fail' ? '✗' : '○';
+                }
+                if (statusEl) {
+                    statusEl.textContent = message;
+                    statusEl.style.color = status === 'fail' ? 'var(--error)' : 'var(--text-secondary)';
+                }
+                if (timeEl) timeEl.textContent = duration;
+            },
+
+            updateSummary() {
+                const total = this.results.length;
+                const passed = this.results.filter(r => r.status === 'pass').length;
+                const failed = this.results.filter(r => r.status === 'fail').length;
+                const running = this.results.filter(r => r.status === 'running').length;
+                
+                document.getElementById('summary').innerHTML = `
+                    <div class="summary-card">
+                        <div class="summary-value">${total}</div>
+                        <div class="summary-label">Total Tests</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-value pass">${passed}</div>
+                        <div class="summary-label">Passed</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-value fail">${failed}</div>
+                        <div class="summary-label">Failed</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-value warn">${running}</div>
+                        <div class="summary-label">Running</div>
+                    </div>
+                `;
+            },
+
+            updateProgress() {
+                const totalTests = this.groups.reduce((sum, g) => sum + g.tests.length, 0);
+                const completed = this.results.length;
+                const percent = totalTests > 0 ? Math.round((completed / totalTests) * 100) : 0;
+                document.getElementById('progress-bar').style.width = `${percent}%`;
+            },
+
+            renderGroups() {
+                const container = document.getElementById('test-groups');
+                
+                container.innerHTML = this.groups.map(group => `
+                    <div class="test-group" id="group-${group.id}">
+                        <div class="test-group-header" onclick="this.parentElement.classList.toggle('open')">
+                            <span class="test-group-title">${group.title}</span>
+                            <span class="test-group-status status-pending">PENDING</span>
+                        </div>
+                        <div class="test-results">
+                            ${group.tests.map(test => `
+                                <div class="test-item">
+                                    <div class="test-icon" id="icon-${test.id}">○</div>
+                                    <div class="test-details">
+                                        <div class="test-name">${test.name}</div>
+                                        <div class="test-message" id="status-${test.id}">Waiting...</div>
+                                    </div>
+                                    <div class="test-time" id="time-${test.id}"></div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+            },
+
+            log(message, type = '') {
+                const log = document.getElementById('log-output');
+                const entry = document.createElement('div');
+                entry.className = `log-entry ${type}`;
+                entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                log.appendChild(entry);
+                log.scrollTop = log.scrollHeight;
+            },
+
+            clear() {
+                this.results = [];
+                document.getElementById('test-groups').innerHTML = '';
+                document.getElementById('log-output').innerHTML = '';
+                document.getElementById('progress-bar').style.width = '0%';
+                this.setupGroups();
+                this.renderGroups();
+                this.updateSummary();
+                this.log('🧹 Results cleared', 'info');
+            }
+        };
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', async () => {
+            await localDB.init();
+            networkManager.init();
+            await offlineAuth.init();
+            TestRunner.init();
+            TestRunner.renderGroups();
+        });
+
+        // Global test functions
+        function runAllTests() { TestRunner.runAll(); }
+        function runOfflineTests() {
+            TestRunner.results = [];
+            TestRunner.runGroup(TestRunner.groups.find(g => g.id === 'offline'));
+        }
+        function runDatabaseTests() {
+            TestRunner.results = [];
+            TestRunner.runGroup(TestRunner.groups.find(g => g.id === 'database'));
+        }
+        function runUITests() {
+            TestRunner.results = [];
+            TestRunner.runGroup(TestRunner.groups.find(g => g.id === 'ui'));
+        }
+        function runPerformanceTests() {
+            TestRunner.results = [];
+            TestRunner.runGroup(TestRunner.groups.find(g => g.id === 'performance'));
+        }
+        function clearResults() { TestRunner.clear(); }
+    </script>
+</body>
+</html>

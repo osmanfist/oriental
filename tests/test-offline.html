@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline Capability Test</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f172a;
+            color: #f1f5f9;
+            padding: 24px;
+            text-align: center;
+        }
+        h1 { margin-bottom: 8px; }
+        .status {
+            font-size: 48px;
+            margin: 32px 0;
+        }
+        .card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 24px;
+            margin: 16px auto;
+            max-width: 500px;
+            text-align: left;
+        }
+        .pass { color: #22c55e; }
+        .fail { color: #ef4444; }
+        .warn { color: #f59e0b; }
+    </style>
+</head>
+<body>
+    <h1>📡 Offline Capability Test</h1>
+    <p>Turn off your internet and refresh this page</p>
+    
+    <div class="status" id="status">🔍 Testing...</div>
+    
+    <div class="card">
+        <h3>Tests:</h3>
+        <div id="results"></div>
+    </div>
+
+    <script src="../js/db.js"></script>
+    <script src="../js/network.js"></script>
+    <script>
+        async function runOfflineTest() {
+            const results = document.getElementById('results');
+            const status = document.getElementById('status');
+            
+            // Test 1: Network detection
+            const test1 = navigator.onLine ? 
+                '<span class="fail">❌ Online - Turn off internet to test</span>' :
+                '<span class="pass">✅ Offline detected</span>';
+            
+            // Test 2: IndexedDB
+            await localDB.init();
+            const test2 = localDB.db ? 
+                '<span class="pass">✅ IndexedDB working</span>' :
+                '<span class="fail">❌ IndexedDB failed</span>';
+            
+            // Test 3: Local storage
+            try {
+                localStorage.setItem('test', '1');
+                localStorage.removeItem('test');
+                var test3 = '<span class="pass">✅ localStorage working</span>';
+            } catch(e) {
+                var test3 = '<span class="fail">❌ localStorage failed</span>';
+            }
+            
+            // Test 4: Save offline
+            await localDB.put('tasks', { id: 'offline-test', title: 'Saved offline!' });
+            const saved = await localDB.get('tasks', 'offline-test');
+            const test4 = saved ? 
+                '<span class="pass">✅ Offline save successful</span>' :
+                '<span class="fail">❌ Offline save failed</span>';
+            
+            // Test 5: Service Worker
+            const test5 = 'serviceWorker' in navigator ?
+                '<span class="pass">✅ Service Worker supported</span>' :
+                '<span class="warn">⚠️ Service Worker not supported</span>';
+            
+            // Overall
+            const allPass = !navigator.onLine && localDB.db && saved;
+            status.innerHTML = allPass ? '✅ OFFLINE READY' : '⚠️ PARTIALLY WORKING';
+            status.style.color = allPass ? '#22c55e' : '#f59e0b';
+            
+            results.innerHTML = [test1, test2, test3, test4, test5]
+                .map(t => `<p>${t}</p>`).join('');
+        }
+        
+        runOfflineTest();
+    </script>
+</body>
+</html>

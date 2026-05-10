@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Storage Benchmark</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f172a;
+            color: #f1f5f9;
+            padding: 24px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #334155;
+            text-align: left;
+        }
+        th { background: #1e293b; }
+        .fast { color: #22c55e; }
+        .slow { color: #f59e0b; }
+    </style>
+</head>
+<body>
+    <h1>⚡ Storage Benchmark</h1>
+    <div id="results"></div>
+
+    <script src="../js/db.js"></script>
+    <script>
+        async function runBenchmark() {
+            await localDB.init();
+            const results = [];
+            
+            // Test 1: Single write
+            const w1 = performance.now();
+            await localDB.put('tasks', { id: 'bench-1', data: 'test' });
+            results.push({ test: 'Single Write', time: (performance.now() - w1).toFixed(2) + 'ms' });
+            
+            // Test 2: Single read
+            const r1 = performance.now();
+            await localDB.get('tasks', 'bench-1');
+            results.push({ test: 'Single Read', time: (performance.now() - r1).toFixed(2) + 'ms' });
+            
+            // Test 3: Batch 100 writes
+            const items = Array.from({length: 100}, (_, i) => ({ id: `bench-batch-${i}`, data: `item-${i}` }));
+            const w100 = performance.now();
+            await localDB.batchPut('tasks', items);
+            results.push({ test: 'Batch 100 Writes', time: (performance.now() - w100).toFixed(2) + 'ms' });
+            
+            // Test 4: Bulk read
+            const rAll = performance.now();
+            await localDB.getAll('tasks');
+            results.push({ test: 'Bulk Read All', time: (performance.now() - rAll).toFixed(2) + 'ms' });
+            
+            // Test 5: Indexed query
+            const idx = performance.now();
+            await localDB.getByIndex('tasks', 'projectId', 'bench-batch-0');
+            results.push({ test: 'Index Query', time: (performance.now() - idx).toFixed(2) + 'ms' });
+            
+            // Cleanup
+            await localDB.delete('tasks', 'bench-1');
+            for (let i = 0; i < 100; i++) {
+                await localDB.delete('tasks', `bench-batch-${i}`);
+            }
+            
+            // Storage info
+            const storage = await localDB.getStorageUsage();
+            
+            document.getElementById('results').innerHTML = `
+                <table>
+                    <tr><th>Operation</th><th>Time</th></tr>
+                    ${results.map(r => `<tr><td>${r.test}</td><td class="${parseFloat(r.time) < 10 ? 'fast' : 'slow'}">${r.time}</td></tr>`).join('')}
+                </table>
+                ${storage ? `<p style="margin-top:16px;">Storage: ${storage.usage}KB / ${storage.quota}KB (${storage.percentage}%)</p>` : ''}
+            `;
+        }
+        
+        runBenchmark();
+    </script>
+</body>
+</html>

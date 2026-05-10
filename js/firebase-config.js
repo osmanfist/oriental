@@ -1,7 +1,6 @@
 /**
  * Oriental v3.0 - Firebase Configuration
  * Offline-first architecture with Firestore sync
- * Reuses existing Firebase project: oriental-8982d
  */
 
 const firebaseConfig = {
@@ -20,31 +19,29 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// Enable offline persistence (critical for v3.0 architecture)
+// IMPORTANT: Configure Firestore settings BEFORE any other calls
+db.settings({
+    cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED,
+    merge: true
+});
+
+// Now enable offline persistence (after settings)
 db.enablePersistence({ synchronizeTabs: true })
     .then(() => {
         console.log('✅ Firestore offline persistence enabled');
     })
     .catch((err) => {
         if (err.code === 'failed-precondition') {
-            console.warn('⚠️ Offline persistence disabled: multiple tabs open');
+            console.warn('⚠️ Multiple tabs open - persistence disabled');
         } else if (err.code === 'unimplemented') {
-            console.warn('⚠️ Offline persistence not supported by this browser');
+            console.warn('⚠️ Browser does not support offline persistence');
         } else {
             console.error('Firestore persistence error:', err);
         }
     });
 
-// Configure Firestore settings for better offline support
-db.settings({
-    cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED,
-    merge: true
-});
-
-// Keep user signed in across sessions
+// Keep user signed in
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
     .catch((err) => console.error('Auth persistence error:', err));
 
-// Log initialization
 console.log('✅ Firebase initialized | Project: oriental-8982d');
-console.log('📡 Offline-first mode: IndexedDB + Firestore sync');

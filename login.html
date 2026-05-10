@@ -810,16 +810,7 @@
                 document.getElementById('offline-notice').classList.add('show');
             }
         }
-
-        // Check Existing Auth
-        async function checkExistingAuth() {
-            const user = offlineAuth.getCurrentUser();
-            if (user) {
-                showStatus('Already signed in. Redirecting...', 'info');
-                setTimeout(() => redirectToDashboard(), 500);
-            }
-        }
-
+        
         // Redirect
         function redirectToDashboard() {
             window.location.href = 'dashboard.html';

@@ -19,49 +19,50 @@ class OrientalApp {
     }
 
     async init() {
-        console.log(`🚀 Oriental v${this.version} Initializing...`);
-        this.showLoading(true);
+    console.log(`🚀 Oriental v${this.version} Initializing...`);
+    this.showLoading(true);
 
-        try {
-            // Step 1: Initialize auth
-            const user = await authManager.init();
-            if (!user) {
-                window.location.href = 'login.html';
-                return;
-            }
-
-            // Step 2: Load user data
-            await this.loadUserData();
-
-            // Step 3: Setup organization
-            await this.setupOrganization();
-
-            // Step 4: Initialize modules
-            await this.initModules();
-
-            // Step 5: Setup event listeners
-            this.setupEventListeners();
-
-            // Step 6: Load initial view
-            await this.loadView('board');
-
-            // Step 7: Setup real-time subscriptions
-            this.setupRealtimeSubscriptions();
-
-            this.initialized = true;
-            this.showLoading(false);
-            
-            console.log('✅ Oriental ready!');
-            
-            // Check for seed data prompt
-            this.checkSeedData();
-
-        } catch (error) {
-            console.error('Initialization error:', error);
-            this.showError('Failed to initialize application');
-            this.showLoading(false);
+    try {
+        // Step 1: Initialize auth
+        const user = await authManager.init();
+        if (!user) {
+            window.location.href = 'login.html';
+            return;
         }
+
+        // Step 2: Load user data
+        await this.loadUserData();
+
+        // Step 3: Setup organization
+        await this.setupOrganization();
+
+        // Step 4: Initialize modules
+        await this.initModules();
+
+        // Step 5: Load projects list
+        await this.loadProjectsList();  // ADD THIS LINE
+
+        // Step 6: Setup event listeners
+        this.setupEventListeners();
+
+        // Step 7: Load initial view
+        await this.loadView('board');
+
+        // Step 8: Setup real-time subscriptions
+        this.setupRealtimeSubscriptions();
+
+        this.initialized = true;
+        this.showLoading(false);
+        
+        console.log('✅ Oriental ready!');
+        this.checkSeedData();
+
+    } catch (error) {
+        console.error('Initialization error:', error);
+        this.showError('Failed to initialize application');
+        this.showLoading(false);
     }
+}
 
     async loadUserData() {
         const user = authManager.getCurrentUser();
@@ -602,6 +603,114 @@ class OrientalApp {
         }
         showToast(message, 'error');
     }
+    /**
+ * Load and render the projects list in the sidebar
+ */
+async loadProjectsList() {
+    if (!this.state.currentOrganization) return;
+
+    const projectList = document.getElementById('project-list');
+    if (!projectList) return;
+
+    try {
+        // Try local DB first (instant)
+        let projects = await localDB.getByIndex('projects', 'organizationId', this.state.currentOrganization);
+        
+        // If empty or online, sync from Firestore
+        if (projects.length === 0 || navigator.onLine) {
+            const snapshot = await db.collection('projects')
+                .where('organizationId', '==', this.state.currentOrganization)
+                .where('isArchived', '==', false)
+                .get();
+
+            projects = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+
+            // Save to local DB
+            await localDB.clear('projects');
+            await localDB.batchPut('projects', projects);
+        }
+
+        // Render projects
+        if (projects.length === 0) {
+            projectList.innerHTML = `
+                <div class="empty-state-small" style="padding: 16px;">
+                    <p style="font-size: 12px; color: var(--text-muted);">No projects yet</p>
+                    <button class="btn-primary btn-sm" style="margin-top: 8px;" onclick="app.modules.ui.openProjectModal()">
+                        + Create Project
+                    </button>
+                </div>
+            `;
+            return;
+        }
+
+        projectList.innerHTML = projects.map(project => `
+            <div class="project-item ${this.state.currentProject?.id === project.id ? 'active' : ''}" 
+                 data-project-id="${project.id}"
+                 onclick="app.selectProjectById('${project.id}')">
+                <span class="project-color" style="background: ${escapeHtml(project.color || '#8b5cf6')}"></span>
+                <span class="project-name">${escapeHtml(project.name)}</span>
+                <span class="project-count" id="project-count-${project.id}">...</span>
+            </div>
+        `).join('');
+
+        // Load task counts for each project
+        projects.forEach(project => {
+            this.loadProjectTaskCount(project.id);
+        });
+
+        console.log(`📁 Loaded ${projects.length} projects`);
+
+    } catch (error) {
+        console.error('Error loading projects:', error);
+        projectList.innerHTML = `
+            <div class="empty-state-small" style="padding: 16px;">
+                <p style="font-size: 12px; color: var(--error);">Error loading projects</p>
+            </div>
+        `;
+    }
+}
+
+/**
+ * Load task count for a project
+ */
+async loadProjectTaskCount(projectId) {
+    try {
+        const tasks = await localDB.getByIndex('tasks', 'projectId', projectId);
+        const countEl = document.getElementById(`project-count-${projectId}`);
+        if (countEl) {
+            countEl.textContent = tasks.length;
+        }
+    } catch (error) {
+        // Silently fail - count is non-critical
+    }
+}
+
+/**
+ * Select project by ID
+ */
+async selectProjectById(projectId) {
+    try {
+        const project = await localDB.get('projects', projectId);
+        
+        if (!project) {
+            // Try Firestore
+            const doc = await db.collection('projects').doc(projectId).get();
+            if (doc.exists) {
+                const project = { id: doc.id, ...doc.data() };
+                await localDB.put('projects', project);
+                await this.switchProject(project);
+            }
+        } else {
+            await this.switchProject(project);
+        }
+    } catch (error) {
+        console.error('Error selecting project:', error);
+        showToast('Error loading project', 'error');
+    }
+}
 }
 
 // Initialize app when DOM is ready
@@ -617,3 +726,38 @@ if ('serviceWorker' in navigator) {
         .then(reg => console.log('✅ Service Worker registered'))
         .catch(err => console.error('Service Worker failed:', err));
 }
+// Make key functions globally accessible for onclick handlers
+window.app = app;
+window.loadProjectsList = () => app.loadProjectsList();
+window.selectProjectById = (id) => app.selectProjectById(id);
+
+// ============================================
+// GLOBAL MODULE EXPORTS (for console testing)
+// ============================================
+
+// Make all modules globally accessible
+window.app = app;
+window.auth = auth;
+window.db = db;
+
+// Async initialization of globals after app is ready
+app.onReady = async function() {
+    window.authManager = authManager;
+    window.rolesManager = rolesManager;
+    window.localDB = localDB;
+    window.syncManager = syncManager;
+    window.charts = charts;
+    window.networkManager = networkManager;
+    window.offlineAuth = offlineAuth;
+    window.seedGenerator = seedGenerator;
+    
+    console.log('✅ Global modules exported for console access');
+    console.log('Available: authManager, rolesManager, localDB, syncManager, charts, networkManager, offlineAuth, seedGenerator');
+};
+
+// Call onReady after init
+const originalInit = app.init.bind(app);
+app.init = async function() {
+    await originalInit();
+    await app.onReady();
+};
