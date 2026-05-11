@@ -237,6 +237,84 @@ function renderBoard(tasks) {
     setupMobileDragAndDrop();
 }
 
+/**
+ * Calculate due date display - overdue days (red) or days ahead (green)
+ */
+function getDueDateInfo(dueDate, taskStatus) {
+    if (!dueDate || taskStatus === 'done') {
+        return { html: '', days: 0, isOverdue: false };
+    }
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const due = new Date(dueDate);
+    due.setHours(0, 0, 0, 0);
+    
+    const diffTime = due - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) {
+        // Overdue - red
+        const overdueDays = Math.abs(diffDays);
+        return {
+            html: `<span class="task-due-badge overdue">
+                <i class="fas fa-exclamation-circle"></i> +${overdueDays}d
+            </span>`,
+            days: overdueDays,
+            isOverdue: true
+        };
+    } else if (diffDays === 0) {
+        // Due today - warning
+        return {
+            html: `<span class="task-due-badge due-today">
+                <i class="fas fa-clock"></i> Today
+            </span>`,
+            days: 0,
+            isOverdue: false
+        };
+    } else {
+        // Ahead of schedule - green
+        return {
+            html: `<span class="task-due-badge ahead">
+                <i class="fas fa-check-circle"></i> -${diffDays}d
+            </span>`,
+            days: diffDays,
+            isOverdue: false
+        };
+    }
+}
+
+/**
+ * Calculate task progress based on milestones
+ */
+function calculateTaskProgress(task) {
+    const milestones = task.milestones || [];
+    
+    if (milestones.length === 0) {
+        // No milestones set - use status-based progress
+        const statusProgress = {
+            'planned': 0,
+            'started': 10,
+            'in-progress': 50,
+            'waiting': 75,
+            'done': 100
+        };
+        const percent = statusProgress[task.status] || 0;
+        if (percent > 0 && percent < 100) {
+            return { percent, text: `${percent}%` };
+        }
+        return null; // Don't show bar for 0% or 100%
+    }
+    
+    const completed = milestones.filter(m => m.completed).length;
+    const percent = Math.round((completed / milestones.length) * 100);
+    
+    return {
+        percent,
+        text: `${completed}/${milestones.length}`
+    };
+}
+
 // ============================================
 // TASK CARD CREATION
 // ============================================
@@ -246,8 +324,12 @@ function createTaskCard(task) {
     const priorityClass = task.priority === 'high' ? 'priority-high' : (task.priority === 'medium' ? 'priority-medium' : 'priority-low');
     const priorityIcon = task.priority === 'high' ? 'fa-arrow-up' : (task.priority === 'medium' ? 'fa-minus' : 'fa-arrow-down');
     const safeTaskId = task.id.replace(/'/g, "\\'");
-    const dueDateInfo = getDueDateDisplay(task.dueDate);
-    const dueDateClass = task.dueDate ? getDueDateStatus(task.dueDate) : '';
+    
+    // Calculate due date status
+    const dueStatus = getDueDateInfo(task.dueDate, task.status);
+    
+    // Calculate progress
+    const progress = calculateTaskProgress(task);
     
     let highlightedTitle = escapeHtml(task.title);
     if (searchTerm) {
@@ -255,21 +337,40 @@ function createTaskCard(task) {
         highlightedTitle = highlightedTitle.replace(regex, '<mark class="search-highlight">$1</mark>');
     }
     
+    // Project badge for All Projects view
     const projectBadge = showAllProjects ? `
-        <span style="display:inline-flex;align-items:center;gap:3px;background:var(--primary-50);color:var(--primary-600);padding:1px 6px;border-radius:8px;font-size:10px;font-weight:500;">
-            <span style="width:5px;height:5px;border-radius:50%;background:${task.projectColor||'#16a34a'};display:inline-block;"></span>
+        <span class="task-project-badge">
+            <span class="project-dot" style="background:${task.projectColor||'#16a34a'};"></span>
             ${escapeHtml(task.projectName||'')}
         </span>` : '';
     
+    // Tags display
+    const tagsHtml = task.tags && task.tags.length > 0 ? `
+        <div class="task-tags">
+            ${task.tags.slice(0, 3).map(tag => `<span class="task-tag">${escapeHtml(tag)}</span>`).join('')}
+            ${task.tags.length > 3 ? `<span class="task-tag">+${task.tags.length - 3}</span>` : ''}
+        </div>` : '';
+    
     return `
         <div class="task-card" draggable="true" data-task-id="${task.id}" data-status="${task.status || 'planned'}" data-project-id="${task.projectId}" onclick="openTaskDetail('${safeTaskId}')">
-            <div class="task-title">${highlightedTitle} ${projectBadge}</div>
+            <div class="task-title">
+                ${highlightedTitle}
+                ${projectBadge}
+            </div>
             ${task.description ? `<div class="task-description">${escapeHtml(task.description.substring(0, 100))}</div>` : ''}
+            ${tagsHtml}
+            ${progress ? `
+            <div class="task-progress">
+                <div class="task-progress-bar">
+                    <div class="task-progress-fill" style="width:${progress.percent}%;"></div>
+                </div>
+                <span class="task-progress-text">${progress.text}</span>
+            </div>` : ''}
             <div class="task-meta">
                 <span class="priority ${priorityClass}"><i class="fas ${priorityIcon}"></i> ${task.priority || 'medium'}</span>
-                ${dueDateInfo ? `<span class="task-due-date due-${dueDateClass}"><i class="fas fa-calendar-alt"></i> ${escapeHtml(dueDateInfo)}</span>` : ''}
+                ${task.estimatedHours ? `<span class="task-hours"><i class="fas fa-clock"></i> ${task.estimatedHours}h</span>` : ''}
                 <span class="assignee"><i class="fas fa-user"></i> ${task.assignedTo ? escapeHtml(task.assignedTo.substring(0, 8)) : 'Unassigned'}</span>
-                <button class="comment-btn" onclick="event.stopPropagation(); openTaskDetail('${safeTaskId}')"><i class="fas fa-comment"></i></button>
+                ${dueStatus.html}
             </div>
         </div>`;
 }
@@ -295,7 +396,8 @@ async function openTaskDetail(taskId) {
         document.getElementById('edit-task-estimate').value = task.estimatedHours || 0;
         document.getElementById('edit-task-tags').value = task.tags ? task.tags.join(', ') : '';
         document.getElementById('comment-task-title').textContent = `Task: ${task.title}`;
-        
+        renderMilestones(task.id, task.milestones || []);
+
         await loadComments(taskId);
         document.getElementById('comment-modal').style.display = 'flex';
         document.getElementById('comment-modal').classList.add('active');
@@ -342,6 +444,166 @@ async function addComment(taskId, content) {
         return true;
     } catch (error) { console.error('Error:', error); showToast('Error adding comment', 'error'); return false; }
 }
+
+// ============================================
+// MILESTONE SYSTEM
+// ============================================
+
+/**
+ * Update task milestones
+ */
+async function updateTaskMilestones(taskId, milestones) {
+    try {
+        await db.collection('tasks').doc(taskId).update({
+            milestones: milestones,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        return true;
+    } catch (error) {
+        console.error('Error updating milestones:', error);
+        return false;
+    }
+}
+
+/**
+ * Toggle a single milestone's completion
+ */
+async function toggleMilestone(taskId, milestoneIndex) {
+    try {
+        const taskDoc = await db.collection('tasks').doc(taskId).get();
+        const task = taskDoc.data();
+        const milestones = task.milestones || [];
+        
+        if (milestones[milestoneIndex]) {
+            milestones[milestoneIndex].completed = !milestones[milestoneIndex].completed;
+            await updateTaskMilestones(taskId, milestones);
+            return milestones;
+        }
+        return null;
+    } catch (error) {
+        console.error('Error toggling milestone:', error);
+        return null;
+    }
+}
+
+/**
+ * Add milestone to task
+ */
+async function addMilestone(taskId, milestoneName) {
+    try {
+        const taskDoc = await db.collection('tasks').doc(taskId).get();
+        const task = taskDoc.data();
+        const milestones = task.milestones || [];
+        
+        milestones.push({
+            id: Date.now().toString(36),
+            name: milestoneName,
+            completed: false,
+            createdAt: new Date().toISOString()
+        });
+        
+        await updateTaskMilestones(taskId, milestones);
+        return milestones;
+    } catch (error) {
+        console.error('Error adding milestone:', error);
+        return null;
+    }
+}
+
+/**
+ * Remove milestone from task
+ */
+async function removeMilestone(taskId, milestoneIndex) {
+    try {
+        const taskDoc = await db.collection('tasks').doc(taskId).get();
+        const task = taskDoc.data();
+        const milestones = task.milestones || [];
+        
+        milestones.splice(milestoneIndex, 1);
+        await updateTaskMilestones(taskId, milestones);
+        return milestones;
+    } catch (error) {
+        console.error('Error removing milestone:', error);
+        return null;
+    }
+}
+
+/**
+ * Render milestones in task detail modal
+ */
+function renderMilestones(taskId, milestones) {
+    const container = document.getElementById('milestones-container');
+    if (!container) return;
+    
+    const completed = milestones.filter(m => m.completed).length;
+    const total = milestones.length;
+    const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+    
+    container.innerHTML = `
+        <div class="milestones-section">
+            <div class="milestones-header">
+                <h4><i class="fas fa-flag-checkered"></i> Milestones</h4>
+                <span class="milestones-count">${completed}/${total}</span>
+            </div>
+            ${total > 0 ? `
+            <div class="task-progress" style="margin-bottom: 12px;">
+                <div class="task-progress-bar" style="height: 6px;">
+                    <div class="task-progress-fill" style="width:${percent}%;"></div>
+                </div>
+                <span class="task-progress-text">${percent}%</span>
+            </div>` : ''}
+            <div class="milestones-list">
+                ${milestones.map((m, i) => `
+                    <div class="milestone-item ${m.completed ? 'completed' : ''}" onclick="event.stopPropagation(); toggleMilestoneAndRefresh('${taskId}', ${i})">
+                        <input type="checkbox" ${m.completed ? 'checked' : ''} class="milestone-checkbox">
+                        <span class="milestone-name">${escapeHtml(m.name)}</span>
+                        <button class="milestone-delete" onclick="event.stopPropagation(); deleteMilestoneAndRefresh('${taskId}', ${i})">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `).join('')}
+            </div>
+            <div class="milestone-add">
+                <input type="text" id="new-milestone-input" placeholder="Add a milestone..." 
+                       onkeypress="if(event.key==='Enter')addMilestoneAndRefresh('${taskId}')">
+                <button onclick="addMilestoneAndRefresh('${taskId}')" class="btn-small">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+        </div>`;
+}
+
+// Global milestone action functions
+window.toggleMilestoneAndRefresh = async function(taskId, index) {
+    const milestones = await toggleMilestone(taskId, index);
+    if (milestones) {
+        renderMilestones(taskId, milestones);
+        // Refresh the board
+        if (currentProject) loadTasks(false);
+        else loadAllProjectsTasks(false);
+    }
+};
+
+window.deleteMilestoneAndRefresh = async function(taskId, index) {
+    const milestones = await removeMilestone(taskId, index);
+    if (milestones) {
+        renderMilestones(taskId, milestones);
+        if (currentProject) loadTasks(false);
+        else loadAllProjectsTasks(false);
+    }
+};
+
+window.addMilestoneAndRefresh = async function(taskId) {
+    const input = document.getElementById('new-milestone-input');
+    if (!input || !input.value.trim()) return;
+    const milestones = await addMilestone(taskId, input.value.trim());
+    if (milestones) {
+        renderMilestones(taskId, milestones);
+        input.value = '';
+        if (currentProject) loadTasks(false);
+        else loadAllProjectsTasks(false);
+    }
+};
 
 // ============================================
 // MODAL HANDLERS

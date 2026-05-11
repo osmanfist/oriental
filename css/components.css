@@ -2359,7 +2359,127 @@ hr {
         grid-template-columns: 1fr;
     }
 }
+
 /* ============================================
-   ENHANCED ATTACHMENTS INTERFACE
+   MILESTONES SECTION
    ============================================ */
-   
+
+.milestones-section {
+    margin-bottom: var(--space-lg);
+}
+
+.milestones-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-sm);
+}
+
+.milestones-header h4 {
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.milestones-count {
+    font-size: 11px;
+    color: var(--text-muted);
+    background: var(--bg-main);
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.milestones-list {
+    margin-bottom: var(--space-sm);
+}
+
+.milestone-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.milestone-item:hover {
+    background: var(--bg-hover);
+}
+
+.milestone-item.completed .milestone-name {
+    text-decoration: line-through;
+    color: var(--text-muted);
+}
+
+.milestone-checkbox {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary-500);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.milestone-name {
+    flex: 1;
+    font-size: var(--text-sm);
+    color: var(--text-primary);
+}
+
+.milestone-delete {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: var(--radius-xs);
+    font-size: 10px;
+    opacity: 0;
+    transition: all var(--transition-fast);
+}
+
+.milestone-item:hover .milestone-delete {
+    opacity: 1;
+}
+
+.milestone-delete:hover {
+    color: var(--error);
+    background: var(--error-light);
+}
+
+.milestone-add {
+    display: flex;
+    gap: 6px;
+}
+
+.milestone-add input {
+    flex: 1;
+    padding: 6px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+    background: var(--bg-input);
+    color: var(--text-primary);
+}
+
+.milestone-add input:focus {
+    border-color: var(--primary-400);
+    outline: none;
+}
+
+.milestone-add .btn-small {
+    padding: 6px 10px;
+    background: var(--primary-500);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.milestone-add .btn-small:hover {
+    background: var(--primary-600);
+}
