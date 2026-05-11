@@ -810,7 +810,31 @@
     <script src="js/attachments.js"></script>
     <script src="js/recurring-tasks.js"></script>
     <script src="js/templates.js"></script>
-    <script src="js/dashboard.js"></script>
+    <!-- Application Scripts - Load in dependency order -->
+<script src="js/firebase-config.js"></script>
+<script src="js/lang/en.js"></script>
+<script src="js/lang/ar.js"></script>
+<script src="js/lang.js"></script>
+<script src="js/mentions.js"></script>
+<script src="js/attachments.js"></script>
+<script src="js/recurring-tasks.js"></script>
+<script src="js/templates.js"></script>
+
+<!-- Dashboard Core (must load first) -->
+<script src="js/dashboard-core.js"></script>
+
+<!-- Dashboard Modules (order matters for dependencies) -->
+<script src="js/dashboard-projects.js"></script>
+<script src="js/dashboard-tasks.js"></script>
+<script src="js/dashboard-board.js"></script>
+<script src="js/dashboard-sprints.js"></script>
+<script src="js/dashboard-reports.js"></script>
+<script src="js/dashboard-settings.js"></script>
+<script src="js/dashboard-activity.js"></script>
+<script src="js/dashboard-modals.js"></script>
+
+<!-- Initialization (must load last) -->
+<script src="js/dashboard-init.js"></script>
     
     <!-- PWA & Initialization -->
     <script>

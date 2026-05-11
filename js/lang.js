@@ -3,7 +3,7 @@
  * Supports English (en) and Arabic (ar) with RTL
  */
 
-let currentLang = localStorage.getItem('oriental_language') || 'en';
+var currentLang = localStorage.getItem('oriental_language') || 'en';
 let translations = {};
 
 /**

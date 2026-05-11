@@ -1,7 +1,7 @@
 /**
  * Oriental - Arabic Language Pack
  */
-const lang_ar = {
+var lang_ar = {
     // General
     app_name: "أورينتال",
     app_tagline: "إدارة مشاريع مفتوحة المصدر للفرق الحديثة",
