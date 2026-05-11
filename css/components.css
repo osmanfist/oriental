@@ -2483,3 +2483,141 @@ hr {
 .milestone-add .btn-small:hover {
     background: var(--primary-600);
 }
+/* ============================================
+   CREATE TASK MILESTONES
+   ============================================ */
+
+.milestones-section {
+    margin-top: 8px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-color);
+}
+
+.milestones-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: var(--font-semibold);
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+}
+
+.milestones-section-header i {
+    color: var(--primary-500);
+    font-size: 13px;
+}
+
+.milestone-empty {
+    text-align: center;
+    padding: 12px;
+    color: var(--text-muted);
+    font-size: 12px;
+    background: var(--bg-main);
+    border-radius: var(--radius-sm);
+    border: 1px dashed var(--border-color);
+}
+
+.milestone-item-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px;
+    margin-bottom: 4px;
+    background: var(--bg-main);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+    transition: all var(--transition-fast);
+}
+
+.milestone-item-row:hover {
+    border-color: var(--primary-200);
+}
+
+.milestone-drag-handle {
+    color: var(--text-muted);
+    font-size: 11px;
+    cursor: grab;
+    flex-shrink: 0;
+}
+
+.milestone-item-name {
+    flex: 1;
+    font-size: 13px;
+    color: var(--text-primary);
+}
+
+.milestone-item-remove {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 3px 6px;
+    border-radius: var(--radius-xs);
+    font-size: 10px;
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.milestone-item-remove:hover {
+    color: var(--error);
+    background: var(--error-light);
+}
+
+.milestone-add-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.milestone-add-row input {
+    flex: 1;
+    padding: 7px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-family: inherit;
+    background: var(--bg-input);
+    color: var(--text-primary);
+}
+
+.milestone-add-row input:focus {
+    border-color: var(--primary-400);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.1);
+}
+
+.milestone-add-row input::placeholder {
+    color: var(--text-muted);
+}
+
+.milestone-add-row .btn-small {
+    padding: 7px 12px;
+    background: var(--primary-500);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 13px;
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.milestone-add-row .btn-small:hover {
+    background: var(--primary-600);
+}
+
+/* Dark mode */
+[data-theme="dark"] .milestone-empty {
+    background: rgba(255,255,255,0.02);
+    border-color: rgba(255,255,255,0.06);
+}
+
+[data-theme="dark"] .milestone-item-row {
+    background: rgba(255,255,255,0.02);
+    border-color: rgba(255,255,255,0.06);
+}
+
+[data-theme="dark"] .milestone-item-row:hover {
+    border-color: rgba(20, 184, 166, 0.3);
+}

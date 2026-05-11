@@ -39,12 +39,19 @@ async function createTask(taskData) {
         }
         
         const task = {
-            projectId: currentProject.id, title: taskData.title,
-            description: taskData.description || '', priority: taskData.priority || 'medium',
-            status: 'planned', assignedTo: taskData.assignedTo || null, assignedToId: assigneeId,
-            dueDate: taskData.dueDate || null, estimatedHours: parseFloat(taskData.estimatedHours) || 0,
-            tags: taskData.tags ? taskData.tags.split(',').map(t => t.trim()) : [],
-            order: Date.now(), createdBy: currentUser.uid,
+            projectId: currentProject.id,
+            title: taskData.title,
+            description: taskData.description || '',
+            priority: taskData.priority || 'medium',
+            status: 'planned',
+            assignedTo: taskData.assignedTo || null,
+            assignedToId: assigneeId,
+            dueDate: taskData.dueDate || null,
+            estimatedHours: parseFloat(taskData.estimatedHours) || 0,
+            tags: taskData.tags ? taskData.tags.split(',').map(t => t.trim()).filter(t => t) : [],
+            milestones: [...createTaskMilestones],  // ← ADD THIS
+            order: Date.now(),
+            createdBy: currentUser.uid,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
@@ -52,6 +59,7 @@ async function createTask(taskData) {
         const docRef = await db.collection('tasks').add(task);
         await logActivity('create_task', 'task', docRef.id, taskData.title, { assignedTo: taskData.assignedTo });
         invalidateCache();
+        resetCreateMilestones();  // ← ADD THIS
         showToast('Task created successfully', 'success');
         return true;
     } catch (error) {
@@ -396,12 +404,17 @@ async function openTaskDetail(taskId) {
         document.getElementById('edit-task-estimate').value = task.estimatedHours || 0;
         document.getElementById('edit-task-tags').value = task.tags ? task.tags.join(', ') : '';
         document.getElementById('comment-task-title').textContent = `Task: ${task.title}`;
+        
+        // ← ADD THIS LINE
         renderMilestones(task.id, task.milestones || []);
-
+        
         await loadComments(taskId);
         document.getElementById('comment-modal').style.display = 'flex';
         document.getElementById('comment-modal').classList.add('active');
-    } catch (error) { console.error('Error:', error); showToast('Error loading task', 'error'); }
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Error loading task', 'error');
+    }
 }
 
 async function loadComments(taskId) {
@@ -606,13 +619,84 @@ window.addMilestoneAndRefresh = async function(taskId) {
 };
 
 // ============================================
+// CREATE TASK MILESTONES
+// ============================================
+
+let createTaskMilestones = [];
+
+/**
+ * Add a milestone in the create task modal
+ */
+function addCreateMilestone() {
+    const input = document.getElementById('create-milestone-input');
+    if (!input || !input.value.trim()) return;
+    
+    const milestone = {
+        id: Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
+        name: input.value.trim(),
+        completed: false,
+        createdAt: new Date().toISOString()
+    };
+    
+    createTaskMilestones.push(milestone);
+    input.value = '';
+    renderCreateMilestones();
+}
+
+/**
+ * Remove a milestone in the create task modal
+ */
+function removeCreateMilestone(index) {
+    createTaskMilestones.splice(index, 1);
+    renderCreateMilestones();
+}
+
+/**
+ * Render milestones in the create task modal
+ */
+function renderCreateMilestones() {
+    const container = document.getElementById('create-milestones-list');
+    if (!container) return;
+    
+    if (createTaskMilestones.length === 0) {
+        container.innerHTML = '<div class="milestone-empty">No milestones added yet</div>';
+        return;
+    }
+    
+    container.innerHTML = createTaskMilestones.map((m, i) => `
+        <div class="milestone-item-row">
+            <span class="milestone-drag-handle"><i class="fas fa-grip-vertical"></i></span>
+            <span class="milestone-item-name">${escapeHtml(m.name)}</span>
+            <button type="button" class="milestone-item-remove" onclick="removeCreateMilestone(${i})" title="Remove milestone">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `).join('');
+}
+
+/**
+ * Reset create task milestones when modal opens
+ */
+function resetCreateMilestones() {
+    createTaskMilestones = [];
+    renderCreateMilestones();
+    const input = document.getElementById('create-milestone-input');
+    if (input) input.value = '';
+}
+
+// ============================================
 // MODAL HANDLERS
 // ============================================
 
 function openTaskModal() {
     if (!currentProject) { showToast('Select a project first', 'warning'); return; }
     const modal = document.getElementById('task-modal');
-    if (modal) { modal.style.display = 'flex'; modal.classList.add('active'); updateAssigneeDropdowns(); }
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.add('active');
+        updateAssigneeDropdowns();
+        resetCreateMilestones();  // ← ADD THIS
+    }
 }
 
 function closeTaskModal() {
@@ -640,5 +724,9 @@ window.openTaskModal = openTaskModal;
 window.closeTaskModal = closeTaskModal;
 window.closeCommentModal = closeCommentModal;
 window.undoDelete = undoDelete;
+window.addCreateMilestone = addCreateMilestone;
+window.removeCreateMilestone = removeCreateMilestone;
+window.renderCreateMilestones = renderCreateMilestones;
+window.resetCreateMilestones = resetCreateMilestones;
 
 console.log('✅ dashboard-tasks.js loaded');

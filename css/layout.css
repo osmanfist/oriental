@@ -17,13 +17,36 @@
     min-width: 0; /* Prevents overflow */
     overflow-x: hidden; /* Prevents horizontal scroll */
 }
+/* Main Content - Mobile */
 @media (max-width: 768px) {
     .main-content {
         margin-left: 0;
-        padding: 16px 12px;
-        padding-top: 72px; /* Space for mobile header */
-        padding-bottom: 80px; /* Space for bottom nav */
+        padding: 12px 10px;
+        padding-top: 68px;  /* Mobile header height */
+        padding-bottom: 72px; /* Bottom nav height */
+        width: 100%;
+        max-width: 100vw;
+        overflow-x: hidden;
     }
+    
+    /* All views should be full width */
+    .board-view,
+    .sprints-view,
+    .reports-view,
+    .settings-view {
+        width: 100%;
+        max-width: 100%;
+        padding: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .main-content {
+        padding: 8px 6px;
+        padding-top: 64px;
+        padding-bottom: 68px;
+    }
+
 }
 
 .dashboard-header {

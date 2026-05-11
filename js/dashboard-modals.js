@@ -9,19 +9,24 @@
 
 function setupEventListeners() {
     // Task Form
-    document.getElementById('task-form')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const taskData = {
-            title: document.getElementById('task-title').value,
-            description: document.getElementById('task-description').value,
-            priority: document.getElementById('task-priority').value,
-            assignedTo: document.getElementById('task-assignee').value,
-            dueDate: document.getElementById('task-due-date').value,
-            estimatedHours: document.getElementById('task-estimate').value,
-            tags: document.getElementById('task-tags').value
-        };
-        if (await createTask(taskData)) { closeTaskModal(); document.getElementById('task-form').reset(); }
-    });
+    // Task Form submission - update this in setupEventListeners
+document.getElementById('task-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const taskData = {
+        title: document.getElementById('task-title').value,
+        description: document.getElementById('task-description').value,
+        priority: document.getElementById('task-priority').value,
+        assignedTo: document.getElementById('task-assignee').value,
+        dueDate: document.getElementById('task-due-date').value,
+        estimatedHours: document.getElementById('task-estimate').value,
+        tags: document.getElementById('task-tags').value
+    };
+    if (await createTask(taskData)) {
+        closeTaskModal();
+        document.getElementById('task-form').reset();
+        resetCreateMilestones();
+    }
+});
     
     // Project Form
     document.getElementById('project-form')?.addEventListener('submit', async (e) => {
