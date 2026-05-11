@@ -1,359 +1,595 @@
 /* ============================================
-   VISUAL EFFECTS & ENHANCEMENTS
+   ORIENTAL VISUAL EFFECTS SYSTEM
+   Moving shapes, particles, ambient animations
    ============================================ */
 
-/* Glassmorphism Modals */
-.modal-content {
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+/* ============================================
+   FLOATING SHAPES - Main Content Area
+   ============================================ */
+
+.floating-shapes {
+    position: fixed;
+    inset: 0;
+    margin-left: 280px;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
 }
 
-[data-theme="dark"] .modal-content {
-    background: rgba(26, 26, 46, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+.floating-shape {
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0.04;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
 }
 
-/* Glassmorphism Cards */
-.stat-card {
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+/* Circle shapes */
+.floating-shape.circle-1 {
+    width: 300px;
+    height: 300px;
+    background: #14b8a6;
+    top: 10%;
+    left: 5%;
+    animation: floatShape1 25s infinite;
 }
 
-[data-theme="dark"] .stat-card {
-    background: rgba(26, 26, 46, 0.7);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+.floating-shape.circle-2 {
+    width: 200px;
+    height: 200px;
+    background: #8b5cf6;
+    top: 60%;
+    right: 10%;
+    animation: floatShape2 30s infinite;
 }
 
-/* Gradient Headers */
-.dashboard-header {
-    background: linear-gradient(135deg, var(--primary-50) 0%, transparent 100%);
-    padding: var(--space-lg);
-    border-radius: var(--radius-lg);
-    margin-bottom: var(--space-2xl);
+.floating-shape.circle-3 {
+    width: 250px;
+    height: 250px;
+    background: #f59e0b;
+    bottom: 10%;
+    left: 30%;
+    animation: floatShape3 35s infinite;
 }
 
-[data-theme="dark"] .dashboard-header {
-    background: linear-gradient(135deg, rgba(22, 163, 74, 0.1) 0%, transparent 100%);
+.floating-shape.circle-4 {
+    width: 180px;
+    height: 180px;
+    background: #3b82f6;
+    top: 40%;
+    right: 30%;
+    animation: floatShape4 28s infinite;
 }
 
-/* Custom Sidebar Scrollbar */
-.sidebar::-webkit-scrollbar {
-    width: 4px;
+.floating-shape.circle-5 {
+    width: 150px;
+    height: 150px;
+    background: #ec4899;
+    top: 20%;
+    right: 15%;
+    animation: floatShape5 22s infinite;
 }
 
-.sidebar::-webkit-scrollbar-track {
+/* Square/rotated shapes */
+.floating-shape.square-1 {
+    width: 120px;
+    height: 120px;
+    background: #14b8a6;
+    border-radius: 20px;
+    top: 70%;
+    left: 15%;
+    animation: floatRotate1 20s infinite;
+}
+
+.floating-shape.square-2 {
+    width: 100px;
+    height: 100px;
+    background: #f59e0b;
+    border-radius: 15px;
+    top: 15%;
+    right: 40%;
+    animation: floatRotate2 24s infinite;
+}
+
+/* Triangle shapes (using clip-path) */
+.floating-shape.triangle-1 {
+    width: 160px;
+    height: 160px;
+    background: #8b5cf6;
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+    top: 50%;
+    left: 50%;
+    animation: floatTriangle1 26s infinite;
+}
+
+.floating-shape.triangle-2 {
+    width: 130px;
+    height: 130px;
+    background: #3b82f6;
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+    top: 30%;
+    left: 70%;
+    animation: floatTriangle2 30s infinite;
+}
+
+/* Ring shapes */
+.floating-shape.ring-1 {
+    width: 200px;
+    height: 200px;
+    border: 3px solid #14b8a6;
     background: transparent;
+    top: 45%;
+    left: 65%;
+    animation: floatRing1 22s infinite;
 }
 
-.sidebar::-webkit-scrollbar-thumb {
-    background: var(--primary-200);
-    border-radius: var(--radius-full);
+.floating-shape.ring-2 {
+    width: 150px;
+    height: 150px;
+    border: 2px solid #f59e0b;
+    background: transparent;
+    top: 75%;
+    right: 25%;
+    animation: floatRing2 28s infinite;
 }
 
-.sidebar::-webkit-scrollbar-thumb:hover {
-    background: var(--primary-400);
+/* ============================================
+   FLOAT ANIMATIONS
+   ============================================ */
+
+@keyframes floatShape1 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    25% { transform: translate(100px, -50px) scale(1.1); }
+    50% { transform: translate(50px, 80px) scale(0.9); }
+    75% { transform: translate(-30px, 30px) scale(1.05); }
 }
 
-[data-theme="dark"] .sidebar::-webkit-scrollbar-thumb {
-    background: var(--primary-800);
+@keyframes floatShape2 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(-80px, -60px) scale(1.15); }
+    66% { transform: translate(-40px, 40px) scale(0.85); }
 }
 
-/* Hover Card 3D Effect */
+@keyframes floatShape3 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(120px, -40px) scale(1.2); }
+}
+
+@keyframes floatShape4 {
+    0%, 100% { transform: translate(0, 0); }
+    25% { transform: translate(-60px, 50px); }
+    75% { transform: translate(40px, -30px); }
+}
+
+@keyframes floatShape5 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(-90px, -70px) scale(1.3); }
+}
+
+@keyframes floatRotate1 {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    50% { transform: translate(70px, -50px) rotate(180deg); }
+}
+
+@keyframes floatRotate2 {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    33% { transform: translate(-50px, 40px) rotate(120deg); }
+    66% { transform: translate(30px, -30px) rotate(240deg); }
+}
+
+@keyframes floatTriangle1 {
+    0%, 100% { transform: translate(-50%, -50%) rotate(0deg) scale(1); }
+    50% { transform: translate(-40%, -60%) rotate(180deg) scale(1.2); }
+}
+
+@keyframes floatTriangle2 {
+    0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+    25% { transform: translate(60px, -40px) rotate(90deg) scale(0.8); }
+    75% { transform: translate(-30px, 30px) rotate(270deg) scale(1.1); }
+}
+
+@keyframes floatRing1 {
+    0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+    50% { transform: translate(-40px, -30px) rotate(180deg) scale(1.1); }
+}
+
+@keyframes floatRing2 {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    50% { transform: translate(50px, 20px) rotate(-180deg); }
+}
+
+/* ============================================
+   PARTICLES - Small floating dots
+   ============================================ */
+
+.particles-layer {
+    position: fixed;
+    inset: 0;
+    margin-left: 280px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.particle {
+    position: absolute;
+    border-radius: 50%;
+    animation: particleFloat linear infinite;
+}
+
+@keyframes particleFloat {
+    0% {
+        transform: translateY(100vh) scale(0);
+        opacity: 0;
+    }
+    10% {
+        opacity: 1;
+    }
+    90% {
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-10vh) scale(1);
+        opacity: 0;
+    }
+}
+
+/* ============================================
+   CARD HOVER GLOW EFFECT
+   ============================================ */
+
+.task-card {
+    transition: all 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
 .task-card:hover {
-    transform: translateY(-4px) rotateX(2deg);
     box-shadow: 
-        0 10px 20px rgba(0, 0, 0, 0.1),
-        0 6px 6px rgba(0, 0, 0, 0.06);
+        0 4px 12px rgba(0, 0, 0, 0.08),
+        0 0 0 1px var(--primary-200),
+        0 0 20px rgba(20, 184, 166, 0.1);
 }
 
-.sprint-task-card:hover {
-    transform: translateY(-2px) rotateX(1deg);
-    box-shadow: 
-        0 8px 16px rgba(0, 0, 0, 0.08),
-        0 4px 4px rgba(0, 0, 0, 0.04);
+.stat-card {
+    transition: all 0.3s ease, box-shadow 0.3s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-/* Gradient Borders for Active Nav */
-.nav-item.active {
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 
+        0 8px 25px rgba(0, 0, 0, 0.08),
+        0 0 30px rgba(20, 184, 166, 0.08);
+}
+
+.chart-card {
+    transition: all 0.3s ease, box-shadow 0.3s ease;
+}
+
+.chart-card:hover {
+    box-shadow: 
+        0 4px 16px rgba(0, 0, 0, 0.06),
+        0 0 25px rgba(20, 184, 166, 0.06);
+}
+
+/* ============================================
+   BUTTON RIPPLE EFFECT
+   ============================================ */
+
+.btn-primary {
     position: relative;
-    background: linear-gradient(135deg, var(--primary-50), var(--bg-secondary));
+    overflow: hidden;
 }
+
+.btn-primary::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s ease, height 0.6s ease;
+}
+
+.btn-primary:active::after {
+    width: 300px;
+    height: 300px;
+}
+
+/* ============================================
+   NAV ITEM ACTIVE PULSE
+   ============================================ */
 
 .nav-item.active::after {
     content: '';
     position: absolute;
     inset: 0;
-    border-radius: var(--radius-lg);
-    padding: 2px;
-    background: linear-gradient(135deg, var(--primary-400), var(--primary-600), var(--primary-400));
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-}
-
-/* Input Focus Glow */
-.form-group input:focus,
-.form-group textarea:focus,
-.form-group select:focus {
-    box-shadow: 
-        0 0 0 3px rgba(34, 197, 94, 0.15),
-        0 0 20px rgba(34, 197, 94, 0.1);
-}
-
-/* Smooth Section Transitions */
-.settings-panel.active,
-.templates-panel.active,
-.reports-view:not(.hidden),
-.sprints-view:not(.hidden) {
-    animation: fadeInUp 0.4s var(--transition-base);
-}
-/* ============================================
-   DASHBOARD VISUAL ENHANCEMENTS
-   ============================================ */
-   
-/* Animated Gradient Header */
-.dashboard-header {
-    position: relative;
-    background: linear-gradient(135deg, 
-        var(--primary-50) 0%, 
-        var(--bg-secondary) 40%, 
-        var(--primary-50) 80%
-    );
-    background-size: 200% 200%;
-    animation: gradient-shift 8s ease infinite;
-    border-radius: var(--radius-xl);
-    padding: var(--space-xl);
-    margin-bottom: var(--space-2xl);
-    border: 1px solid var(--border-color);
-}
-
-@keyframes gradient-shift {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-}
-
-[data-theme="dark"] .dashboard-header {
-    background: linear-gradient(135deg, 
-        rgba(22, 163, 74, 0.08) 0%, 
-        var(--bg-secondary) 40%, 
-        rgba(22, 163, 74, 0.05) 80%
-    );
-    background-size: 200% 200%;
-}
-
-/* Sparkle on task complete */
-.task-card[data-status="done"]::after {
-    content: '✨';
-    position: absolute;
-    top: -5px;
-    right: -5px;
-    font-size: 14px;
-    animation: sparkle 2s ease-in-out infinite;
-    pointer-events: none;
-}
-
-@keyframes sparkle {
-    0%, 100% { opacity: 0; transform: scale(0.5) rotate(0deg); }
-    50% { opacity: 1; transform: scale(1.2) rotate(180deg); }
-}
-
-/* Overdue task glow */
-.due-overdue {
-    animation: overdue-glow 1.5s ease-in-out infinite;
-}
-
-@keyframes overdue-glow {
-    0%, 100% { 
-        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
-        background: #fee2e2;
-    }
-    50% { 
-        box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
-        background: #fecaca;
-    }
-}
-
-/* Rainbow progress bar for sprints */
-.progress-bar-fill {
-    background: linear-gradient(90deg,
-        #ef4444, #f59e0b, #10b981, #3b82f6, #d9ff00
-    ) !important;
-    background-size: 200% 100%;
-    animation: rainbow-slide 3s linear infinite;
     border-radius: var(--radius-md);
-    height: 100%;
-    transition: width var(--transition-slow);
+    animation: navPulse 2s ease-in-out infinite;
+}
+
+@keyframes navPulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(56, 189, 248, 0);
+    }
+    50% {
+        box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.1);
+    }
+}
+
+/* ============================================
+   PROGRESS BAR SHIMMER
+   ============================================ */
+
+.progress-bar-fill,
+.task-progress-fill {
     position: relative;
     overflow: hidden;
 }
 
-@keyframes rainbow-slide {
-    0% { background-position: 0% 50%; }
-    100% { background-position: 200% 50%; }
-}
-
-.progress-bar-fill::after {
+.progress-bar-fill::after,
+.task-progress-fill::after {
     content: '';
     position: absolute;
     top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.3),
+        transparent
+    );
     animation: shimmer 2s infinite;
 }
 
-/* Glowing nav item */
-.nav-item.active {
-    position: relative;
-    z-index: 1;
+@keyframes shimmer {
+    100% { left: 100%; }
 }
 
-.nav-item.active::after {
-    content: '';
-    position: absolute;
-    inset: -2px;
-    background: linear-gradient(135deg, 
-        var(--primary-400), 
-        var(--primary-600), 
-        var(--primary-400)
-    );
-    border-radius: var(--radius-lg);
-    z-index: -1;
-    opacity: 0.3;
-    animation: border-glow 2s ease-in-out infinite;
+/* ============================================
+   STATUS BADGE PULSE
+   ============================================ */
+
+.status-critical {
+    animation: criticalPulse 2s ease-in-out infinite;
 }
 
-@keyframes border-glow {
-    0%, 100% { opacity: 0.2; }
-    50% { opacity: 0.5; }
+@keyframes criticalPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
 }
 
-/* Enhanced drag-over effect */
-.tasks-container.drag-over {
-    background: linear-gradient(135deg, 
-        rgba(22, 163, 74, 0.05), 
-        rgba(22, 163, 74, 0.1)
-    );
-    outline: 2px dashed var(--primary-400);
-    outline-offset: -2px;
-    animation: drop-zone-pulse 1s ease-in-out infinite;
-    border-radius: var(--radius-lg);
+/* ============================================
+   TOAST SLIDE IN WITH BOUNCE
+   ============================================ */
+
+.toast {
+    animation: toastBounceIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-@keyframes drop-zone-pulse {
-    0%, 100% { 
-        outline-color: var(--primary-400);
-        box-shadow: inset 0 0 20px rgba(22, 163, 74, 0.05);
+@keyframes toastBounceIn {
+    0% {
+        transform: translateX(100px);
+        opacity: 0;
     }
-    50% { 
-        outline-color: var(--primary-600);
-        box-shadow: inset 0 0 30px rgba(22, 163, 74, 0.1);
+    60% {
+        transform: translateX(-10px);
+        opacity: 1;
+    }
+    100% {
+        transform: translateX(0);
+        opacity: 1;
     }
 }
 
-/* Activity log button with unread indicator */
-.activity-log-btn.has-unread {
-    position: relative;
+/* ============================================
+   MODAL ENTRANCE
+   ============================================ */
+
+.modal.active .modal-content {
+    animation: modalPopIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.activity-log-btn.has-unread::after {
-    content: '';
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 8px;
-    height: 8px;
-    background: var(--error);
-    border-radius: 50%;
-    border: 2px solid var(--bg-sidebar);
-    animation: pulse 1.5s infinite;
+@keyframes modalPopIn {
+    0% {
+        transform: scale(0.9) translateY(20px);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
 }
 
-.activity-log-btn.has-unread i {
-    animation: ring 0.5s ease-in-out;
+/* ============================================
+   COLUMN HEADER COUNT BOUNCE
+   ============================================ */
+
+.column-count {
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-/* Animated number change */
-.stat-value {
-    transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+.column-count:active {
+    transform: scale(1.3);
 }
 
-.stat-value.changed {
-    animation: number-pop 0.5s ease-out;
+/* ============================================
+   DUE DATE OVERDUE GLOW
+   ============================================ */
+
+.task-due-badge.overdue {
+    animation: overdueGlow 1.5s ease-in-out infinite;
 }
 
-@keyframes number-pop {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.3); color: var(--primary-500); }
-    100% { transform: scale(1); }
+@keyframes overdueGlow {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+    50% {
+        box-shadow: 0 0 8px 2px rgba(239, 68, 68, 0.2);
+    }
 }
 
-/* 3D hover effect for template cards */
-.template-card {
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    transform-style: preserve-3d;
+/* ============================================
+   PROJECT PERFORMANCE CARD ENTRANCE
+   ============================================ */
+
+.project-performance-card {
+    animation: cardSlideUp 0.5s ease both;
 }
 
-.template-card:hover {
-    transform: translateY(-8px) rotateX(5deg) rotateY(-5deg);
-    box-shadow: 
-        0 15px 35px rgba(0, 0, 0, 0.1),
-        0 5px 15px rgba(0, 0, 0, 0.05);
-}
+.project-performance-card:nth-child(1) { animation-delay: 0.05s; }
+.project-performance-card:nth-child(2) { animation-delay: 0.10s; }
+.project-performance-card:nth-child(3) { animation-delay: 0.15s; }
+.project-performance-card:nth-child(4) { animation-delay: 0.20s; }
+.project-performance-card:nth-child(5) { animation-delay: 0.25s; }
+.project-performance-card:nth-child(6) { animation-delay: 0.30s; }
 
-.template-card .template-icon {
-    transition: transform 0.3s ease;
-}
-
-.template-card:hover .template-icon {
-    transform: translateZ(20px);
-}
-
-/* Animated project color dots */
-.project-color {
-    position: relative;
-    width: 12px !important;
-    height: 12px !important;
-    transition: all 0.3s ease;
-}
-
-.project-item:hover .project-color {
-    transform: scale(1.4);
-    box-shadow: 0 0 12px currentColor;
-}
-
-.project-item.active .project-color {
-    animation: dot-pulse 2s ease-in-out infinite;
-}
-
-@keyframes dot-pulse {
-    0%, 100% { box-shadow: 0 0 0 0 currentColor; }
-    50% { box-shadow: 0 0 0 8px transparent; }
-}
-
-/* View switching animation */
-.board-view,
-.sprints-view:not(.hidden),
-.reports-view:not(.hidden),
-.settings-view:not(.hidden) {
-    animation: view-enter 0.4s ease-out;
-}
-
-@keyframes view-enter {
+@keyframes cardSlideUp {
     from {
         opacity: 0;
-        transform: translateY(15px);
-        filter: blur(4px);
+        transform: translateY(20px);
     }
     to {
         opacity: 1;
         transform: translateY(0);
-        filter: blur(0);
     }
 }
 
+/* ============================================
+   LOGO ICON BOUNCE ON HOVER
+   ============================================ */
+
+.logo i {
+    transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.logo:hover i {
+    animation: logoBounce 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes logoBounce {
+    0%, 100% { transform: scale(1) rotate(0deg); }
+    30% { transform: scale(1.2) rotate(-10deg); }
+    60% { transform: scale(0.9) rotate(5deg); }
+}
+
+/* ============================================
+   SKELETON LOADING SHIMMER
+   ============================================ */
+
+.skeleton {
+    background: linear-gradient(
+        90deg,
+        var(--bg-muted) 25%,
+        var(--bg-surface) 50%,
+        var(--bg-muted) 75%
+    );
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes skeletonShimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* ============================================
+   EMPTY STATE ICON FLOAT
+   ============================================ */
+
+.empty-state i {
+    animation: emptyFloat 3s ease-in-out infinite;
+}
+
+@keyframes emptyFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+/* ============================================
+   REFRESH BUTTON SPIN
+   ============================================ */
+
+#refresh-reports-btn:active i {
+    animation: refreshSpin 0.8s ease-in-out;
+}
+
+@keyframes refreshSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* ============================================
+   INTEGRATION CARD HOVER LIFT
+   ============================================ */
+
+.integration-row {
+    transition: all 0.3s ease;
+}
+
+.integration-row:hover {
+    transform: translateX(4px);
+}
+
+/* ============================================
+   DANGER ZONE PULSE BORDER
+   ============================================ */
+
+.danger-item-critical {
+    animation: dangerPulse 3s ease-in-out infinite;
+}
+
+@keyframes dangerPulse {
+    0%, 100% {
+        border-color: #fecaca;
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+    50% {
+        border-color: #fca5a5;
+        box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.05);
+    }
+}
+
+/* ============================================
+   DARK MODE ADJUSTMENTS
+   ============================================ */
+
+[data-theme="dark"] .task-card:hover {
+    box-shadow: 
+        0 4px 12px rgba(0, 0, 0, 0.3),
+        0 0 0 1px rgba(20, 184, 166, 0.3),
+        0 0 20px rgba(20, 184, 166, 0.05);
+}
+
+[data-theme="dark"] .stat-card:hover {
+    box-shadow: 
+        0 8px 25px rgba(0, 0, 0, 0.4),
+        0 0 30px rgba(20, 184, 166, 0.05);
+}
+
+/* ============================================
+   REDUCED MOTION SUPPORT
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+    .floating-shape,
+    .particle,
+    .task-card,
+    .stat-card,
+    .chart-card,
+    .nav-item.active::after,
+    .status-critical,
+    .task-due-badge.overdue,
+    .danger-item-critical,
+    .empty-state i {
+        animation: none !important;
+    }
+    
+    .floating-shapes,
+    .particles-layer {
+        display: none;
+    }
+}

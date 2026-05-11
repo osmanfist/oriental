@@ -1,5 +1,5 @@
 /* ============================================
-   DASHBOARD LOADING SCREEN
+   DASHBOARD LOADING SCREEN - Animated Circle
    ============================================ */
 
 .dashboard-loading {
@@ -10,7 +10,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: opacity 0.4s ease, visibility 0.4s ease;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
 }
 
 .dashboard-loading.fade-out {
@@ -25,66 +25,148 @@
 }
 
 @keyframes loadingFadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
+/* ============================================
+   CIRCLE LOGO
+   ============================================ */
+
 .loading-logo {
-    margin-bottom: 16px;
+    margin-bottom: 24px;
 }
 
 .loading-icon {
-    width: 64px;
-    height: 64px;
+    width: 80px;
+    height: 80px;
     margin: 0 auto;
-    border-radius: 16px;
+    position: relative;
+}
+
+/* The main circle */
+.loading-icon-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
     background: linear-gradient(135deg, #14b8a6, #0d9488);
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 8px 32px rgba(20, 184, 166, 0.25);
-    animation: loadingPulse 2s ease-in-out infinite;
+    position: relative;
+    z-index: 2;
+    box-shadow: 0 0 40px rgba(20, 184, 166, 0.3);
 }
 
-@keyframes loadingPulse {
-    0%, 100% {
-        box-shadow: 0 8px 32px rgba(20, 184, 166, 0.25);
-        transform: scale(1);
-    }
-    50% {
-        box-shadow: 0 12px 40px rgba(20, 184, 166, 0.4);
-        transform: scale(1.05);
-    }
-}
-
-.loading-icon i {
-    font-size: 28px;
+.loading-icon-circle i {
+    font-size: 32px;
     color: white;
 }
+
+/* Orbiting ring 1 */
+.loading-orbit-1 {
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.06);
+    animation: orbitSpin 4s linear infinite;
+}
+
+.loading-orbit-1::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: 50%;
+    width: 6px;
+    height: 6px;
+    background: #5eead4;
+    border-radius: 50%;
+    transform: translateX(-50%);
+    box-shadow: 0 0 8px rgba(94, 234, 212, 0.6);
+}
+
+/* Orbiting ring 2 */
+.loading-orbit-2 {
+    position: absolute;
+    top: -22px;
+    left: -22px;
+    width: 124px;
+    height: 124px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255, 255, 255, 0.04);
+    animation: orbitSpin 6s linear infinite reverse;
+}
+
+.loading-orbit-2::before {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    background: #fbbf24;
+    border-radius: 50%;
+    transform: translateX(-50%);
+    box-shadow: 0 0 6px rgba(251, 191, 36, 0.5);
+}
+
+/* Orbiting ring 3 */
+.loading-orbit-3 {
+    position: absolute;
+    top: -34px;
+    left: -34px;
+    width: 148px;
+    height: 148px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.025);
+    animation: orbitSpin 8s linear infinite;
+}
+
+.loading-orbit-3::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: -3px;
+    width: 4px;
+    height: 4px;
+    background: #38bdf8;
+    border-radius: 50%;
+    box-shadow: 0 0 6px rgba(56, 189, 248, 0.5);
+}
+
+@keyframes orbitSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* ============================================
+   TITLE
+   ============================================ */
 
 .loading-title {
     font-size: 22px;
     font-weight: 700;
     color: #f1f5f9;
-    margin-bottom: 24px;
+    margin-bottom: 28px;
     letter-spacing: -0.02em;
 }
 
+/* ============================================
+   PROGRESS BAR
+   ============================================ */
+
 .loading-progress-container {
-    width: 200px;
-    margin: 0 auto 16px;
+    width: 180px;
+    margin: 0 auto 14px;
 }
 
 .loading-progress-bar {
     width: 100%;
     height: 3px;
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.06);
     border-radius: 3px;
     overflow: hidden;
 }
@@ -92,35 +174,27 @@
 .loading-progress-fill {
     height: 100%;
     width: 0%;
-    background: linear-gradient(90deg, #14b8a6, #5eead4);
+    background: linear-gradient(90deg, #14b8a6, #5eead4, #38bdf8);
+    background-size: 200% 100%;
     border-radius: 3px;
-    transition: width 0.3s ease;
+    transition: width 0.4s ease;
+    animation: progressShimmer 2s linear infinite;
 }
+
+@keyframes progressShimmer {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+}
+
+/* ============================================
+   STATUS TEXT
+   ============================================ */
 
 .loading-status {
     font-size: 13px;
-    color: #94a3b8;
+    color: #64748b;
     margin: 0;
-    animation: statusPulse 2s ease-in-out infinite;
-}
-
-@keyframes statusPulse {
-    0%, 100% { opacity: 0.6; }
-    50% { opacity: 1; }
-}
-
-/* Dots animation for status text */
-.loading-status.dots::after {
-    content: '';
-    animation: loadingDots 1.5s steps(4, end) infinite;
-}
-
-@keyframes loadingDots {
-    0%   { content: ''; }
-    25%  { content: '.'; }
-    50%  { content: '..'; }
-    75%  { content: '...'; }
-    100% { content: ''; }
+    transition: color 0.3s ease;
 }
 
 /* ============================================

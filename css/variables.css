@@ -50,7 +50,7 @@
        ========================================== */
     --bg-main: #f3f4f6;
     --bg-surface: #ffffff;
-    --bg-sidebar: #3e5375;
+    --bg-sidebar: #31435f;
     --bg-sidebar-hover: rgba(255, 255, 255, 0.05);
     --bg-sidebar-active: #334155;
     --bg-hover: #f8fafc;
@@ -155,6 +155,13 @@
     --animation-fast: 0.15s;
     --animation-base: 0.2s;
     --animation-slow: 0.3s;
+
+        /* ==========================================
+       ANIMATED BACKGROUNDS
+       ========================================== */
+    --sidebar-animation-duration: 20s;
+    --board-animation-duration: 15s;
+
 }
 
 /* ============================================
@@ -169,6 +176,17 @@
     --bg-muted: #1e293b;
     --bg-column: #1e293b;
     --bg-input: #1e293b;
+    --grid-dot-color: rgba(255, 255, 255, 0.03);
+    
+    [data-theme="dark"] .sidebar::after {
+    background-image: radial-gradient(circle, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
+    --sidebar-text: #cbd5e1;
+    --sidebar-text-muted: #64748b;
+    --sidebar-highlight: #38bdf8;
+    --sidebar-border: rgba(255, 255, 255, 0.06);
+    --sidebar-divider: rgba(255, 255, 255, 0.08);
     
     --text-primary: #f1f5f9;
     --text-secondary: #cbd5e1;
@@ -176,6 +194,11 @@
     
     --border-color: #334155;
     --border-light: #1e293b;
+    [data-theme="dark"] .main-content::before {
+    background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+}
     
     --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
     --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);

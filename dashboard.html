@@ -41,14 +41,22 @@
     </script>
 </head>
 <body>
-    <!-- ============================================ -->
+
+<!-- ============================================ -->
 <!-- LOADING SCREEN -->
 <!-- ============================================ -->
 <div id="dashboard-loading" class="dashboard-loading">
     <div class="loading-content">
         <div class="loading-logo">
             <div class="loading-icon">
-                <i class="fas fa-mountain-sun"></i>
+                <!-- Orbiting rings with dots -->
+                <div class="loading-orbit-3"></div>
+                <div class="loading-orbit-2"></div>
+                <div class="loading-orbit-1"></div>
+                <!-- Center circle -->
+                <div class="loading-icon-circle">
+                    <i class="fas fa-mountain-sun"></i>
+                </div>
             </div>
         </div>
         <h2 class="loading-title">Oriental</h2>
@@ -60,6 +68,27 @@
         <p class="loading-status" id="loading-status">Loading your workspace...</p>
     </div>
 </div>
+<!-- ============================================ -->
+<!-- FLOATING BACKGROUND SHAPES -->
+<!-- ============================================ -->
+<div class="floating-shapes" id="floating-shapes">
+    <div class="floating-shape circle-1"></div>
+    <div class="floating-shape circle-2"></div>
+    <div class="floating-shape circle-3"></div>
+    <div class="floating-shape circle-4"></div>
+    <div class="floating-shape circle-5"></div>
+    <div class="floating-shape square-1"></div>
+    <div class="floating-shape square-2"></div>
+    <div class="floating-shape triangle-1"></div>
+    <div class="floating-shape triangle-2"></div>
+    <div class="floating-shape ring-1"></div>
+    <div class="floating-shape ring-2"></div>
+</div>
+
+<!-- ============================================ -->
+<!-- FLOATING PARTICLES -->
+<!-- ============================================ -->
+<div class="particles-layer" id="particles-layer"></div>
     <!-- Pull to Refresh -->
     <div class="pull-to-refresh" id="pull-to-refresh">
         <i class="fas fa-arrow-down"></i>
@@ -1308,5 +1337,41 @@
 <script src="js/lang/en.js"></script>
 <script src="js/lang/ar.js"></script>
 <script src="js/lang.js"></script>
+<script>
+    // Generate floating particles
+    (function generateParticles() {
+        const container = document.getElementById('particles-layer');
+        if (!container) return;
+        
+        const colors = ['#14b8a6', '#8b5cf6', '#f59e0b', '#3b82f6', '#ec4899', '#10b981'];
+        const particleCount = 25;
+        
+        for (let i = 0; i < particleCount; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            
+            const size = Math.random() * 6 + 2;
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            const left = Math.random() * 100;
+            const duration = Math.random() * 20 + 15;
+            const delay = Math.random() * 15;
+            
+            particle.style.cssText = `
+                width: ${size}px;
+                height: ${size}px;
+                background: ${color};
+                left: ${left}%;
+                bottom: -10px;
+                animation-duration: ${duration}s;
+                animation-delay: -${delay}s;
+                opacity: ${Math.random() * 0.3 + 0.1};
+            `;
+            
+            container.appendChild(particle);
+        }
+    })();
+</script>
+<!-- Test Data Generator (development only) -->
+<script src="js/test-data-generator.js"></script>
 </body>
 </html>
