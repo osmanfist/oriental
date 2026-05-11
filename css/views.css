@@ -826,3 +826,717 @@
     padding: 2px 6px;
     border-radius: 4px;
 }
+/* ============================================
+   SETTINGS VIEW - Clean & Consistent
+   ============================================ */
+
+.settings-view {
+    width: 100%;
+    max-width: 100%;
+}
+
+.settings-view.hidden { display: none; }
+
+.settings-header {
+    margin-bottom: 20px;
+}
+
+.settings-header h2 {
+    font-size: 20px;
+    font-weight: var(--font-semibold);
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.settings-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+/* ============================================
+   TABS - Pill Style
+   ============================================ */
+
+.settings-tabs {
+    display: flex;
+    gap: 2px;
+    background: var(--bg-muted);
+    padding: 3px;
+    border-radius: var(--radius-md);
+    margin-bottom: 20px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.settings-tab {
+    padding: 7px 14px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: var(--font-medium);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: inherit;
+    flex-shrink: 0;
+}
+
+.settings-tab:hover {
+    color: var(--text-primary);
+}
+
+.settings-tab.active {
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-xs);
+}
+
+.settings-tab i {
+    font-size: 12px;
+}
+
+/* ============================================
+   PANELS
+   ============================================ */
+
+.settings-panel {
+    display: none;
+}
+
+.settings-panel.active {
+    display: block;
+}
+
+/* ============================================
+   SECTION CARDS
+   ============================================ */
+
+.settings-section {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    margin-bottom: 14px;
+    overflow: hidden;
+}
+
+.settings-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    font-weight: var(--font-semibold);
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-light);
+    background: var(--bg-main);
+}
+
+.settings-section-title i {
+    font-size: 13px;
+    color: var(--primary-500);
+    width: 16px;
+    text-align: center;
+}
+
+.settings-section-content {
+    padding: 16px;
+}
+
+/* ============================================
+   FIELDS
+   ============================================ */
+
+.settings-field {
+    margin-bottom: 14px;
+}
+
+.settings-field:last-child {
+    margin-bottom: 0;
+}
+
+.settings-field label {
+    display: block;
+    font-size: 13px;
+    font-weight: var(--font-medium);
+    color: var(--text-secondary);
+    margin-bottom: 5px;
+}
+
+.settings-field input[type="text"] {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-family: inherit;
+    background: var(--bg-input);
+    color: var(--text-primary);
+    transition: border-color var(--transition-fast);
+}
+
+.settings-field input[type="text"]:focus {
+    border-color: var(--primary-400);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.1);
+}
+
+.settings-field select {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-family: inherit;
+    background: var(--bg-input);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: border-color var(--transition-fast);
+}
+
+.settings-field select:focus {
+    border-color: var(--primary-400);
+    outline: none;
+}
+
+.field-hint {
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+#slug-preview {
+    font-weight: var(--font-semibold);
+    color: var(--primary-500);
+}
+
+/* ============================================
+   CHECKBOX FIELDS
+   ============================================ */
+
+.settings-field-checkbox .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    padding: 2px 0;
+}
+
+.settings-field-checkbox .checkbox-label.disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.settings-field-checkbox input[type="checkbox"] {
+    width: 17px;
+    height: 17px;
+    accent-color: var(--primary-500);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.settings-field-checkbox input[type="checkbox"]:disabled {
+    cursor: not-allowed;
+}
+
+.settings-field-checkbox .checkbox-label span {
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+/* ============================================
+   FIELD ROW (side by side)
+   ============================================ */
+
+.settings-field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+@media (max-width: 500px) {
+    .settings-field-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ============================================
+   SECTION SAVE BUTTON
+   ============================================ */
+
+.settings-section-content .btn-primary {
+    margin-top: 4px;
+}
+
+/* ============================================
+   PERMISSIONS TABLE
+   ============================================ */
+
+.permissions-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.permissions-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 420px;
+}
+
+.permissions-table th {
+    text-align: left;
+    padding: 9px 12px;
+    font-size: 11px;
+    font-weight: var(--font-semibold);
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.permissions-table th:not(:first-child) {
+    text-align: center;
+    width: 80px;
+}
+
+.permissions-table td {
+    padding: 9px 12px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border-light);
+    color: var(--text-secondary);
+}
+
+.permissions-table td:not(:first-child) {
+    text-align: center;
+}
+
+.permissions-table tr:last-child td {
+    border-bottom: none;
+}
+
+.check-yes { color: #10b981; font-size: 15px; }
+.check-no { color: #ef4444; font-size: 15px; }
+
+/* ============================================
+   INTEGRATION ROW
+   ============================================ */
+
+.integration-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.integration-row p {
+    flex: 1;
+    min-width: 200px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+/* ============================================
+   DANGER ITEMS
+   ============================================ */
+
+.danger-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    margin-bottom: 10px;
+}
+
+.danger-item:last-child {
+    margin-bottom: 0;
+}
+
+.danger-item-warning {
+    border-color: #fde68a;
+    background: #fffbeb;
+}
+
+.danger-item-critical {
+    border-color: #fecaca;
+    background: #fef2f2;
+}
+
+[data-theme="dark"] .danger-item-warning {
+    background: rgba(245, 158, 11, 0.06);
+    border-color: rgba(245, 158, 11, 0.2);
+}
+
+[data-theme="dark"] .danger-item-critical {
+    background: rgba(239, 68, 68, 0.06);
+    border-color: rgba(239, 68, 68, 0.2);
+}
+
+.danger-item-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-main);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.danger-item-warning .danger-item-icon {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.danger-item-critical .danger-item-icon {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+[data-theme="dark"] .danger-item-warning .danger-item-icon {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fcd34d;
+}
+
+[data-theme="dark"] .danger-item-critical .danger-item-icon {
+    background: rgba(239, 68, 68, 0.15);
+    color: #fca5a5;
+}
+
+.danger-item-content {
+    flex: 1;
+    min-width: 150px;
+}
+
+.danger-item-content h4 {
+    font-size: 14px;
+    font-weight: var(--font-semibold);
+    color: var(--text-primary);
+    margin-bottom: 1px;
+}
+
+.danger-item-content p {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 0;
+    line-height: 1.4;
+}
+
+/* ============================================
+   DANGER BUTTONS
+   ============================================ */
+
+.btn-danger-outline {
+    background: transparent;
+    color: #dc2626;
+    border: 1px solid #fca5a5;
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    font-weight: var(--font-medium);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: inherit;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.btn-danger-outline:hover {
+    background: #fef2f2;
+}
+
+[data-theme="dark"] .btn-danger-outline {
+    color: #fca5a5;
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+[data-theme="dark"] .btn-danger-outline:hover {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* ============================================
+   COMING SOON BADGE
+   ============================================ */
+
+.badge-coming-soon {
+    display: inline-block;
+    background: var(--bg-muted);
+    color: var(--text-muted);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: var(--font-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* ============================================
+   RESPONSIVE - SETTINGS VIEW
+   ============================================ */
+
+@media (max-width: 1100px) {
+    .settings-view {
+        padding: 0;
+    }
+    
+    .settings-section-content {
+        padding: 14px;
+    }
+    
+    .danger-item {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .danger-item button {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 768px) {
+    /* Header */
+    .settings-header h2 {
+        font-size: 18px;
+    }
+    
+    .settings-subtitle {
+        font-size: 12px;
+    }
+    
+    /* Tabs - scrollable pills */
+    .settings-tabs {
+        gap: 1px;
+        padding: 3px;
+        margin-bottom: 16px;
+        border-radius: var(--radius-sm);
+    }
+    
+    .settings-tab {
+        padding: 6px 10px;
+        font-size: 11px;
+        gap: 4px;
+    }
+    
+    .settings-tab i {
+        font-size: 11px;
+    }
+    
+    /* Sections */
+    .settings-section {
+        margin-bottom: 10px;
+        border-radius: var(--radius-sm);
+    }
+    
+    .settings-section-title {
+        padding: 10px 14px;
+        font-size: 12px;
+    }
+    
+    .settings-section-content {
+        padding: 12px;
+    }
+    
+    /* Fields */
+    .settings-field {
+        margin-bottom: 12px;
+    }
+    
+    .settings-field label {
+        font-size: 12px;
+    }
+    
+    .settings-field input[type="text"],
+    .settings-field select {
+        width: 100%;
+        max-width: 100%;
+        padding: 8px 10px;
+        font-size: 13px;
+    }
+    
+    /* Field row collapses to single column */
+    .settings-field-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    /* Checkboxes */
+    .settings-field-checkbox .checkbox-label span {
+        font-size: 13px;
+    }
+    
+    /* Permissions table */
+    .permissions-table-wrap {
+        margin: 0 -12px;
+        padding: 0 12px;
+    }
+    
+    .permissions-table {
+        min-width: 380px;
+    }
+    
+    .permissions-table th {
+        padding: 7px 8px;
+        font-size: 10px;
+    }
+    
+    .permissions-table td {
+        padding: 7px 8px;
+        font-size: 12px;
+    }
+    
+    .permissions-table th:not(:first-child) {
+        width: 60px;
+    }
+    
+    /* Danger items */
+    .danger-item {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 12px;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+    
+    .danger-item-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 13px;
+    }
+    
+    .danger-item-content h4 {
+        font-size: 13px;
+    }
+    
+    .danger-item-content p {
+        font-size: 11px;
+    }
+    
+    .danger-item button {
+        width: 100%;
+        justify-content: center;
+        padding: 10px;
+        font-size: 13px;
+    }
+    
+    .btn-danger-outline {
+        width: 100%;
+        justify-content: center;
+        padding: 10px;
+    }
+    
+    /* Integration rows */
+    .integration-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .integration-row p {
+        font-size: 12px;
+        min-width: unset;
+    }
+    
+    .integration-row button {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .integration-row .badge-coming-soon {
+        align-self: flex-start;
+    }
+    
+    /* Save button */
+    .settings-section-content .btn-primary {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Even smaller */
+    .settings-tabs {
+        gap: 0;
+        padding: 2px;
+    }
+    
+    .settings-tab {
+        padding: 5px 8px;
+        font-size: 10px;
+        gap: 3px;
+    }
+    
+    .settings-tab i {
+        font-size: 10px;
+    }
+    
+    .settings-section-title {
+        padding: 8px 12px;
+        font-size: 11px;
+        gap: 6px;
+    }
+    
+    .settings-section-content {
+        padding: 10px;
+    }
+    
+    .settings-field input[type="text"],
+    .settings-field select {
+        padding: 7px 8px;
+        font-size: 12px;
+    }
+    
+    .settings-field label {
+        font-size: 11px;
+    }
+    
+    .field-hint {
+        font-size: 10px;
+    }
+    
+    .permissions-table {
+        min-width: 320px;
+    }
+    
+    .permissions-table th,
+    .permissions-table td {
+        padding: 6px;
+        font-size: 11px;
+    }
+    
+    .permissions-table th:not(:first-child) {
+        width: 50px;
+    }
+    
+    .check-yes, .check-no {
+        font-size: 13px;
+    }
+    
+    .danger-item {
+        padding: 10px;
+        gap: 6px;
+    }
+    
+    .settings-field-checkbox .checkbox-label {
+        gap: 8px;
+    }
+    
+    .settings-field-checkbox .checkbox-label span {
+        font-size: 12px;
+    }
+}

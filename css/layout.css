@@ -14,6 +14,16 @@
     padding: 24px 28px;
     background: var(--bg-main);
     animation: fadeIn var(--animation-base) var(--transition-base);
+    min-width: 0; /* Prevents overflow */
+    overflow-x: hidden; /* Prevents horizontal scroll */
+}
+@media (max-width: 768px) {
+    .main-content {
+        margin-left: 0;
+        padding: 16px 12px;
+        padding-top: 72px; /* Space for mobile header */
+        padding-bottom: 80px; /* Space for bottom nav */
+    }
 }
 
 .dashboard-header {
