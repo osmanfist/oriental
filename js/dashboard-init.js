@@ -4,6 +4,44 @@
  */
 
 // ============================================
+// LOADING SCREEN CONTROLLER
+// ============================================
+
+const loadingSteps = [
+    { progress: 10, status: 'Checking authentication...', delay: 300 },
+    { progress: 25, status: 'Loading user data...', delay: 400 },
+    { progress: 40, status: 'Loading organization...', delay: 300 },
+    { progress: 55, status: 'Loading team members...', delay: 400 },
+    { progress: 70, status: 'Loading projects...', delay: 500 },
+    { progress: 85, status: 'Setting up workspace...', delay: 300 },
+    { progress: 95, status: 'Almost ready...', delay: 200 },
+    { progress: 100, status: 'Ready!', delay: 300 },
+];
+
+let currentLoadingStep = 0;
+
+function updateLoadingProgress(stepIndex) {
+    const step = loadingSteps[stepIndex];
+    if (!step) return;
+    
+    const fill = document.getElementById('loading-progress-fill');
+    const status = document.getElementById('loading-status');
+    
+    if (fill) fill.style.width = step.progress + '%';
+    if (status) status.textContent = step.status;
+}
+
+function hideLoadingScreen() {
+    const loadingEl = document.getElementById('dashboard-loading');
+    if (loadingEl) {
+        loadingEl.classList.add('fade-out');
+        setTimeout(() => {
+            if (loadingEl.parentNode) loadingEl.parentNode.removeChild(loadingEl);
+        }, 500);
+    }
+}
+
+// ============================================
 // REALTIME SUBSCRIPTION
 // ============================================
 
@@ -60,16 +98,35 @@ function initializePhase1Features() {
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 Oriental Dashboard - Leantime Edition');
     
+        // Start loading
+    updateLoadingProgress(0);
+    
     initDarkMode();
     setupOfflineDetection();
     setupPWAInstallPrompt();
     
+    // Step 1: Auth
+    updateLoadingProgress(1);
     await checkAuth();
+    
+    // Step 2: User data
+    updateLoadingProgress(2);
     await loadUserData();
+    
+    // Step 3: Organization
+    updateLoadingProgress(3);
     await loadOrganization();
+    
+    // Step 4: Team
+    updateLoadingProgress(4);
     await loadTeamMembers();
+    
+    // Step 5: Projects
+    updateLoadingProgress(5);
     await loadProjectsOptimized();
     
+    // Step 6: Setup
+    updateLoadingProgress(6);
     setupEventListeners();
     setupSettingsEventListeners();
     setupRealtimeSubscription();
@@ -79,8 +136,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupThemeToggle();
     setupAllProjectsToggle();
     setupSearchAndFilter();
-    
     initializePhase1Features();
+    
+    // Step 7: Done
+    updateLoadingProgress(7);
+    
+    // Hide loading screen
+    setTimeout(() => {
+        hideLoadingScreen();
+    }, 400);
     
     window.addEventListener('beforeunload', cleanup);
     
