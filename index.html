@@ -5,62 +5,359 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Oriental - Project Management</title>
     
-    <meta name="theme-color" content="#16a34a">
+    <meta name="theme-color" content="#14b8a6">
     <link rel="manifest" href="manifest.json">
     
     <!-- Favicon and App Icons -->
-    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="css/index.css">
     
     <style>
+        :root {
+            --primary: #14b8a6;
+            --primary-dark: #0d9488;
+            --primary-light: #5eead4;
+            --bg-dark: #1e293b;
+            --bg-darker: #0f172a;
+            --text-primary: #f1f5f9;
+            --text-muted: #94a3b8;
+            --card-bg: rgba(255, 255, 255, 0.04);
+            --card-border: rgba(255, 255, 255, 0.08);
+        }
+        
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg-darker);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        /* Background gradient orbs */
+        .bg-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.15;
+            pointer-events: none;
+        }
+        
+        .bg-orb-1 {
+            width: 500px;
+            height: 500px;
+            background: var(--primary);
+            top: -150px;
+            right: -100px;
+            animation: float 8s ease-in-out infinite;
+        }
+        
+        .bg-orb-2 {
+            width: 400px;
+            height: 400px;
+            background: #38bdf8;
+            bottom: -100px;
+            left: -100px;
+            animation: float 10s ease-in-out infinite reverse;
+        }
+        
+        .bg-orb-3 {
+            width: 300px;
+            height: 300px;
+            background: #8b5cf6;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: float 12s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-30px) scale(1.05); }
+        }
+        
+        /* Grid pattern overlay */
+        .grid-pattern {
+            position: fixed;
+            inset: 0;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+        }
+        
+        /* Main content */
+        .splash-content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            padding: 40px 24px;
+            max-width: 520px;
+            width: 100%;
+        }
+        
+        /* Logo */
+        .splash-logo {
+            margin-bottom: 32px;
+        }
+        
+        .logo-icon-container {
+            width: 88px;
+            height: 88px;
+            margin: 0 auto;
+            position: relative;
+        }
+        
+        .logo-icon {
+            width: 88px;
+            height: 88px;
+            border-radius: 22px;
+            background: linear-gradient(135deg, var(--primary), #0d9488);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 2;
+            box-shadow: 0 8px 32px rgba(20, 184, 166, 0.3);
+        }
+        
+        .logo-icon i {
+            font-size: 40px;
+            color: white;
+        }
+        
+        .logo-ring {
+            position: absolute;
+            border-radius: 50%;
+            border: 1.5px solid rgba(255,255,255,0.08);
+            animation: ringPulse 3s ease-in-out infinite;
+        }
+        
+        .logo-ring:nth-child(1) {
+            width: 130px;
+            height: 130px;
+            top: -21px;
+            left: -21px;
+            animation-delay: 0s;
+        }
+        
+        .logo-ring:nth-child(2) {
+            width: 170px;
+            height: 170px;
+            top: -41px;
+            left: -41px;
+            animation-delay: 0.5s;
+        }
+        
+        @keyframes ringPulse {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.05); }
+        }
+        
+        /* Title */
+        .splash-title {
+            font-size: 40px;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .splash-tagline {
+            font-size: 16px;
+            color: var(--text-muted);
+            margin-bottom: 32px;
+            line-height: 1.5;
+        }
+        
+        /* Feature pills */
+        .feature-pills {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 36px;
+        }
+        
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 14px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            font-size: 13px;
+            color: var(--text-muted);
+            transition: all 0.2s ease;
+        }
+        
+        .pill:hover {
+            background: rgba(255,255,255,0.08);
+            color: #e2e8f0;
+            border-color: rgba(255,255,255,0.15);
+        }
+        
+        .pill i {
+            font-size: 12px;
+            color: var(--primary-light);
+        }
+        
+        /* Buttons */
+        .splash-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+        }
+        
+        .btn-splash {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 28px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .btn-splash-primary {
+            background: var(--primary);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(20, 184, 166, 0.3);
+        }
+        
+        .btn-splash-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(20, 184, 166, 0.4);
+        }
+        
+        .btn-splash-secondary {
+            background: var(--card-bg);
+            color: #e2e8f0;
+            border: 1px solid var(--card-border);
+        }
+        
+        .btn-splash-secondary:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.15);
+            transform: translateY(-2px);
+        }
+        
+        /* Stats */
+        .splash-stats {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            display: block;
+            font-size: 20px;
+            font-weight: 700;
+            color: #e2e8f0;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        
+        .stat-divider {
+            width: 1px;
+            height: 28px;
+            background: rgba(255,255,255,0.08);
+        }
+        
+        /* Loading state */
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            margin: 20px auto;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            color: var(--text-muted);
+            font-size: 14px;
+            animation: fadePulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes fadePulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+        
+        /* Responsive */
+        @media (max-width: 480px) {
+            .splash-title { font-size: 32px; }
+            .splash-tagline { font-size: 14px; }
+            .btn-splash { padding: 10px 22px; font-size: 14px; }
+            .splash-stats { gap: 16px; }
+            .logo-icon-container { width: 72px; height: 72px; }
+            .logo-icon { width: 72px; height: 72px; border-radius: 18px; }
+            .logo-icon i { font-size: 32px; }
+        }
     </style>
 </head>
-<body class="index-page">
+<body>
     
-    <!-- Animated Particles -->
-    <div class="particles-container">
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-    </div>
-    
-    <!-- Mountain Background -->
-    <div class="mountains-bg">
-        <div class="mountain"></div>
-        <div class="mountain"></div>
-        <div class="mountain"></div>
-        <div class="mountain"></div>
-    </div>
+    <!-- Background Orbs -->
+    <div class="bg-orb bg-orb-1"></div>
+    <div class="bg-orb bg-orb-2"></div>
+    <div class="bg-orb bg-orb-3"></div>
+    <div class="grid-pattern"></div>
 
     <!-- Main Content -->
     <div class="splash-content" id="splash-content">
         
-        <!-- Logo with Rings -->
+        <!-- Logo -->
         <div class="splash-logo">
             <div class="logo-icon-container">
                 <div class="logo-ring"></div>
                 <div class="logo-ring"></div>
                 <div class="logo-icon">
-    <i class="fas fa-mountain-sun"></i>
-    <!-- Fallback emoji if icon fails -->
-    <span class="icon-fallback" style="display: none;">🏔️</span>
+    <img src="/icons/icon-512.png" 
+         alt="Oriental Logo" 
+         width="64" 
+         height="64"
+         style="width: 64px; height: 64px; border-radius: 16px;"
+         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+    <i class="fas fa-mountain-sun" style="display: none; font-size: 40px; color: white;"></i>
 </div>
             </div>
         </div>
@@ -107,14 +404,14 @@
         </div>
     </div>
     
-    <!-- Loading State (hidden by default) -->
-    <div class="splash-content loading-container" id="loading-state" style="display: none;">
-        <div class="logo-icon-container" style="width: 80px; height: 80px;">
-            <div class="logo-icon">
-                <i class="fas fa-mountain-sun" style="font-size: 36px;"></i>
+    <!-- Loading State -->
+    <div class="splash-content" id="loading-state" style="display: none;">
+        <div class="logo-icon-container" style="width: 72px; height: 72px;">
+            <div class="logo-icon" style="width: 72px; height: 72px; border-radius: 18px;">
+                <i class="fas fa-mountain-sun" style="font-size: 32px;"></i>
             </div>
         </div>
-        <h2 style="color: white; margin-top: 1rem;">Loading...</h2>
+        <h2 style="color: #e2e8f0; margin-top: 16px; font-size: 20px;">Loading...</h2>
         <div class="loading-spinner"></div>
         <p class="loading-text">Preparing your workspace</p>
     </div>
@@ -129,7 +426,6 @@
         // Check if user is already logged in
         auth.onAuthStateChanged((user) => {
             if (user) {
-                // User is signed in - redirect to dashboard
                 document.getElementById('splash-content').style.display = 'none';
                 document.getElementById('loading-state').style.display = 'block';
                 
