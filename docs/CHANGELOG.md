@@ -7,6 +7,175 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.3.0] - 2026-05-11
+
+### 🎨 Visual Overhaul - Leantime-Inspired Design
+
+#### Design System
+- Complete color system redesign with teal primary (#14b8a6) and slate neutrals
+- Leantime-inspired dark sidebar (#1e293b) with sky blue active highlights
+- Light mode sidebar option (#f8fafc)
+- 15 CSS files with modular architecture
+- CSS custom properties for consistent theming
+- Subtle card shadows and rounded corners (7px)
+- Left accent borders on task cards (3px colored)
+- Responsive settings page with card-based sections
+
+#### Animated Visual Effects
+- Floating geometric shapes (circles, squares, triangles, rings)
+- 25-particle rising animation system
+- Animated gradient orbs in background
+- Grid pattern drift overlay
+- Sidebar shimmer gradient animation
+- Card hover glow effects
+- Button ripple click effect
+- Nav item active pulse
+- Progress bar shimmer
+- Modal pop-in entrance animation
+- Toast bounce-in notification
+- Overdue badge glow pulse
+- Skeleton loading shimmer
+- Reduced motion support for accessibility
+
+#### Loading Screen
+- Animated loading screen with orbiting circles
+- Progress bar with status text
+- Step-based initialization display
+- Smooth fade-out transition
+
+### 📋 5-Column Kanban Board
+
+#### New Columns
+- **Planned** (gray) - Initial task state
+- **Started** (blue) - Work has begun
+- **In Progress** (amber) - Active development
+- **Waiting** (purple) - Blocked or on hold
+- **Done** (green) - Completed
+
+#### Legacy Support
+- Automatic migration of 'todo' status to 'planned'
+- Backward compatible with existing tasks
+
+### 🎯 Milestone System
+
+#### Features
+- Add milestones in Create Task and Edit Task modals
+- Inline milestone management (add/remove)
+- Checkbox toggle for completion
+- Progress bar on task cards based on milestone completion
+- Visual progress indicator (e.g., "2/5 - 40%")
+- Drag handles for reordering (visual only)
+
+### 📊 Enhanced Reports & Analytics
+
+#### New Charts (4 additional, 8 total)
+- **Cumulative Flow Diagram** - Work in progress over time
+- **Task Aging Chart** - How long open tasks have existed
+- **Workload Distribution** - Tasks per assignee with breakdown
+- **Weekly Velocity** - Completion rate per week
+
+#### Chart Improvements
+- All charts use teal color palette
+- Responsive containers (420px min)
+- Chart export to PNG
+- Date range filtering (7/30/90 days, year, all time)
+
+### 👥 Role-Based Access Control
+
+#### New Roles
+- **Admin** - Full authority (projects, team, settings)
+- **Manager** (NEW) - Create/delete tasks & sprints
+- **Member** - Complete tasks, milestones, comment
+- **Viewer** - Read-only access
+
+#### Permission System
+- `PERMISSIONS` object with granular access control
+- `can()` and `requirePermission()` helper functions
+- UI elements show/hide based on role
+- Permission guards on all CRUD operations
+- Settings panel adapts to user role
+
+### 🌍 Internationalization
+
+#### Arabic (العربية)
+- Comprehensive translations for all UI elements
+- 150+ translated strings covering every feature
+- RTL layout support with CSS overrides
+- Font adjustments for Arabic script
+- Language selector in settings
+
+#### Language Manager
+- `lang.js` - Core language switching
+- `lang/en.js` - English (var-based, no redeclaration)
+- `lang/ar.js` - Arabic (var-based)
+- `data-i18n` attribute support
+- `translateMajorUI()` for dynamic elements
+
+### 🏗️ Architecture Refactor
+
+#### Modular JavaScript (10+ files)
+- `dashboard-core.js` - Auth, globals, utilities (~300 lines)
+- `dashboard-projects.js` - Project CRUD, sidebar (~200 lines)
+- `dashboard-tasks.js` - Task CRUD, board, milestones (~300 lines)
+- `dashboard-board.js` - Search, filters, drag-drop (~200 lines)
+- `dashboard-sprints.js` - Sprint management (~200 lines)
+- `dashboard-reports.js` - 8 charts, exports (~300 lines)
+- `dashboard-settings.js` - Settings panels (~100 lines)
+- `dashboard-activity.js` - Activity log (~60 lines)
+- `dashboard-modals.js` - Event listeners (~150 lines)
+- `dashboard-init.js` - Initialization (~80 lines)
+
+#### Benefits
+- Parallel loading for faster page loads
+- Smaller files for easier maintenance
+- Clear separation of concerns
+- Team-friendly for collaboration
+
+### 📱 Progressive Web App
+
+#### Service Worker v2.3.0
+- Smart caching strategies (Cache First, Network First, Stale While Revalidate)
+- Offline write queue with IndexedDB
+- Background sync for queued operations
+- API response caching (5-minute TTL)
+- Push notification support
+- Periodic cache cleanup
+- Offline fallback page with auto-reconnect
+
+### 🧪 Test Data Generator
+- `test-data-generator.js` - Comprehensive test data
+- 5-7 team members with all roles
+- 3-5 projects with colors and descriptions
+- 25 tasks per project with varied statuses
+- 2-5 milestones per task
+- Comments on ~40% of tasks
+- 1-3 sprints per project
+- Activity log entries
+- Console-based with progress reporting
+
+### 📄 Landing Page
+- Dark background matching dashboard theme
+- Animated gradient orbs
+- Grid pattern overlay
+- Feature pills (Kanban, Analytics, Team, Dark Mode, Real-time)
+- Stats row (100% Open Source, Free Forever, PWA Ready)
+- Auto-redirect for authenticated users
+- App icon display with shadow glow
+
+### 🐛 Bug Fixes
+- Fixed language file `const` redeclaration (changed to `var`)
+- Fixed `columns[status].tasks is undefined` in board rendering
+- Fixed sidebar overlap on settings view
+- Fixed responsive design issues on mobile settings
+- Fixed missing `bg-sidebar` CSS variable
+- Fixed loading screen removal after initialization
+
+### 📚 Documentation
+- Updated README.md with all v2.3.0 features
+- Updated API.md with milestones, roles, 5-column schema
+- Updated CHANGELOG.md with comprehensive change log
+- Updated DEPLOYMENT.md with new file structure
+
 ## [2.1.1] - 2026-04-28
 
 ### Fixed
