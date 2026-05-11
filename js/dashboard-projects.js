@@ -92,6 +92,7 @@ async function selectProject(project) {
 }
 
 async function createProject(projectData) {
+    if (!requirePermission('createProjects')) return false;
     if (!currentOrganization) { await loadUserData(); if (!currentOrganization) { showToast('Please refresh', 'error'); return false; } }
     try {
         const project = {
@@ -247,6 +248,7 @@ function switchToProject(projectId) {
 // ============================================
 
 async function deleteProjectWithUndo(projectId, projectData) {
+    if (!requirePermission('deleteProjects')) return;
     deletedItem = { id: projectId, ...projectData, type: 'project' };
     deletedItemType = 'project';
     try {

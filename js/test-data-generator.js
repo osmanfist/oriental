@@ -164,40 +164,32 @@ const testDataGenerator = {
     // ============================================
 
     async generateTeamMembers() {
-        console.log('👥 Generating team members...');
-        
-        const members = [];
-        const usedEmails = new Set();
-        
-        // Generate admins
-        for (let i = 0; i < this.config.teamMembers.admins; i++) {
-            const name = this.names[i];
-            const email = `admin${i + 1}@oriental-test.dev`;
-            members.push({ name, email, role: 'admin' });
-            usedEmails.add(email);
-        }
-        
-        // Generate regular members
-        const memberCount = this.randomInt(this.config.teamMembers.members - 1, this.config.teamMembers.members + 1);
-        for (let i = 0; i < memberCount; i++) {
-            const idx = this.config.teamMembers.admins + i;
-            const name = this.names[idx] || this.randomElement(this.names);
-            const email = `member${i + 1}@oriental-test.dev`;
-            members.push({ name, email, role: 'member' });
-            usedEmails.add(email);
-        }
-        
-        // Generate viewers
-        for (let i = 0; i < this.config.teamMembers.viewers; i++) {
-            const name = this.randomElement(this.names);
-            const email = `viewer${i + 1}@oriental-test.dev`;
-            members.push({ name, email, role: 'viewer' });
-            usedEmails.add(email);
-        }
-        
-        console.log(`  ✅ Created ${members.length} team members (${this.config.teamMembers.admins} admin, ${memberCount} members, ${this.config.teamMembers.viewers} viewer)`);
-        return members;
-    },
+    console.log('👥 Generating team members...');
+    
+    const members = [];
+    
+    // Admin
+    members.push({ name: 'Admin User', email: 'admin@oriental-test.dev', role: 'admin' });
+    
+    // Manager
+    members.push({ name: 'Manager User', email: 'manager@oriental-test.dev', role: 'manager' });
+    
+    // Members (3-5)
+    const memberCount = this.randomInt(3, 5);
+    for (let i = 0; i < memberCount; i++) {
+        members.push({ 
+            name: this.names[i + 5] || this.randomElement(this.names), 
+            email: `member${i + 1}@oriental-test.dev`, 
+            role: 'member' 
+        });
+    }
+    
+    // Viewer
+    members.push({ name: 'Viewer User', email: 'viewer@oriental-test.dev', role: 'viewer' });
+    
+    console.log(`  ✅ Created ${members.length} team members (1 admin, 1 manager, ${memberCount} members, 1 viewer)`);
+    return members;
+},
 
     async generateProjects() {
         console.log('📁 Generating projects...');
@@ -530,6 +522,7 @@ const testDataGenerator = {
         }
     }
 };
+
 
 // ============================================
 // USAGE INSTRUCTIONS

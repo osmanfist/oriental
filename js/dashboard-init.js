@@ -140,7 +140,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Step 7: Done
     updateLoadingProgress(7);
-    
+
+    // Step: Apply permissions
+    await loadUserRole();
+    applyPermissionUI();
     // Hide loading screen
     setTimeout(() => {
         hideLoadingScreen();
@@ -162,5 +165,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     console.log('✅ Dashboard ready!');
 });
-
+async function loadUserRole() {
+    try {
+        const userDoc = await db.collection('users').doc(currentUser.uid).get();
+        if (userDoc.exists) {
+            const userData = userDoc.data();
+            currentUserRole = userData.role || 'admin';
+            console.log('👤 User role:', currentUserRole);
+        }
+    } catch (error) {
+        console.error('Error loading user role:', error);
+        currentUserRole = 'admin'; // Default fallback
+    }
+}
 console.log('✅ dashboard-init.js loaded');

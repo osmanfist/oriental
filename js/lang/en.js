@@ -393,4 +393,24 @@ var lang_en = {
     status_healthy: "Healthy",
     status_at_risk: "At Risk",
     status_critical: "Critical",
+
+    // Roles
+role_admin: "Admin",
+role_manager: "Manager",
+role_member: "Member",
+role_viewer: "Viewer",
+
+// Permissions
+perm_view_tasks: "View Tasks",
+perm_view_projects: "View Projects",
+perm_view_reports: "View Reports",
+perm_complete_tasks: "Complete Tasks & Milestones",
+perm_comment: "Add Comments",
+perm_create_tasks: "Create Tasks",
+perm_delete_tasks: "Delete Tasks",
+perm_create_sprints: "Create & Manage Sprints",
+perm_manage_team: "Manage Team Members",
+perm_create_projects: "Create Projects",
+perm_delete_projects: "Delete Projects",
+perm_full_authority: "Full Authority",
 };

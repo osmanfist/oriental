@@ -187,6 +187,7 @@ async function loadPastSprints() {
 // ============================================
 
 async function createSprint(sprintData) {
+    if (!requirePermission('createSprints')) return false;
     if (!currentProject) { showToast('Select a project first', 'warning'); return false; }
     try {
         await db.collection('sprints').add({
@@ -204,6 +205,7 @@ async function createSprint(sprintData) {
 }
 
 async function completeSprint() {
+    if (!requirePermission('createSprints')) return;
     if (!currentSprint) { showToast('No active sprint', 'warning'); return; }
     const confirmed = await showConfirmDialog('Complete Sprint', `Mark "${currentSprint.name}" as completed?`, 'warning');
     if (!confirmed) return;
@@ -220,6 +222,7 @@ async function completeSprint() {
 }
 
 function openSprintModal() {
+    if (!requirePermission('createSprints')) return;
     if (!currentProject) { showToast('Select a project first', 'warning'); return; }
     if (currentSprint) { showToast('Active sprint exists. Complete it first.', 'warning'); return; }
     const modal = document.getElementById('sprint-modal');

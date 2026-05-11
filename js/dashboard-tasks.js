@@ -28,6 +28,7 @@ async function loadTasks(showSkeleton = true) {
 // ============================================
 
 async function createTask(taskData) {
+    if (!requirePermission('createTasks')) return false;
     if (!currentProject) { showToast('Please select a project first', 'warning'); return false; }
     if (!taskData.title) { showToast('Please enter a task title', 'warning'); return false; }
     
@@ -74,6 +75,7 @@ async function createTask(taskData) {
 // ============================================
 
 async function updateTask(taskId, taskData) {
+    if (!requirePermission('createTasks') && !requirePermission('completeTasks')) return false;
     try {
         let assigneeId = null;
         if (taskData.assignedTo && taskData.assignedTo !== 'Unassigned' && taskData.assignedTo !== '') {
@@ -122,6 +124,7 @@ function showUndoToast(message, undoFn) {
 }
 
 async function deleteTaskWithUndo(taskId, taskData) {
+    if (!requirePermission('deleteTasks')) return;
     deletedItem = { id: taskId, ...taskData, type: 'task' };
     deletedItemType = 'task';
     try {
@@ -689,6 +692,7 @@ function resetCreateMilestones() {
 // ============================================
 
 function openTaskModal() {
+    if (!requirePermission('createTasks')) return;
     if (!currentProject) { showToast('Select a project first', 'warning'); return; }
     const modal = document.getElementById('task-modal');
     if (modal) {

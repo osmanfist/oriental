@@ -69,6 +69,7 @@ document.getElementById('task-form')?.addEventListener('submit', async (e) => {
         const newBtn = addCommentBtn.cloneNode(true);
         addCommentBtn.parentNode.replaceChild(newBtn, addCommentBtn);
         newBtn.addEventListener('click', async () => {
+            if (!requirePermission('comment')) return;
             const content = document.getElementById('new-comment').value;
             if (!content?.trim()) { showToast('Please enter a comment', 'warning'); return; }
             if (!currentTaskForComments) { showToast('No task selected', 'error'); return; }

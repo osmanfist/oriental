@@ -394,4 +394,24 @@ var lang_ar = {
     status_healthy: "سليم",
     status_at_risk: "معرض للخطر",
     status_critical: "حرج",
+
+    // Roles
+role_admin: "مدير",
+role_manager: "مشرف",
+role_member: "عضو",
+role_viewer: "مشاهد",
+
+// Permissions
+perm_view_tasks: "عرض المهام",
+perm_view_projects: "عرض المشاريع",
+perm_view_reports: "عرض التقارير",
+perm_complete_tasks: "إكمال المهام والمعالم",
+perm_comment: "إضافة تعليقات",
+perm_create_tasks: "إنشاء مهام",
+perm_delete_tasks: "حذف المهام",
+perm_create_sprints: "إنشاء وإدارة السباقات",
+perm_manage_team: "إدارة أعضاء الفريق",
+perm_create_projects: "إنشاء مشاريع",
+perm_delete_projects: "حذف مشاريع",
+perm_full_authority: "صلاحية كاملة",
 };

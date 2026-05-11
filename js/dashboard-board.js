@@ -271,8 +271,13 @@ function setupDragAndDrop() {
     document.querySelectorAll('.tasks-container').forEach(container => {
         container.addEventListener('dragover', (e) => e.preventDefault());
         container.addEventListener('drop', async (e) => {
-            e.preventDefault();
             if (!draggedTask) return;
+    if (!can('completeTasks')) {
+        showToast('You do not have permission to move tasks', 'error');
+        draggedTask.classList.remove('dragging');
+        draggedTask = null;
+        return;
+    }
             const newStatus = container.dataset.status;
             const taskId = draggedTask.dataset.taskId;
             const oldStatus = draggedTask.dataset.status;

@@ -9,6 +9,24 @@
 
 async function loadSettingsView() {
     if (!currentOrganization) { showToast('Loading settings...', 'info'); return; }
+    applyPermissionUI();
+        // Hide certain sections for non-admins
+    const perms = getUserPermissions()
+    const dangerPanel = document.getElementById('panel-danger');
+    if (dangerPanel) {
+        const dangerItems = dangerPanel.querySelectorAll('.danger-item, .danger-item-warning, .danger-item-critical');
+        dangerItems.forEach(item => {
+            if (item.classList.contains('danger-item-critical') && !perms.deleteProjects) {
+                item.style.display = 'none';
+            }
+        });
+    }
+    
+    // Team management visibility
+    const teamTab = document.querySelector('.settings-tab[data-tab="team"]');
+    if (teamTab) {
+        teamTab.style.display = perms.manageTeam ? 'flex' : 'none';
+    }
     try {
         const orgDoc = await db.collection('organizations').doc(currentOrganization).get();
         if (orgDoc.exists) {

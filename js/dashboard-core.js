@@ -150,6 +150,143 @@ function escapeCsvField(value) {
 }
 
 // ============================================
+// PERMISSION SYSTEM
+// ============================================
+
+const PERMISSIONS = {
+    viewer: {
+        viewTasks: true,
+        viewProjects: true,
+        viewReports: true,
+        completeTasks: false,
+        comment: false,
+        createTasks: false,
+        deleteTasks: false,
+        createSprints: false,
+        manageTeam: false,
+        createProjects: false,
+        deleteProjects: false,
+        fullAuthority: false
+    },
+    member: {
+        viewTasks: true,
+        viewProjects: true,
+        viewReports: true,
+        completeTasks: true,
+        comment: true,
+        createTasks: false,
+        deleteTasks: false,
+        createSprints: false,
+        manageTeam: false,
+        createProjects: false,
+        deleteProjects: false,
+        fullAuthority: false
+    },
+    manager: {
+        viewTasks: true,
+        viewProjects: true,
+        viewReports: true,
+        completeTasks: true,
+        comment: true,
+        createTasks: true,
+        deleteTasks: true,
+        createSprints: true,
+        manageTeam: false,
+        createProjects: false,
+        deleteProjects: false,
+        fullAuthority: false
+    },
+    admin: {
+        viewTasks: true,
+        viewProjects: true,
+        viewReports: true,
+        completeTasks: true,
+        comment: true,
+        createTasks: true,
+        deleteTasks: true,
+        createSprints: true,
+        manageTeam: true,
+        createProjects: true,
+        deleteProjects: true,
+        fullAuthority: true
+    }
+};
+
+let currentUserRole = 'admin'; // Default for safety
+
+function getUserPermissions() {
+    return PERMISSIONS[currentUserRole] || PERMISSIONS.viewer;
+}
+
+function can(permission) {
+    const perms = getUserPermissions();
+    return perms[permission] || perms.fullAuthority || false;
+}
+
+function requirePermission(permission) {
+    if (!can(permission)) {
+        showToast('You do not have permission to perform this action', 'error');
+        return false;
+    }
+    return true;
+}
+
+/**
+ * Update UI based on user permissions
+ */
+function applyPermissionUI() {
+    const perms = getUserPermissions();
+    
+    // Create Task button
+    const createTaskBtn = document.getElementById('create-task-btn');
+    const bottomAddBtn = document.getElementById('bottom-add-btn');
+    if (createTaskBtn) createTaskBtn.style.display = perms.createTasks ? 'flex' : 'none';
+    if (bottomAddBtn) bottomAddBtn.style.display = perms.createTasks ? 'flex' : 'none';
+    
+    // Create Project button
+    const addProjectBtn = document.getElementById('add-project-btn');
+    if (addProjectBtn) addProjectBtn.style.display = perms.createProjects ? 'flex' : 'none';
+    
+    // Templates button
+    const templatesBtn = document.getElementById('templates-btn');
+    if (templatesBtn) templatesBtn.style.display = perms.createTasks ? 'flex' : 'none';
+    
+    // Invite button
+    const inviteBtn = document.getElementById('invite-btn');
+    if (inviteBtn) inviteBtn.style.display = perms.manageTeam ? 'flex' : 'none';
+    
+    // Delete project buttons (hide for non-admins)
+    document.querySelectorAll('.delete-project-btn').forEach(btn => {
+        btn.style.display = perms.deleteProjects ? '' : 'none';
+    });
+    
+    // Sprint buttons
+    const createSprintBtn = document.getElementById('create-sprint-btn');
+    const completeSprintBtn = document.getElementById('complete-sprint-btn');
+    const addToSprintBtn = document.getElementById('add-to-sprint-btn');
+    if (createSprintBtn) createSprintBtn.style.display = perms.createSprints ? 'flex' : 'none';
+    if (addToSprintBtn) addToSprintBtn.style.display = perms.createSprints ? 'flex' : 'none';
+    
+    // Settings tabs
+    document.querySelectorAll('.settings-tab[data-tab="team"]').forEach(tab => {
+        tab.style.display = perms.manageTeam ? 'flex' : 'none';
+    });
+    
+    // Danger zone in settings
+    document.querySelectorAll('.danger-item-critical').forEach(item => {
+        item.style.display = perms.deleteProjects ? 'flex' : 'none';
+    });
+    
+    // Export buttons
+    const exportCsvBtn = document.getElementById('export-csv-btn');
+    const exportPdfBtn = document.getElementById('export-pdf-btn');
+    if (exportCsvBtn) exportCsvBtn.style.display = perms.viewReports ? 'flex' : 'none';
+    if (exportPdfBtn) exportPdfBtn.style.display = perms.viewReports ? 'flex' : 'none';
+    
+    console.log('🔒 Permissions applied for role:', currentUserRole, perms);
+}
+
+// ============================================
 // CACHING
 // ============================================
 
