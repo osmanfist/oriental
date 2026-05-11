@@ -287,6 +287,297 @@ function applyPermissionUI() {
 }
 
 // ============================================
+// SMART FEATURES - AI/Algorithmic
+// ============================================
+
+/**
+ * Smart Priority Suggestion System
+ * Analyzes task properties and suggests optimal priority
+ */
+function suggestPriority(taskData, allContextTasks) {
+    let score = 0;
+    const reasons = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // === DUE DATE URGENCY (max 50 points) ===
+    if (taskData.dueDate) {
+        const due = new Date(taskData.dueDate);
+        due.setHours(0, 0, 0, 0);
+        const daysUntilDue = Math.ceil((due - today) / (1000 * 60 * 60 * 24));
+        
+        if (daysUntilDue < 0) {
+            score += 50;
+            reasons.push(`🚨 ${Math.abs(daysUntilDue)} days overdue`);
+        } else if (daysUntilDue === 0) {
+            score += 45;
+            reasons.push('🚨 Due today');
+        } else if (daysUntilDue <= 1) {
+            score += 35;
+            reasons.push('⏰ Due tomorrow');
+        } else if (daysUntilDue <= 3) {
+            score += 25;
+            reasons.push(`📅 Due in ${daysUntilDue} days`);
+        } else if (daysUntilDue <= 7) {
+            score += 10;
+            reasons.push(`📅 Due in ${daysUntilDue} days`);
+        }
+    } else {
+        // No due date = less urgent
+        score -= 10;
+        reasons.push('📅 No due date set');
+    }
+    
+    // === TITLE KEYWORD ANALYSIS (max 30 points) ===
+    const title = (taskData.title || '').toLowerCase();
+    const urgentKeywords = [
+        { word: 'critical', points: 25, reason: '🔴 Critical keyword' },
+        { word: 'urgent', points: 25, reason: '🔴 Urgent keyword' },
+        { word: 'security', points: 25, reason: '🔒 Security issue' },
+        { word: 'crash', points: 25, reason: '💥 Crash/bug' },
+        { word: 'outage', points: 25, reason: '🚨 Outage' },
+        { word: 'blocker', points: 20, reason: '🚫 Blocker' },
+        { word: 'bug', points: 15, reason: '🐛 Bug fix' },
+        { word: 'fix', points: 15, reason: '🔧 Fix needed' },
+        { word: 'hotfix', points: 25, reason: '🔥 Hotfix' },
+        { word: 'production', points: 20, reason: '🏭 Production issue' },
+        { word: 'release', points: 15, reason: '📦 Release' },
+        { word: 'deploy', points: 10, reason: '🚀 Deployment' },
+    ];
+    
+    urgentKeywords.forEach(({ word, points, reason }) => {
+        if (title.includes(word)) {
+            score += points;
+            reasons.push(reason);
+        }
+    });
+    
+    // Low priority keywords
+    const lowKeywords = ['documentation', 'docs', 'readme', 'chore', 'cleanup', 'refactor', 'minor'];
+    lowKeywords.forEach(word => {
+        if (title.includes(word)) {
+            score -= 10;
+            reasons.push('📝 Maintenance/low-priority keyword');
+        }
+    });
+    
+    // === DESCRIPTION ANALYSIS (max 15 points) ===
+    const desc = (taskData.description || '').toLowerCase();
+    if (desc.includes('client') || desc.includes('customer') || desc.includes('stakeholder')) {
+        score += 15;
+        reasons.push('👤 Client/stakeholder mentioned');
+    }
+    if (desc.includes('revenue') || desc.includes('money') || desc.includes('payment')) {
+        score += 15;
+        reasons.push('💰 Revenue impact');
+    }
+    
+    // === TAGS ANALYSIS (max 15 points) ===
+    const tags = taskData.tags || [];
+    const highPriorityTags = ['critical', 'urgent', 'security', 'production', 'hotfix', 'bug'];
+    tags.forEach(tag => {
+        if (highPriorityTags.includes(tag.toLowerCase())) {
+            score += 15;
+            reasons.push(`🏷️ High-priority tag: ${tag}`);
+        }
+    });
+    
+    // === ASSIGNEE WORKLOAD (max 20 points) ===
+    if (taskData.assignedTo && allContextTasks) {
+        const assigneeTasks = allContextTasks.filter(t =>
+            t.assignedTo === taskData.assignedTo &&
+            t.status !== 'done' &&
+            t.status !== 'planned'
+        );
+        const workload = assigneeTasks.length;
+        
+        if (workload > 10) {
+            score += 20;
+            reasons.push(`👤 ${taskData.assignedTo} has heavy workload (${workload} active tasks)`);
+        } else if (workload > 7) {
+            score += 10;
+            reasons.push(`👤 Moderate workload (${workload} active tasks)`);
+        } else if (workload <= 2) {
+            score -= 5;
+            reasons.push(`👤 Light workload (${workload} active tasks)`);
+        }
+    }
+    
+    // === ESTIMATED HOURS (max 10 points) ===
+    const hours = parseFloat(taskData.estimatedHours) || 0;
+    if (hours > 20) {
+        score += 10;
+        reasons.push(`⏱️ Large task (${hours}h estimated)`);
+    } else if (hours > 8) {
+        score += 5;
+        reasons.push(`⏱️ Medium task (${hours}h estimated)`);
+    }
+    
+    // === DETERMINE PRIORITY ===
+    let suggestedPriority;
+    if (score >= 50) suggestedPriority = 'high';
+    else if (score >= 20) suggestedPriority = 'medium';
+    else suggestedPriority = 'low';
+    
+    return {
+        priority: suggestedPriority,
+        score: score,
+        confidence: Math.min(Math.abs(score) / 80 * 100, 100).toFixed(0),
+        reasons: reasons,
+        summary: `Score: ${score}/100 — Suggested: ${suggestedPriority.toUpperCase()}`
+    };
+}
+
+/**
+ * Smart Assignee Suggestion System
+ * Suggests best team member based on workload, expertise, and availability
+ */
+function suggestAssignee(taskData, teamMembersList, allContextTasks) {
+    if (!teamMembersList || teamMembersList.length === 0) return null;
+    
+    const memberScores = teamMembersList
+        .filter(m => m.role !== 'viewer') // Viewers can't be assigned
+        .map(member => {
+            let score = 50; // Start at neutral
+            const reasons = [];
+            
+            // === WORKLOAD BALANCE (max -30 points for busy, +10 for free) ===
+            const activeTasks = allContextTasks.filter(t =>
+                t.assignedTo === member.name &&
+                t.status !== 'done'
+            );
+            const workload = activeTasks.length;
+            
+            if (workload === 0) {
+                score += 10;
+                reasons.push('🟢 No active tasks');
+            } else if (workload <= 3) {
+                score += 5;
+                reasons.push(`🟢 Light load (${workload} tasks)`);
+            } else if (workload <= 6) {
+                score += 0;
+                reasons.push(`🟡 Moderate load (${workload} tasks)`);
+            } else if (workload <= 9) {
+                score -= 15;
+                reasons.push(`🟠 Busy (${workload} tasks)`);
+            } else {
+                score -= 30;
+                reasons.push(`🔴 Overloaded (${workload} tasks)`);
+            }
+            
+            // === TAG/EXPERTISE MATCHING (max +25 points) ===
+            const taskTags = (taskData.tags || []).map(t => t.toLowerCase());
+            if (taskTags.length > 0) {
+                const completedTasks = allContextTasks.filter(t =>
+                    t.assignedTo === member.name &&
+                    t.status === 'done'
+                );
+                
+                let tagMatches = 0;
+                taskTags.forEach(tag => {
+                    const matches = completedTasks.filter(t =>
+                        t.tags?.some(ct => ct.toLowerCase() === tag)
+                    ).length;
+                    tagMatches += matches;
+                });
+                
+                if (tagMatches > 5) {
+                    score += 25;
+                    reasons.push(`⭐ Expert in: ${taskTags.join(', ')} (${tagMatches} similar tasks)`);
+                } else if (tagMatches > 2) {
+                    score += 15;
+                    reasons.push(`📚 Experience with: ${taskTags.join(', ')}`);
+                } else if (tagMatches > 0) {
+                    score += 8;
+                    reasons.push(`📖 Some experience with these tags`);
+                }
+            }
+            
+            // === PAST PERFORMANCE (max +15 points) ===
+            const completionRate = member.totalAssigned > 0
+                ? (member.completedCount / member.totalAssigned) * 100
+                : 0;
+            
+            if (completionRate > 80 && member.totalAssigned > 5) {
+                score += 15;
+                reasons.push(`🏆 High completion rate (${completionRate.toFixed(0)}%)`);
+            } else if (completionRate > 60) {
+                score += 8;
+                reasons.push(`✅ Good completion rate (${completionRate.toFixed(0)}%)`);
+            }
+            
+            // === RECENT ACTIVITY (max +10 points) ===
+            const recentTasks = completedByMember.filter(t => {
+                const weekAgo = new Date();
+                weekAgo.setDate(weekAgo.getDate() - 7);
+                return t.updatedAt?.toDate() > weekAgo;
+            }).length;
+            
+            if (recentTasks > 3) {
+                score += 10;
+                reasons.push('🔄 Recently active');
+            } else if (recentTasks > 0) {
+                score += 5;
+                reasons.push('👀 Some recent activity');
+            } else {
+                score -= 10;
+                reasons.push('💤 No recent activity');
+            }
+            
+            // === ROLE/POSITION (max +10 points) ===
+            if (member.role === 'admin') {
+                score -= 5;
+                reasons.push('👑 Admin (may delegate)');
+            } else if (member.role === 'manager') {
+                score += 5;
+                reasons.push('📋 Manager (oversees work)');
+            } else if (member.role === 'member') {
+                score += 8;
+                reasons.push('👤 Team member (executor)');
+            }
+            
+            return {
+                member,
+                score,
+                confidence: Math.min((score / 100) * 100, 100).toFixed(0),
+                reasons,
+                summary: `${member.name} — Score: ${score}/100`
+            };
+        });
+    
+    // Sort by score descending
+    memberScores.sort((a, b) => b.score - a.score);
+    
+    return {
+        topPick: memberScores[0],
+        allSuggestions: memberScores,
+        bestName: memberScores[0]?.member.name || null
+    };
+}
+
+/**
+ * Calculate member statistics for smart suggestions
+ */
+function calculateMemberStats(memberName, allTasks) {
+    const memberTasks = allTasks.filter(t => t.assignedTo === memberName);
+    const completed = memberTasks.filter(t => t.status === 'done');
+    
+    return {
+        totalAssigned: memberTasks.length,
+        completedCount: completed.length,
+        completionRate: memberTasks.length > 0 
+            ? ((completed.length / memberTasks.length) * 100).toFixed(0) 
+            : 0,
+        activeCount: memberTasks.filter(t => t.status !== 'done').length,
+        recentActivity: completed.filter(t => {
+            const weekAgo = new Date();
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            return t.updatedAt?.toDate() > weekAgo;
+        }).length
+    };
+}
+
+// ============================================
 // CACHING
 // ============================================
 

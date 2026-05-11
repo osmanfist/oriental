@@ -714,7 +714,160 @@ function closeCommentModal() {
     document.getElementById('new-comment').value = '';
 }
 
-// Make functions available globally
+// ============================================
+// SMART FEATURE TRIGGERS
+// ============================================
+
+/**
+ * Trigger smart priority suggestion for create task form
+ */
+function triggerSmartPriority() {
+    const taskData = {
+        title: document.getElementById('task-title')?.value || '',
+        description: document.getElementById('task-description')?.value || '',
+        dueDate: document.getElementById('task-due-date')?.value || null,
+        estimatedHours: document.getElementById('task-estimate')?.value || 0,
+        assignedTo: document.getElementById('task-assignee')?.value || null,
+        tags: document.getElementById('task-tags')?.value 
+            ? document.getElementById('task-tags').value.split(',').map(t => t.trim()) 
+            : []
+    };
+    
+    const result = suggestPriority(taskData, allTasks);
+    
+    // Update the priority select
+    const prioritySelect = document.getElementById('task-priority');
+    if (prioritySelect) prioritySelect.value = result.priority;
+    
+    // Show the result
+    const resultDiv = document.getElementById('smart-priority-result');
+    if (resultDiv) {
+        resultDiv.style.display = 'block';
+        const confidenceColor = result.confidence > 60 ? '#10b981' : (result.confidence > 30 ? '#f59e0b' : '#ef4444');
+        
+        resultDiv.innerHTML = `
+            <div class="smart-result-card">
+                <div class="smart-result-header">
+                    <i class="fas fa-brain"></i>
+                    <span>Smart Priority Analysis</span>
+                    <span class="smart-confidence" style="background:${confidenceColor}">${result.confidence}% confidence</span>
+                </div>
+                <div class="smart-result-body">
+                    <div class="smart-result-main">
+                        Suggested: <strong style="color:${result.priority === 'high' ? '#ef4444' : (result.priority === 'medium' ? '#f59e0b' : '#10b981')}">${result.priority.toUpperCase()}</strong>
+                        <span style="color:var(--text-muted); margin-left: 8px;">(${result.summary})</span>
+                    </div>
+                    ${result.reasons.length > 0 ? `
+                        <div class="smart-reasons">
+                            ${result.reasons.map(r => `<div class="smart-reason">${r}</div>`).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }
+    
+    // Animate the priority select
+    if (prioritySelect) {
+        prioritySelect.style.transform = 'scale(1.05)';
+        prioritySelect.style.borderColor = confidenceColor;
+        setTimeout(() => {
+            prioritySelect.style.transform = 'scale(1)';
+            setTimeout(() => { prioritySelect.style.borderColor = ''; }, 1500);
+        }, 200);
+    }
+    
+    // Track analytics
+    if (typeof trackAnalytics === 'function') {
+        trackAnalytics('smart_priority_used', { suggested: result.priority, confidence: result.confidence });
+    }
+}
+
+/**
+ * Trigger smart assignee suggestion for create task form
+ */
+function triggerSmartAssignee() {
+    const taskData = {
+        title: document.getElementById('task-title')?.value || '',
+        tags: document.getElementById('task-tags')?.value 
+            ? document.getElementById('task-tags').value.split(',').map(t => t.trim()) 
+            : []
+    };
+    
+    // Calculate member stats
+    const enrichedMembers = teamMembers.map(m => ({
+        ...m,
+        ...calculateMemberStats(m.name, allTasks)
+    }));
+    
+    const result = suggestAssignee(taskData, enrichedMembers, allTasks);
+    
+    // Update the assignee select
+    const assigneeSelect = document.getElementById('task-assignee');
+    if (assigneeSelect && result.bestName) {
+        assigneeSelect.value = result.bestName;
+    }
+    
+    // Show the result
+    const resultDiv = document.getElementById('smart-assignee-result');
+    if (resultDiv) {
+        resultDiv.style.display = 'block';
+        
+        const topPick = result.topPick;
+        const confidenceColor = topPick.confidence > 60 ? '#10b981' : (topPick.confidence > 30 ? '#f59e0b' : '#ef4444');
+        
+        resultDiv.innerHTML = `
+            <div class="smart-result-card">
+                <div class="smart-result-header">
+                    <i class="fas fa-brain"></i>
+                    <span>Smart Assignee Analysis</span>
+                    <span class="smart-confidence" style="background:${confidenceColor}">${topPick.confidence}% match</span>
+                </div>
+                <div class="smart-result-body">
+                    <div class="smart-result-main">
+                        🏆 Best match: <strong>${escapeHtml(topPick.member.name)}</strong>
+                        <span style="color:var(--text-muted); margin-left: 8px;">(${topPick.summary})</span>
+                    </div>
+                    ${topPick.reasons.length > 0 ? `
+                        <div class="smart-reasons">
+                            ${topPick.reasons.map(r => `<div class="smart-reason">${r}</div>`).join('')}
+                        </div>
+                    ` : ''}
+                    ${result.allSuggestions.length > 1 ? `
+                        <details class="smart-other-suggestions">
+                            <summary>Other suggestions (${result.allSuggestions.length - 1} more)</summary>
+                            ${result.allSuggestions.slice(1, 4).map(s => `
+                                <div class="smart-other-item">
+                                    <span>${escapeHtml(s.member.name)}</span>
+                                    <span class="smart-confidence small" style="background:${s.confidence > 60 ? '#10b981' : (s.confidence > 30 ? '#f59e0b' : '#ef4444')}">${s.score}/100</span>
+                                </div>
+                            `).join('')}
+                        </details>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }
+    
+    // Animate the select
+    if (assigneeSelect) {
+        assigneeSelect.style.transform = 'scale(1.05)';
+        assigneeSelect.style.borderColor = confidenceColor;
+        setTimeout(() => {
+            assigneeSelect.style.transform = 'scale(1)';
+            setTimeout(() => { assigneeSelect.style.borderColor = ''; }, 1500);
+        }, 200);
+    }
+    
+    // Track analytics
+    if (typeof trackAnalytics === 'function') {
+        trackAnalytics('smart_assignee_used', { suggested: result.bestName, confidence: topPick.confidence });
+    }
+}
+
+// Make globally available
+window.triggerSmartPriority = triggerSmartPriority;
+window.triggerSmartAssignee = triggerSmartAssignee;
 window.loadTasks = loadTasks;
 window.createTask = createTask;
 window.updateTask = updateTask;

@@ -1100,21 +1100,39 @@
                     <textarea id="task-description" rows="3" placeholder="Enter task description"></textarea>
                 </div>
                 <div class="form-row">
-                    <div class="form-group">
-                        <label for="task-priority">Priority</label>
-                        <select id="task-priority">
-                            <option value="low">Low</option>
-                            <option value="medium" selected>Medium</option>
-                            <option value="high">High</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="task-assignee">Assign to</label>
-                        <select id="task-assignee">
-                            <option value="">Unassigned</option>
-                        </select>
-                    </div>
-                </div>
+    <div class="form-group">
+        <label for="task-priority">Priority</label>
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <select id="task-priority" style="flex: 1;">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+            </select>
+            <button type="button" class="btn-smart" id="smart-priority-btn" 
+                    onclick="triggerSmartPriority()" 
+                    title="AI Priority Suggestion">
+                <i class="fas fa-brain"></i> Smart
+            </button>
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="task-assignee">Assign to</label>
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <select id="task-assignee" style="flex: 1;">
+                <option value="">Unassigned</option>
+            </select>
+            <button type="button" class="btn-smart" id="smart-assignee-btn" 
+                    onclick="triggerSmartAssignee()" 
+                    title="AI Assignee Suggestion">
+                <i class="fas fa-brain"></i> Smart
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Smart Suggestion Result Display -->
+<div id="smart-priority-result" style="display:none; margin-top: 8px;"></div>
+<div id="smart-assignee-result" style="display:none; margin-top: 8px;"></div>
                 <div class="form-row">
                     <div class="form-group">
                         <label for="task-due-date">Due Date</label>
