@@ -22,7 +22,7 @@ async function loadTasks(showSkeleton = true) {
         showToast('Error loading tasks', 'error');
     }
 }
-
+cacheDataOffline('tasks', allTasks);
 // ============================================
 // TASK CREATION
 // ============================================

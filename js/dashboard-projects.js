@@ -176,6 +176,8 @@ applySearchAndFilter();
     } catch (error) { console.error('Error:', error); showToast('Error loading tasks', 'error'); }
 }
 
+cacheDataOffline('tasks', allTasks);
+
 // ============================================
 // PROJECT PERFORMANCE CHARTS
 // ============================================

@@ -548,6 +548,62 @@ function setupOfflineDetection() {
 }
 
 // ============================================
+// CLIENT-SIDE INDEXEDDB CACHE
+// ============================================
+
+const CACHE_DB_NAME = 'OrientalCache';
+const CACHE_VERSION = 1;
+
+function openCacheDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(CACHE_DB_NAME, CACHE_VERSION);
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains('tasks')) {
+                db.createObjectStore('tasks', { keyPath: 'id' });
+            }
+            if (!db.objectStoreNames.contains('projects')) {
+                db.createObjectStore('projects', { keyPath: 'id' });
+            }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function cacheDataOffline(storeName, data) {
+    try {
+        const db = await openCacheDB();
+        const tx = db.transaction(storeName, 'readwrite');
+        const store = tx.objectStore(storeName);
+        for (const item of data) {
+            await store.put(item);
+        }
+        await tx.complete;
+        console.log(`📦 Cached ${data.length} items in ${storeName}`);
+    } catch (error) {
+        console.warn('Cache write failed:', error);
+    }
+}
+
+async function getCachedData(storeName) {
+    try {
+        const db = await openCacheDB();
+        const tx = db.transaction(storeName, 'readonly');
+        const data = await tx.objectStore(storeName).getAll();
+        await tx.complete;
+        return data;
+    } catch (error) {
+        console.warn('Cache read failed:', error);
+        return [];
+    }
+}
+
+// Cache tasks after loading
+// Add this line after loadTasks() and loadAllProjectsTasks():
+// cacheDataOffline('tasks', allTasks);
+
+// ============================================
 // DARK MODE
 // ============================================
 
