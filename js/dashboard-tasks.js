@@ -15,11 +15,17 @@ async function loadTasks(showSkeleton = true) {
         const tasksSnapshot = await db.collection('tasks').where('projectId', '==', currentProject.id).get();
         allTasks = [];
         tasksSnapshot.forEach(doc => allTasks.push({ id: doc.id, ...doc.data() }));
+                console.log(`📋 Loaded ${allTasks.length} tasks for project`);
+        
+        // RENDER THE BOARD
         loadAssigneeFilters();
         applySearchAndFilter();
+        
+        return allTasks;
     } catch (error) {
         console.error('Error loading tasks:', error);
         showToast('Error loading tasks', 'error');
+        return [];
     }
 }
 cacheDataOffline('tasks', allTasks);
@@ -57,10 +63,14 @@ async function createTask(taskData) {
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
         
-        const docRef = await db.collection('tasks').add(task);
-        await logActivity('create_task', 'task', docRef.id, taskData.title, { assignedTo: taskData.assignedTo });
+                const docRef = await db.collection('tasks').add(task);
+        await logActivity('create_task', 'task', docRef.id, taskData.title, {});
         invalidateCache();
-        resetCreateMilestones();  // ← ADD THIS
+        resetCreateMilestones();
+        
+        // REFRESH BOARD
+        await loadTasks(false);
+        
         showToast('Task created successfully', 'success');
         return true;
     } catch (error) {
@@ -95,6 +105,10 @@ async function updateTask(taskId, taskData) {
         await db.collection('tasks').doc(taskId).update(updateData);
         await logActivity('update_task', 'task', taskId, taskData.title, {});
         invalidateCache();
+        
+        // REFRESH BOARD
+        await loadTasks(false);
+        
         showToast('Task updated successfully', 'success');
         return true;
     } catch (error) {
@@ -132,11 +146,16 @@ async function deleteTaskWithUndo(taskId, taskData) {
         const batch = db.batch();
         cs.forEach(d => batch.delete(d.ref));
         batch.delete(db.collection('tasks').doc(taskId));
-        await batch.commit();
+                await batch.commit();
         await logActivity('delete_task', 'task', taskId, taskData.title, {});
         showUndoToast('Task deleted', undoDelete);
-        if (document.getElementById('comment-modal').style.display === 'flex') closeCommentModal();
-        await loadTasks();
+        
+        if (document.getElementById('comment-modal')?.style.display === 'flex') {
+            closeCommentModal();
+        }
+        
+        // REFRESH BOARD
+        await loadTasks(false);
         invalidateCache();
     } catch (error) { console.error('Error:', error); showToast('Error deleting task', 'error'); }
 }
@@ -168,10 +187,16 @@ async function undoDelete() {
                 }
             }
         }
-        deletedItem = null; deletedItemType = null;
+        deletedItem = null;
+        deletedItemType = null;
         invalidateCache();
-        if (deletedItemType === 'project') await loadProjectsOptimized();
-        else await loadTasks();
+        
+        // REFRESH BOARD
+        if (deletedItemType === 'project') {
+            await loadProjectsOptimized();
+        } else {
+            await loadTasks(false);
+        }
     } catch (error) { console.error('Error:', error); showToast('Error undoing', 'error'); }
 }
 

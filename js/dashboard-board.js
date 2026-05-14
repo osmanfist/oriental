@@ -270,33 +270,38 @@ function setupDragAndDrop() {
     
     document.querySelectorAll('.tasks-container').forEach(container => {
         container.addEventListener('dragover', (e) => e.preventDefault());
-        container.addEventListener('drop', async (e) => {
+                container.addEventListener('drop', async (e) => {
+            e.preventDefault();
             if (!draggedTask) return;
-    if (!can('completeTasks')) {
-        showToast('You do not have permission to move tasks', 'error');
-        draggedTask.classList.remove('dragging');
-        draggedTask = null;
-        return;
-    }
+            
             const newStatus = container.dataset.status;
             const taskId = draggedTask.dataset.taskId;
             const oldStatus = draggedTask.dataset.status;
+            
             if (newStatus === oldStatus) return;
+            
+            // Optimistic: move card immediately
+            if (draggedTask && container) {
+                draggedTask.dataset.status = newStatus;
+                container.appendChild(draggedTask);
+                updateColumnCounts();
+            }
             
             try {
                 await db.collection('tasks').doc(taskId).update({
                     status: newStatus,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                const taskDoc = await db.collection('tasks').doc(taskId).get();
-                await logActivity('update_task', 'task', taskId, taskDoc.data()?.title, { oldStatus, newStatus });
+                
+                await loadTasks(false);
                 showToast('Task moved', 'success');
-                invalidateCache();
             } catch (error) {
-                console.error('Error moving task:', error);
+                await loadTasks(false); // Revert on error
                 showToast('Error moving task', 'error');
             }
         });
+
+
     });
 }
 
@@ -358,6 +363,15 @@ function setupMobileDragAndDrop() {
             draggedTask = null;
             isDragging = false;
         });
+    });
+}
+
+function updateColumnCounts() {
+    document.querySelectorAll('.board-column').forEach(col => {
+        const status = col.dataset.status;
+        const count = col.querySelectorAll('.task-card').length;
+        const countEl = col.querySelector('.column-count');
+        if (countEl) countEl.textContent = count;
     });
 }
 

@@ -6,6 +6,7 @@
 // ============================================
 // LOADING SCREEN CONTROLLER
 // ============================================
+let isInitialLoad = true;
 
 const loadingSteps = [
     { progress: 10, status: 'Checking authentication...', delay: 300 },
@@ -98,8 +99,10 @@ function initializePhase1Features() {
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 Oriental Dashboard - Leantime Edition');
     
-        // Start loading
-    updateLoadingProgress(0);
+    // Start loading
+    if (isInitialLoad) {
+        updateLoadingProgress(0);
+    }
     
     initDarkMode();
     setupOfflineDetection();
@@ -145,9 +148,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadUserRole();
     applyPermissionUI();
     // Hide loading screen
-    setTimeout(() => {
-        hideLoadingScreen();
-    }, 400);
+    hideLoadingScreen();
+    isInitialLoad = false;
     
     window.addEventListener('beforeunload', cleanup);
     

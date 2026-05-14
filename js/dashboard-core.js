@@ -150,6 +150,41 @@ function escapeCsvField(value) {
 }
 
 // ============================================
+// VIEW REFRESH WITHOUT PAGE RELOAD
+// ============================================
+
+let isRefreshing = false;
+
+async function refreshCurrentView() {
+    if (isRefreshing) return;
+    isRefreshing = true;
+    
+    try {
+        switch (currentView) {
+            case 'board':
+                if (showAllProjects) {
+                    await loadAllProjectsTasks(false);
+                } else if (currentProject) {
+                    await loadTasks(false);
+                }
+                break;
+            case 'sprints':
+                await loadSprints();
+                break;
+            case 'reports':
+                await loadReportsData();
+                break;
+        }
+    } catch (error) {
+        console.error('Refresh error:', error);
+    } finally {
+        isRefreshing = false;
+    }
+}
+
+window.refreshCurrentView = refreshCurrentView;
+
+// ============================================
 // PERMISSION SYSTEM
 // ============================================
 

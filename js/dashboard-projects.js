@@ -86,9 +86,13 @@ async function selectProject(project) {
     });
     
     document.querySelector('.dashboard-header h1').textContent = project.name;
+    
     const chartContainer = document.getElementById('project-performance-charts');
     if (chartContainer) chartContainer.style.display = 'none';
+    
+    // REFRESH
     await loadTasks(true);
+    setupRealtimeSubscription();
 }
 
 async function createProject(projectData) {
@@ -121,14 +125,21 @@ async function createProject(projectData) {
 function setupAllProjectsToggle() {
     const toggleBtn = document.getElementById('all-projects-toggle');
     if (!toggleBtn) return;
-    toggleBtn.addEventListener('click', () => {
+        toggleBtn.addEventListener('click', async () => {
         showAllProjects = !showAllProjects;
+        
         if (showAllProjects) {
             toggleBtn.classList.add('active');
-            loadAllProjectsTasks(true);
+            toggleBtn.querySelector('span').textContent = 'Single Project';
+            toggleBtn.querySelector('i').className = 'fas fa-folder';
+            await loadAllProjectsTasks(true);
         } else {
             toggleBtn.classList.remove('active');
-            if (currentProject) loadTasks(true);
+            toggleBtn.querySelector('span').textContent = 'All Projects';
+            toggleBtn.querySelector('i').className = 'fas fa-layer-group';
+            if (currentProject) {
+                await loadTasks(true);
+            }
         }
     });
 }
@@ -166,9 +177,18 @@ applySearchAndFilter();
     }
 });
         
-        document.querySelector('.dashboard-header h1').textContent = `📋 All Projects (${projects.length})`;
-        document.querySelectorAll('.project-item').forEach(item => item.classList.remove('active'));
+        console.log(`📋 Loaded ${allTasks.length} tasks from ${projects.length} projects`);
         
+        // Update header
+        document.querySelector('.dashboard-header h1').textContent = 
+            `📋 All Projects (${projects.length})`;
+        
+        // Update sidebar
+        document.querySelectorAll('.project-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        
+        // RENDER
         await renderProjectPerformanceCharts();
         loadAssigneeFilters();
         applySearchAndFilter();
