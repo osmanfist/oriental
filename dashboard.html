@@ -1207,9 +1207,13 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="closeSprintModal()">Cancel</button>
-                    <button type="submit" class="btn-primary">Start Sprint</button>
-                </div>
+    <button type="button" class="btn-secondary" onclick="closeSprintModal()">
+        <i class="fas fa-times"></i> Cancel
+    </button>
+    <button type="submit" class="btn-primary">
+        <i class="fas fa-rocket"></i> Start Sprint
+    </button>
+</div>
             </form>
         </div>
     </div>
@@ -1317,10 +1321,14 @@
     </select>
 </div>
                     <div class="invite-info"><i class="fas fa-info-circle"></i><span>They'll receive an email with a link to join.</span></div>
-                    <div style="display:flex;gap:1rem;margin-top:1.5rem;">
-                        <button type="button" class="btn-secondary" onclick="closeInviteModal()">Cancel</button>
-                        <button type="submit" class="btn-primary">Send Invite</button>
-                    </div>
+                </div>
+                <div class="modal-footer" style="gap: 12px;">
+                    <button type="button" class="btn-secondary" onclick="closeInviteModal()" style="flex: 1; border-radius: var(--radius-full); justify-content: center;">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn-primary" style="flex: 1; border-radius: var(--radius-full); justify-content: center;">
+                        <i class="fas fa-paper-plane"></i> Send Invite
+                    </button>
                 </div>
             </form>
         </div>

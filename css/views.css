@@ -122,6 +122,11 @@
 .priority-medium { background: #fffbeb; color: #d97706; }
 .priority-low { background: #f0fdfa; color: #0d9488; }
 
+/* Dark Mode Priority Overrides */
+[data-theme="dark"] .priority-high { background: rgba(220, 38, 38, 0.2); color: #fca5a5; }
+[data-theme="dark"] .priority-medium { background: rgba(217, 119, 6, 0.2); color: #fcd34d; }
+[data-theme="dark"] .priority-low { background: rgba(13, 148, 136, 0.2); color: #5eead4; }
+
 .assignee {
     display: flex;
     align-items: center;

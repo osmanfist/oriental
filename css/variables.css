@@ -168,9 +168,9 @@
    DARK THEME
    ============================================ */
 [data-theme="dark"] {
-    --bg-main: #0f172a;
+    --bg-main: #0f172a; /* Slate 900 */
     --bg-surface: #1e293b;
-    --bg-sidebar: #0f172a;
+    --bg-sidebar: #020617; /* Slate 950 - Provides depth against the main content */
     --bg-sidebar-active: #1e293b;
     --bg-hover: #1e293b;
     --bg-muted: #1e293b;
