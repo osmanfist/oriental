@@ -66,11 +66,10 @@ h1, h2, h3, h4, h5, h6 {
     border-radius: var(--radius-sm);
 }
 
-:focus:not(:focus-visible) {
-    outline: none;
-}
+/* ============================================
+   26. SCROLLBAR STYLES
+   ============================================ */
 
-/* Scrollbar */
 ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
